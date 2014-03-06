@@ -1,0 +1,7 @@
+(define (get-classname object) (invoke (invoke object 'getClass) 'getName))
+
+(define (to-string obj) (invoke obj 'toString))
+
+(define (to-symbol str) (invoke-static 'jlll.common.Symbol 'intern str))
+
+(define jlll-convertors '())

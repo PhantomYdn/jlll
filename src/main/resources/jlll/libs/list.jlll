@@ -1,0 +1,41 @@
+(define (list . li) li)
+(define vector->list collection->list)
+(define (caar x) (car (car x)))
+(define (cadr x) (car (cdr x)))
+(define (cdar x) (cdr (car x)))
+(define (cddr x) (cdr (cdr x)))
+
+(define (caaar x) (car (car (car x))))
+(define (caadr x) (car (car (cdr x))))
+(define (cadar x) (car (cdr (car x))))
+(define (caddr x) (car (cdr (cdr x))))
+
+(define (cdaar x) (cdr (car (car x))))
+(define (cdadr x) (cdr (car (cdr x))))
+(define (cddar x) (cdr (cdr (car x))))
+(define (cdddr x) (cdr (cdr (cdr x))))
+
+(define (length li)
+    (if (nil? li)
+        0
+        (+ 1 (length (cdr li)))
+        ))
+(define (append lif lis)
+    (if (nil? lif)
+        lis
+        (cons
+            (car lif)
+            (append (cdr lif) lis)
+            )))
+
+(define (last li)
+    (if (null? (cdr li)) (car li) (last (cdr li)))
+)
+            
+(define (reverse li)
+        (if (nil? li)
+            '()
+            (append (reverse (cdr li))
+                    (list (car li))
+                    )))
+

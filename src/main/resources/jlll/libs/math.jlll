@@ -1,0 +1,1 @@
+(defmacro (def-math name)  `(define (,name x)     (invoke-static 'java.lang.Math ',name x)))(def-math sqrt)(def-math exp)(def-math log)(def-math floor)(def-math sin)(def-math cos)(def-math tan)(def-math atan)(def-math acos)(def-math atan)				;+++ 2-arg form(def-math ceil)(def-math abs)
