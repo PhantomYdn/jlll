@@ -1,1 +1,0 @@
-(define (println . rest) (eval (cons 'print (append rest '("\n")))) )
