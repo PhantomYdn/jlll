@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/PhantomYdn/jlll.svg?branch=master)](https://travis-ci.org/PhantomYdn/jlll)
+
 jlll
 ====
 
@@ -35,6 +37,6 @@ Examples
 (invoke-static 'java.lang.Math 'cos 0.0)
 1.0
 
-(invoke "hello" length)
+(invoke "hello" 'length)
 5
 ```
