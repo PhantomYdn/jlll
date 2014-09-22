@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/PhantomYdn/jlll.svg?branch=master)](https://travis-ci.org/PhantomYdn/jlll)
+[![Build Status](https://travis-ci.org/PhantomYdn/jlll.svg?branch=master)](https://travis-ci.org/PhantomYdn/jlll) [![Coverage Status](https://img.shields.io/coveralls/PhantomYdn/jlll.svg)](https://coveralls.io/r/PhantomYdn/jlll?branch=master)
 
 jlll
 ====
