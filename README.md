@@ -79,14 +79,14 @@ HELLO WORLD
 <dependency>
     <groupId>ru.ydn</groupId>
     <artifactId>jlll</artifactId>
-    <version>2.0-SNAPSHOT</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'ru.ydn:jlll:2.0-SNAPSHOT'
+implementation 'ru.ydn:jlll:2.0.0'
 ```
 
 ---
