@@ -58,11 +58,11 @@ public class MathLib extends ReflectionLibrary
                 }
                 if (isInteger)
                 {
-                    return new Integer((int) ret);
+                    return (int) ret;
                 }
                 else
                 {
-                    return new Double(ret);
+                    return ret;
                 }
             }
         };
@@ -123,11 +123,11 @@ public class MathLib extends ReflectionLibrary
                 }
                 if (isInteger)
                 {
-                    return new Integer((int) ret);
+                    return (int) ret;
                 }
                 else
                 {
-                    return new Double(ret);
+                    return ret;
                 }
             }
         };
@@ -205,7 +205,7 @@ public class MathLib extends ReflectionLibrary
                     next = Evaluator.eval(it.next(), env);
                     if (!CommonUtil.getBoolean(next)) return next;
                 }
-                return next == null? new Boolean(true):next;
+                return next == null ? Boolean.TRUE : next;
             }
         };
 
@@ -225,7 +225,7 @@ public class MathLib extends ReflectionLibrary
                     next = Evaluator.eval(it.next(), env);
                     if (CommonUtil.getBoolean(next)) return next;
                 }
-                return next == null? new Boolean(false):next;
+                return next == null ? Boolean.FALSE : next;
             }
         };
         

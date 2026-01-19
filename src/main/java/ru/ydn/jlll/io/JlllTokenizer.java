@@ -95,8 +95,7 @@ public class JlllTokenizer extends StreamTokenizer
             case TT_NUMBER:
                 {
                     parseNumbers();
-                    Double ret = new Double(nval);
-                    return ret;
+                    return nval;
                 }
             case TT_WORD:
                 {
@@ -110,7 +109,7 @@ public class JlllTokenizer extends StreamTokenizer
                 {
                     if (readList)
                     {
-                        return new Character(')');
+                        return ')';
                     }
                     else
                     {
@@ -178,7 +177,7 @@ public class JlllTokenizer extends StreamTokenizer
         while (true)
         {
             Object next = nextObject();
-            if (next instanceof Character && next.equals(new Character(')')))
+            if (next instanceof Character && next.equals(')'))
             {
                 break;
             }
@@ -186,7 +185,7 @@ public class JlllTokenizer extends StreamTokenizer
             {
                 Object cdr = nextObject();
                 Object close = nextObject();
-                if (!(close instanceof Character) || !close.equals(new Character(')')))
+                if (!(close instanceof Character) || !close.equals(')'))
                 {
                     throw new JlllException("Not a dotted list");
                 }
@@ -226,13 +225,13 @@ public class JlllTokenizer extends StreamTokenizer
         {
             if(what.indexOf(".")>=0)
             {
-                return new Double(what);
+                return Double.valueOf(what);
             }
             else
             {
                 try
                 {
-                    return new Integer(what);
+                    return Integer.valueOf(what);
                 }
                 catch (NumberFormatException e)
                 {

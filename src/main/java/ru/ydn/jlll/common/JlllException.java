@@ -1,1 +1,93 @@
-package ru.ydn.jlll.common;import java.util.ArrayList;import java.util.List;/** * Created by IntelliJ IDEA. * User: naryzhny * Date: May 6, 2003 * Time: 5:20:09 PM * To change this template use Options | File Templates. */public class JlllException extends Exception{    	private static final long serialVersionUID = 8810568891407802852L;		private List<String> jlllCouse = null;    public JlllException(String s)    {        super(s);    }    public JlllException(Throwable couse)    {    	this(couse.getMessage(), couse);    }    public JlllException(String s, Throwable couse)    {        super(s,couse);    }        public JlllException(String s, Object jlllCouse)    {        super(s);        addJlllCouse(jlllCouse);    }    public JlllException(String s, Object jlllCouse, Throwable couse)    {        super(s,couse);        addJlllCouse(jlllCouse);    }        public void addJlllCouse(Object couse)    {        if(couse!=null)        {            if(jlllCouse==null) jlllCouse = new ArrayList<String>();            jlllCouse.add(couse.toString());        }    }    public String jlllCause()    {        StringBuffer sb = new StringBuffer(super.toString());        if(jlllCouse!=null && jlllCouse.size()>0)        {            sb.append("\njlll:\n");            for (String nextCouse : jlllCouse)            {                sb.append("\tat ").append(nextCouse).append("\n");            }        }        return sb.toString();    }        public String toString()    {        StringBuffer sb = new StringBuffer(super.toString());        if(jlllCouse!=null && jlllCouse.size()>0)        {            sb.append("\njlll:\n");            for (String nextCouse : jlllCouse)            {                sb.append("\tat ").append(nextCouse).append("\n");                        }            sb.append("java:");        }        return sb.toString();    }}
+package ru.ydn.jlll.common;
+
+import java.util.ArrayList;
+
+import java.util.List;
+/** * Created by IntelliJ IDEA. * User: naryzhny * Date: May 6, 2003 * Time: 5:20:09 PM * To change this template use Options | File Templates. */
+    public class JlllException extends Exception
+{
+    	
+    private static final long serialVersionUID = 8810568891407802852L;
+		
+    private List<String> jlllCouse = null;
+    
+    public JlllException(String s)    
+{
+        super(s);
+    
+}
+    
+    public JlllException(Throwable couse)    
+{
+    	this(couse.getMessage(), couse);
+    
+}
+    
+    public JlllException(String s, Throwable couse)    
+{
+        super(s,couse);
+    
+}
+        
+    public JlllException(String s, Object jlllCouse)    
+{
+        super(s);
+        addJlllCouse(jlllCouse);
+    
+}
+    
+    public JlllException(String s, Object jlllCouse, Throwable couse)    
+{
+        super(s,couse);
+        addJlllCouse(jlllCouse);
+    
+}
+        
+    public void addJlllCouse(Object couse)    
+{
+        if(couse!=null)        
+{
+            if(jlllCouse==null) jlllCouse = new ArrayList<String>();
+            jlllCouse.add(couse.toString());
+        
+}
+    
+}
+    
+    public String jlllCause()    
+{
+        StringBuffer sb = new StringBuffer(super.toString());
+        if(jlllCouse!=null && jlllCouse.size()>0)        
+{
+            sb.append("\njlll:\n");
+            for (String nextCouse : jlllCouse)            
+{
+                sb.append("\tat ").append(nextCouse).append("\n");
+            
+}
+        
+}
+        return sb.toString();
+    
+}
+        
+    public String toString()    
+{
+        StringBuffer sb = new StringBuffer(super.toString());
+        if(jlllCouse!=null && jlllCouse.size()>0)        
+{
+            sb.append("\njlll:\n");
+            for (String nextCouse : jlllCouse)            
+{
+                sb.append("\tat ").append(nextCouse).append("\n");
+                        
+}
+            sb.append("java:");
+        
+}
+        return sb.toString();
+    
+}
+
+}
+

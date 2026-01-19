@@ -1,1 +1,254 @@
-package ru.ydn.jlll.common;import java.io.*;import java.net.URL;import java.util.ArrayList;import java.util.Iterator;import java.util.List;import ru.ydn.jlll.io.JlllTokenizer;import ru.ydn.jlll.util.ListUtil;/** * Created by IntelliJ IDEA. * User: Eleas * Date: 18.05.2003 * Time: 3:17:43 * To change this template use Options | File Templates. */public class Jlll{    public static Object eval(Object eval, Enviroment env) throws JlllException    {        return Evaluator.eval(eval, env);    }    public static Object eval(Object eval) throws JlllException    {        return eval(eval, Enviroment.top);    }    public static Object eval(String str, Enviroment env) throws JlllException    {        return eval(new StringReader(str), env);    }    public static Object eval(String str) throws JlllException    {        return eval(str, Enviroment.top);    }    public static Object eval(InputStream is, Enviroment env) throws JlllException    {        return eval(new InputStreamReader(is), env);    }    public static Object eval(InputStream is) throws JlllException    {        return eval(is, Enviroment.top);    }    public static Object eval(URL url, Enviroment env) throws JlllException    {        Object ret;        try        {            ret = eval(url.openConnection().getInputStream(), env);        }        catch (IOException e)        {            throw new JlllException("IOERROR", e);        }        return ret;    }    public static Object eval(URL url) throws JlllException    {        return eval(url, Enviroment.top);    }    public static Object eval(Reader reader, Enviroment env) throws JlllException    {        JlllTokenizer jt = new JlllTokenizer(reader);        Object ret = null;        Object next = null;        while (true)        {            try            {                next = jt.nextObject();                if (next == null) break;                ret = Evaluator.eval(next, env);            }            catch (IOException e)            {                throw new JlllException("IOERROR", e);            }        }        return ret;    }    public static Object eval(Reader reader) throws JlllException    {        return eval(reader, Enviroment.top);    }    public static Cons evalEvery(Cons cons, Enviroment env) throws JlllException    {        Iterator<?> it = cons.iterator();        List<Object> ret = new ArrayList<Object>();        while (it.hasNext())        {            ret.add(Evaluator.eval(it.next(), env));        }        return ListUtil.arrayToCons(ret.toArray());    }    public static Object invoke(String code, Object... args) throws JlllException    {        return invoke(code, Enviroment.top, args);    }    public static Object invoke(String code, Enviroment env, Object... args) throws JlllException    {        ArgsEnvironment newEnv = new ArgsEnvironment(env, args);        Object ret = Jlll.eval(code, newEnv);        return ret == null || ret instanceof Null ? null : ret;    }    public static Object invokeProcedure(String primitiveName, Enviroment env, Object... args) throws JlllException    {        return eval(new Cons(Symbol.intern(primitiveName), Cons.list(args)), env);    }    public static String describeEval(String code, Enviroment env)    {        StringWriter sw = new StringWriter();        PrintWriter out = new PrintWriter(sw);        out.println("Code: " + code);        try        {            long startTime = System.currentTimeMillis();            Object ret = Jlll.eval(code, env);            long finishTime = System.currentTimeMillis();            out.println("Execution time: " + (finishTime - startTime) + "mil.");            out.println("Class: " + (ret == null || ret instanceof Null ? "null" : ret.getClass().getName()));            out.println("toString: " + ret);        }        catch (Exception e)        {            e.printStackTrace(out);        }        return sw.toString();    }    public static Object prepare(String str) throws JlllException    {        return prepare(new StringReader(str));    }    public static Object prepare(Reader reader) throws JlllException    {        JlllTokenizer jt = new JlllTokenizer(reader);        Object next = null;        Object ret = null;        boolean list = false;        while (true)        {            try            {                next = jt.nextObject();                if (next == null) break;                if (ret == null)                {                    ret = next;                }                else                {                    if (list)                    {                        ListUtil.append((Cons) ret, next);                    }                    else                    {                        ret = new Cons(Symbol.BEGIN, new Cons(ret));                        ListUtil.append((Cons) ret, next);                        list = true;                    }                }            }            catch (IOException e)            {                throw new JlllException("IOException", e);            }        }        return ret;    }    public static void main(String[] args)    {        try        {            Reader in = new InputStreamReader(System.in);            BufferedReader br = new BufferedReader(in);            Enviroment env = new Enviroment(Enviroment.top);            while (true)            {            	System.out.print(">");                String line = br.readLine();                if (line == null) break;                try                {                    System.out.println(eval(line, env));                                    }                catch (Exception e)                {                    e.printStackTrace();                }            }        }        catch (IOException e)        {            e.printStackTrace();        }    }}
+package ru.ydn.jlll.common;
+
+import java.io.*;
+
+import java.net.URL;
+
+import java.util.ArrayList;
+
+import java.util.Iterator;
+
+import java.util.List;
+
+import ru.ydn.jlll.io.JlllTokenizer;
+
+import ru.ydn.jlll.util.ListUtil;
+/** * Created by IntelliJ IDEA. * User: Eleas * Date: 18.05.2003 * Time: 3:17:43 * To change this template use Options | File Templates. */
+    public class Jlll
+{
+    
+    public static Object eval(Object eval, Enviroment env) throws JlllException    
+{
+        return Evaluator.eval(eval, env);
+    
+}
+    
+    public static Object eval(Object eval) throws JlllException    
+{
+        return eval(eval, Enviroment.top);
+    
+}
+    
+    public static Object eval(String str, Enviroment env) throws JlllException    
+{
+        return eval(new StringReader(str), env);
+    
+}
+    
+    public static Object eval(String str) throws JlllException    
+{
+        return eval(str, Enviroment.top);
+    
+}
+    
+    public static Object eval(InputStream is, Enviroment env) throws JlllException    
+{
+        return eval(new InputStreamReader(is), env);
+    
+}
+    
+    public static Object eval(InputStream is) throws JlllException    
+{
+        return eval(is, Enviroment.top);
+    
+}
+    
+    public static Object eval(URL url, Enviroment env) throws JlllException    
+{
+        Object ret;
+        try        
+{
+            ret = eval(url.openConnection().getInputStream(), env);
+        
+}
+        catch (IOException e)        
+{
+            throw new JlllException("IOERROR", e);
+        
+}
+        return ret;
+    
+}
+    
+    public static Object eval(URL url) throws JlllException    
+{
+        return eval(url, Enviroment.top);
+    
+}
+    
+    public static Object eval(Reader reader, Enviroment env) throws JlllException    
+{
+        JlllTokenizer jt = new JlllTokenizer(reader);
+        Object ret = null;
+        Object next = null;
+        while (true)        
+{
+            try            
+{
+                next = jt.nextObject();
+                if (next == null) break;
+                ret = Evaluator.eval(next, env);
+            
+}
+            catch (IOException e)            
+{
+                throw new JlllException("IOERROR", e);
+            
+}
+        
+}
+        return ret;
+    
+}
+    
+    public static Object eval(Reader reader) throws JlllException    
+{
+        return eval(reader, Enviroment.top);
+    
+}
+    
+    public static Cons evalEvery(Cons cons, Enviroment env) throws JlllException    
+{
+        Iterator<?> it = cons.iterator();
+        List<Object> ret = new ArrayList<Object>();
+        while (it.hasNext())        
+{
+            ret.add(Evaluator.eval(it.next(), env));
+        
+}
+        return ListUtil.arrayToCons(ret.toArray());
+    
+}
+    
+    public static Object invoke(String code, Object... args) throws JlllException    
+{
+        return invoke(code, Enviroment.top, args);
+    
+}
+    
+    public static Object invoke(String code, Enviroment env, Object... args) throws JlllException    
+{
+        ArgsEnvironment newEnv = new ArgsEnvironment(env, args);
+        Object ret = Jlll.eval(code, newEnv);
+        return ret == null || ret instanceof Null ? null : ret;
+    
+}
+    
+    public static Object invokeProcedure(String primitiveName, Enviroment env, Object... args) throws JlllException    
+{
+        return eval(new Cons(Symbol.intern(primitiveName), Cons.list(args)), env);
+    
+}
+    
+    public static String describeEval(String code, Enviroment env)    
+{
+        StringWriter sw = new StringWriter();
+        PrintWriter out = new PrintWriter(sw);
+        out.println("Code: " + code);
+        try        
+{
+            long startTime = System.currentTimeMillis();
+            Object ret = Jlll.eval(code, env);
+            long finishTime = System.currentTimeMillis();
+            out.println("Execution time: " + (finishTime - startTime) + "mil.");
+            out.println("Class: " + (ret == null || ret instanceof Null ? "null" : ret.getClass().getName()));
+            out.println("toString: " + ret);
+        
+}
+        catch (Exception e)        
+{
+            e.printStackTrace(out);
+        
+}
+        return sw.toString();
+    
+}
+    
+    public static Object prepare(String str) throws JlllException    
+{
+        return prepare(new StringReader(str));
+    
+}
+    
+    public static Object prepare(Reader reader) throws JlllException    
+{
+        JlllTokenizer jt = new JlllTokenizer(reader);
+        Object next = null;
+        Object ret = null;
+        boolean list = false;
+        while (true)        
+{
+            try            
+{
+                next = jt.nextObject();
+                if (next == null) break;
+                if (ret == null)                
+{
+                    ret = next;
+                
+}
+                else                
+{
+                    if (list)                    
+{
+                        ListUtil.append((Cons) ret, next);
+                    
+}
+                    else                    
+{
+                        ret = new Cons(Symbol.BEGIN, new Cons(ret));
+                        ListUtil.append((Cons) ret, next);
+                        list = true;
+                    
+}
+                
+}
+            
+}
+            catch (IOException e)            
+{
+                throw new JlllException("IOException", e);
+            
+}
+        
+}
+        return ret;
+    
+}
+    
+    public static void main(String[] args)    
+{
+        try        
+{
+            Reader in = new InputStreamReader(System.in);
+            BufferedReader br = new BufferedReader(in);
+            Enviroment env = new Enviroment(Enviroment.top);
+            while (true)            
+{
+            	System.out.print(">");
+                String line = br.readLine();
+                if (line == null) break;
+                try                
+{
+                    System.out.println(eval(line, env));
+                                    
+}
+                catch (Exception e)                
+{
+                    e.printStackTrace();
+                
+}
+            
+}
+        
+}
+        catch (IOException e)        
+{
+            e.printStackTrace();
+        
+}
+    
+}
+
+}
+

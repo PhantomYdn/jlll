@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 2.0.0)'
+        required: true
+        type: string
+      next_version:
+        description: 'Next SNAPSHOT version (e.g., 2.1-SNAPSHOT)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Only run on main repository, not forks
+    if: github.repository == 'PhantomYdn/jlll'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+          server-id: central
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: GPG_PASSPHRASE
+
+      - name: Validate version format
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "Error: Version '${{ inputs.version }}' is not a valid release version"
+            exit 1
+          fi
+          if [[ ! "${{ inputs.next_version }}" =~ ^[0-9]+\.[0-9]+(-SNAPSHOT)?$ ]]; then
+            echo "Error: Next version '${{ inputs.next_version }}' is not valid"
+            exit 1
+          fi
+
+      - name: Set release version
+        run: mvn -B versions:set -DnewVersion=${{ inputs.version }} -DgenerateBackupPoms=false
+
+      - name: Build and verify
+        run: mvn -B verify --file pom.xml
+
+      - name: Deploy to Maven Central
+        run: mvn -B deploy -Prelease -DskipTests
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Commit release version
+        run: |
+          git add pom.xml
+          git commit -m "Release v${{ inputs.version }}"
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+
+      - name: Set next SNAPSHOT version
+        run: mvn -B versions:set -DnewVersion=${{ inputs.next_version }} -DgenerateBackupPoms=false
+
+      - name: Commit next version
+        run: |
+          git add pom.xml
+          git commit -m "Prepare for next development iteration (${{ inputs.next_version }})"
+
+      - name: Push changes and tags
+        run: |
+          git push origin HEAD
+          git push origin "v${{ inputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: JLLL v${{ inputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false

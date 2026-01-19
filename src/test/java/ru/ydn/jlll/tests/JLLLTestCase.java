@@ -182,8 +182,8 @@ public class JLLLTestCase
     @Test
     public void testObjectEval() throws Exception
     {
-        eval(new Integer(1), "1");
-        eval(new Double(1.0), "1.0");
+        eval(1, "1");
+        eval(1.0, "1.0");
         eval("string", "\"string\"");
         Object obj = new Object();
         assertEquals(Jlll.eval(obj, env),obj);        
@@ -219,10 +219,10 @@ public class JLLLTestCase
     @Test
     public void testPredefined() throws Exception
     {
-        eval(new Boolean(true), "true");
-//        eval("#t", new Boolean(true));
-        eval(new Boolean(false), "false");
-//        eval("#f", new Boolean(false));
+        eval(true, "true");
+//        eval("#t", true);
+        eval(false, "false");
+//        eval("#f", false);
         //eval("null",null);
         eval(Null.NULL,"null");
     }
