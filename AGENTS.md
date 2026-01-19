@@ -252,10 +252,7 @@ new Primitive("my-func", env)
   - Runs on push/PR to master/main
   - Tests on Java 17 and 21
   - Code coverage with JaCoCo + Codecov
-
-- **Nightly Snapshots**: GitHub Actions (`.github/workflows/nightly.yml`)
-  - Publishes SNAPSHOT to Maven Central Portal daily at 2 AM UTC
-  - Can be triggered manually
+  - Publishes SNAPSHOT to Maven Central Portal on every successful push to master/main
 
 - **Releases**: GitHub Actions (`.github/workflows/release.yml`)
   - Manual workflow dispatch with version input
