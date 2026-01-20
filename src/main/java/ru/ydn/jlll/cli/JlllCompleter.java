@@ -44,13 +44,8 @@ public class JlllCompleter implements Completer
     @Override
     public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates)
     {
-        String word = line.word();
-        String buffer = line.line();
-        int cursor = line.cursor();
-
-        // Find the start of the current symbol
-        int wordStart = findSymbolStart(buffer, cursor);
-        String prefix = buffer.substring(wordStart, cursor);
+        // Use the word from the parser directly - it now correctly identifies Lisp symbols
+        String prefix = line.word();
 
         // Collect all possible completions
         TreeSet<String> completions = new TreeSet<>();
@@ -89,34 +84,6 @@ public class JlllCompleter implements Completer
                 true                  // complete
             ));
         }
-    }
-
-    /**
-     * Find the start position of the current symbol being typed.
-     */
-    private int findSymbolStart(String buffer, int cursor)
-    {
-        int pos = cursor - 1;
-        while (pos >= 0)
-        {
-            char c = buffer.charAt(pos);
-            if (isSymbolTerminator(c))
-            {
-                break;
-            }
-            pos--;
-        }
-        return pos + 1;
-    }
-
-    /**
-     * Check if a character terminates a symbol.
-     */
-    private boolean isSymbolTerminator(char c)
-    {
-        return c == '(' || c == ')' || c == '[' || c == ']' ||
-               c == '\'' || c == '`' || c == ',' || c == '@' ||
-               c == '"' || c == ';' || Character.isWhitespace(c);
     }
 
     /**

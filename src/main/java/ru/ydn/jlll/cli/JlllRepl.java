@@ -94,6 +94,7 @@ public class JlllRepl
             .terminal(terminal)
             .history(history)
             .variable(LineReader.HISTORY_FILE, historyPath)
+            .parser(new JlllParser())
             .completer(new JlllCompleter(env))
             .highlighter(colorEnabled ? new JlllHighlighter() : null)
             .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
