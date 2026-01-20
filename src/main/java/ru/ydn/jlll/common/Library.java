@@ -1,13 +1,24 @@
 package ru.ydn.jlll.common;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 18:21:19
- * To change this template use Options | File Templates.
+ * Interface for loadable JLLL libraries.
+ * Libraries register primitives, macros, and bindings when loaded into an environment.
+ *
+ * <p>
+ * Implement this interface to create custom libraries that can be loaded with
+ * {@code (load-lib "com.example.MyLib")}.
+ * </p>
  */
 public interface Library
 {
+    /**
+     * Loads this library into the given environment.
+     * Implementations should register all primitives and bindings here.
+     *
+     * @param env
+     *            the environment to load into
+     * @throws JlllException
+     *             if loading fails
+     */
     public void load(Enviroment env) throws JlllException;
 }

@@ -3,14 +3,50 @@ package ru.ydn.jlll.common;
 import java.lang.reflect.Method;
 import ru.ydn.jlll.common.annotation.JlllName;
 
+/**
+ * Base class for libraries that expose Java methods as JLLL primitives via reflection.
+ * Methods annotated with {@link JlllName} are automatically registered as primitives.
+ *
+ * <p>
+ * Example library:
+ * </p>
+ *
+ * <pre>
+ * public class MyLib extends ReflectionLibrary
+ * {
+ *     &#64;JlllName("greet")
+ *     public String greet(Enviroment env, String name)
+ *     {
+ *         return "Hello, " + name;
+ *     }
+ * }
+ * </pre>
+ */
 public abstract class ReflectionLibrary implements Library
 {
-    //protected Logger log = Logger.getLogger(this.getClass());
+    /**
+     * Loads this library by scanning for {@link JlllName} annotated methods.
+     *
+     * @param env
+     *            the environment to load into
+     * @throws JlllException
+     *             if loading fails
+     */
     public void load(Enviroment env) throws JlllException
     {
         loadMethods(this, env);
     }
 
+    /**
+     * Scans an object for {@link JlllName} annotated methods and registers them as primitives.
+     *
+     * @param obj
+     *            the object containing annotated methods
+     * @param env
+     *            the environment to register primitives in
+     * @throws JlllException
+     *             if registration fails
+     */
     public static void loadMethods(Object obj, Enviroment env) throws JlllException
     {
         Method[] methods = obj.getClass().getMethods();

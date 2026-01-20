@@ -1,13 +1,21 @@
 package ru.ydn.jlll.common;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: 06.09.2007
- * Time: 14:08:07
- * To change this template use File | Settings | File Templates.
+ * Functional interface for type conversion when calling Java methods from JLLL.
+ * Implementations convert JLLL values to the required Java types.
  */
 public interface Convertor
 {
+    /**
+     * Converts a JLLL value to the required Java type.
+     *
+     * @param value
+     *            the JLLL value to convert
+     * @param requiredClass
+     *            the target Java class
+     * @param env
+     *            the current environment (for context)
+     * @return the converted value
+     */
     public Object convert(Object value, Class<?> requiredClass, Enviroment env);
 }

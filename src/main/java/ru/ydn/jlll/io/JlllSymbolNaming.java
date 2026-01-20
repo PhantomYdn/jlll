@@ -7,14 +7,22 @@ import java.io.StringWriter;
 import ru.ydn.jlll.common.JlllException;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: Oct 27, 2004
- * Time: 6:11:41 PM
- * To change this template use Options | File Templates.
+ * Symbol naming utilities for escape sequence handling.
+ * Converts between internal symbol representation and display format,
+ * handling special characters like spaces and newlines.
  */
 public class JlllSymbolNaming
 {
+    /**
+     * Converts an input string to internal symbol name, processing escape sequences.
+     * Escape sequences: {@code \\} for backslash, {@code \n} for newline, {@code \s} for space.
+     *
+     * @param str
+     *            the input string possibly containing escape sequences
+     * @return the symbol name with escapes resolved
+     * @throws JlllException
+     *             if escape sequence is malformed
+     */
     public static String convertFromInToSymbolName(String str) throws JlllException
     {
         if (str.indexOf("\\") >= 0)
@@ -67,6 +75,13 @@ public class JlllSymbolNaming
         }
     }
 
+    /**
+     * Converts a symbol name to output format, escaping special characters.
+     *
+     * @param str
+     *            the internal symbol name
+     * @return the display string with special characters escaped
+     */
     public static String convertFromSymbolNameToOut(String str)
     {
         return str.replace("\\", "\\\\").replace(" ", "\\s").replace("\n", "\\n");

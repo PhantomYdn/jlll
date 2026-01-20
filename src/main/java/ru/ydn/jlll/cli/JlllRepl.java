@@ -36,16 +36,34 @@ public class JlllRepl
     private LineReader reader;
     private PrintWriter out;
 
+    /**
+     * Creates a REPL for the given environment.
+     *
+     * @param env
+     *            the environment for evaluating expressions
+     */
     public JlllRepl(Enviroment env)
     {
         this.env = env;
     }
 
+    /**
+     * Enables or disables ANSI color output.
+     *
+     * @param enabled
+     *            true to enable colors
+     */
     public void setColorEnabled(boolean enabled)
     {
         this.colorEnabled = enabled;
     }
 
+    /**
+     * Enables or disables the startup banner.
+     *
+     * @param quiet
+     *            true to suppress the banner
+     */
     public void setQuiet(boolean quiet)
     {
         this.quiet = quiet;

@@ -9,16 +9,17 @@ import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 06.05.2003
- * Time: 22:46:14
- * To change this template use Options | File Templates.
+ * Utility methods for Cons list construction and manipulation.
+ * Provides conversions between Cons lists and Java collections/arrays.
  */
 public class ListUtil
 {
+    /** Generic comparator for sorting lists with Comparable elements */
     public static final Comparator<Object> GENERIC_COMPARATOR = new GenericComparator();
 
+    /**
+     * Comparator that delegates to Comparable.compareTo().
+     */
     public static class GenericComparator implements Comparator<Object>
     {
         public int compare(Object o1, Object o2)
@@ -29,9 +30,18 @@ public class ListUtil
         }
     }
 
+    /**
+     * Appends an element to the end of a Cons list (mutating).
+     *
+     * @param first
+     *            the list to append to
+     * @param last
+     *            the element to append
+     * @throws JlllException
+     *             if the list is a dotted pair
+     */
     public static void append(Cons first, Object last) throws JlllException
     {
-        //        if(obj==null) return;
         if (first.car() == null)
             first.car(last);
         else if (first.cdr() == null || ((first.cdr() instanceof Cons) && ((Cons) first.cdr()).isNull()))
@@ -51,11 +61,29 @@ public class ListUtil
         }
     }
 
+    /**
+     * Converts a Cons list to an Object array.
+     *
+     * @param cons
+     *            the list to convert
+     * @return array of list elements
+     * @throws JlllException
+     *             if iteration fails
+     */
     public static Object[] listVector(Cons cons) throws JlllException
     {
         return consToList(cons).toArray();
     }
 
+    /**
+     * Converts a Cons list to a Java List.
+     *
+     * @param cons
+     *            the Cons list to convert
+     * @return a new ArrayList containing the elements
+     * @throws JlllException
+     *             if iteration fails
+     */
     public static List<Object> consToList(Cons cons) throws JlllException
     {
         List<Object> ret = new ArrayList<Object>();
@@ -67,11 +95,25 @@ public class ListUtil
         return ret;
     }
 
+    /**
+     * Creates a Cons list from varargs.
+     *
+     * @param objects
+     *            the elements
+     * @return a new Cons list
+     */
     public static Cons toCons(Object... objects)
     {
         return arrayToCons(objects);
     }
 
+    /**
+     * Converts an array to a Cons list.
+     *
+     * @param array
+     *            the array to convert
+     * @return a new Cons list containing the array elements
+     */
     public static Cons arrayToCons(Object[] array)
     {
         return arrayToCons(array, null);

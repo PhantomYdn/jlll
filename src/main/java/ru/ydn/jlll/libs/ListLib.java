@@ -11,11 +11,20 @@ import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 18:32:25
- * To change this template use Options | File Templates.
+ * List manipulation primitives.
+ *
+ * <p>
+ * Provides list utilities in addition to core list operations (cons, car, cdr):
+ * </p>
+ * <ul>
+ * <li><b>list-&gt;vector:</b> converts a list to a Java array</li>
+ * <li><b>collection-&gt;list:</b> converts a Java Collection to a Cons list</li>
+ * </ul>
+ *
+ * <p>
+ * Also loads list.jlll which provides additional functions like
+ * list, append, reverse, length, nth, etc.
+ * </p>
  */
 public class ListLib implements Library
 {

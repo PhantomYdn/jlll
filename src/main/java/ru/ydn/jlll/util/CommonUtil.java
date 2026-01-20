@@ -8,19 +8,30 @@ import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: May 15, 2003
- * Time: 5:43:35 PM
- * To change this template use Options | File Templates.
+ * Common utility methods for Java reflection and type handling.
+ * Used internally by JLLL for Java interoperability operations.
  */
 public class CommonUtil
 {
+    /**
+     * Converts null to Null.NULL for JLLL compatibility.
+     *
+     * @param ret
+     *            the value to prepare
+     * @return the value, or Null.NULL if null
+     */
     public static Object prepareReturn(Object ret)
     {
         return ret == null ? Null.NULL : ret;
     }
 
+    /**
+     * Converts Null.NULL to Java null.
+     *
+     * @param obj
+     *            the value to convert
+     * @return null if Null.NULL, otherwise the original value
+     */
     public static Object avoidNull(Object obj)
     {
         if (Null.NULL.equals(obj))
@@ -28,6 +39,17 @@ public class CommonUtil
         return obj;
     }
 
+    /**
+     * Creates an object using reflection, finding a matching constructor.
+     *
+     * @param clss
+     *            the class to instantiate
+     * @param constr
+     *            constructor arguments
+     * @return the new instance
+     * @throws JlllException
+     *             if no matching constructor or instantiation fails
+     */
     public static Object constactObject(Class<?> clss, Object[] constr) throws JlllException
     {
         try
@@ -70,6 +92,19 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Invokes a method on an object using reflection.
+     *
+     * @param object
+     *            the target object
+     * @param methodS
+     *            the method name
+     * @param params
+     *            method arguments
+     * @return the method result
+     * @throws JlllException
+     *             if method not found or invocation fails
+     */
     public static Object invoke(Object object, String methodS, Object[] params) throws JlllException
     {
         if (object == null)

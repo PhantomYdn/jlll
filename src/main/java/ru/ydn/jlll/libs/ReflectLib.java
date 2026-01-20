@@ -8,11 +8,20 @@ import ru.ydn.jlll.common.annotation.JlllName;
 import ru.ydn.jlll.util.CommonUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 18:26:18
- * To change this template use Options | File Templates.
+ * Java reflection primitives for interoperability.
+ *
+ * <p>
+ * Provides Java interop operations:
+ * </p>
+ * <ul>
+ * <li><b>new:</b> creates Java objects - {@code (new "java.util.ArrayList")}</li>
+ * <li><b>invoke:</b> calls instance methods - {@code (invoke list "add" item)}</li>
+ * <li><b>invoke-static:</b> calls static methods - {@code (invoke-static "Math" "sqrt" 2)}</li>
+ * <li><b>peek/poke:</b> gets/sets instance fields</li>
+ * <li><b>peek-static/poke-static:</b> gets/sets static fields</li>
+ * <li><b>instanceof?:</b> type checking - {@code (instanceof? obj "java.util.List")}</li>
+ * <li><b>class:</b> converts string to Class object</li>
+ * </ul>
  */
 public class ReflectLib extends ReflectionLibrary
 {

@@ -25,11 +25,20 @@ import ru.ydn.jlll.io.Marshaller;
 import ru.ydn.jlll.io.MultiPartFormOutputStream;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 18:30:42
- * To change this template use Options | File Templates.
+ * I/O and networking primitives.
+ *
+ * <p>
+ * Provides input/output and HTTP operations:
+ * </p>
+ * <ul>
+ * <li><b>print:</b> outputs values to stdout or specified writer</li>
+ * <li><b>remote-eval:</b> evaluates code on a remote JLLL server</li>
+ * <li><b>remote-login:</b> authenticates with a remote JLLL server</li>
+ * </ul>
+ *
+ * <p>
+ * Also loads iolib.jlll which provides println and other utilities.
+ * </p>
  */
 public class IOLib implements Library
 {

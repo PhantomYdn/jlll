@@ -14,11 +14,22 @@ import ru.ydn.jlll.util.CommonUtil;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 18:28:13
- * To change this template use Options | File Templates.
+ * Mathematical and logical primitives.
+ *
+ * <p>
+ * Provides arithmetic and comparison operations:
+ * </p>
+ * <ul>
+ * <li><b>Arithmetic:</b> +, -, *, /</li>
+ * <li><b>Comparison:</b> &lt;, &gt;, =, between</li>
+ * <li><b>Aggregation:</b> max, min</li>
+ * <li><b>Logic:</b> and, or, not</li>
+ * </ul>
+ *
+ * <p>
+ * Arithmetic operations support both integers and floating-point numbers,
+ * preserving integer type when all operands are integers.
+ * </p>
  */
 public class MathLib extends ReflectionLibrary
 {

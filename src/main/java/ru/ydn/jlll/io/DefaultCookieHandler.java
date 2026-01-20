@@ -9,11 +9,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Simple HTTP cookie handler for JLLL's network operations.
+ * Stores cookies per-host and automatically includes them in subsequent requests.
+ */
 public class DefaultCookieHandler extends CookieHandler
 {
     private Map<URI, List<String>> cache = new HashMap<URI, List<String>>();
 
-    //private static final Map<String, List<String>> NULL_MAP = new HashMap<String, List<String>>();
+    /**
+     * Returns cookies for the given URI.
+     *
+     * @param uri
+     *            the request URI
+     * @param arg1
+     *            request headers (unused)
+     * @return map containing Cookie header if cookies exist for this host
+     * @throws IOException
+     *             if URI normalization fails
+     */
     @Override
     public Map<String, List<String>> get(URI uri, Map<String, List<String>> arg1) throws IOException
     {
@@ -26,6 +40,16 @@ public class DefaultCookieHandler extends CookieHandler
         return ret;
     }
 
+    /**
+     * Stores cookies from a response.
+     *
+     * @param uri
+     *            the response URI
+     * @param arg1
+     *            response headers containing Set-Cookie
+     * @throws IOException
+     *             if URI normalization fails
+     */
     @Override
     public void put(URI uri, Map<String, List<String>> arg1) throws IOException
     {

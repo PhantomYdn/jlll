@@ -4,44 +4,87 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: May 6, 2003
- * Time: 5:20:09 PM
- * To change this template use Options | File Templates.
+ * Exception thrown during JLLL parsing or evaluation.
+ * Wraps interpreter errors with optional JLLL stack trace information showing
+ * the Lisp expressions that led to the error.
  */
 public class JlllException extends Exception
 {
     private static final long serialVersionUID = 8810568891407802852L;
     private List<String> jlllCouse = null;
 
+    /**
+     * Creates an exception with the given message.
+     *
+     * @param s
+     *            the error message
+     */
     public JlllException(String s)
     {
         super(s);
     }
 
+    /**
+     * Creates an exception wrapping another throwable.
+     *
+     * @param couse
+     *            the underlying cause
+     */
     public JlllException(Throwable couse)
     {
         this(couse.getMessage(), couse);
     }
 
+    /**
+     * Creates an exception with message and cause.
+     *
+     * @param s
+     *            the error message
+     * @param couse
+     *            the underlying cause
+     */
     public JlllException(String s, Throwable couse)
     {
         super(s, couse);
     }
 
+    /**
+     * Creates an exception with message and JLLL context.
+     *
+     * @param s
+     *            the error message
+     * @param jlllCouse
+     *            the JLLL expression that caused the error
+     */
     public JlllException(String s, Object jlllCouse)
     {
         super(s);
         addJlllCouse(jlllCouse);
     }
 
+    /**
+     * Creates an exception with message, JLLL context, and Java cause.
+     *
+     * @param s
+     *            the error message
+     * @param jlllCouse
+     *            the JLLL expression that caused the error
+     * @param couse
+     *            the underlying Java exception
+     */
     public JlllException(String s, Object jlllCouse, Throwable couse)
     {
         super(s, couse);
         addJlllCouse(jlllCouse);
     }
 
+    /**
+     * Adds a JLLL expression to the error context stack.
+     * Called during stack unwinding to build up the JLLL trace.
+     *
+     * @param couse
+     *            the JLLL expression to add to the trace
+     */
     public void addJlllCouse(Object couse)
     {
         if (couse != null)
@@ -52,6 +95,11 @@ public class JlllException extends Exception
         }
     }
 
+    /**
+     * Returns the JLLL stack trace as a string.
+     *
+     * @return the formatted JLLL trace
+     */
     public String jlllCause()
     {
         StringBuffer sb = new StringBuffer(super.toString());

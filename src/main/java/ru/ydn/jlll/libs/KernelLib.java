@@ -23,11 +23,21 @@ import ru.ydn.jlll.util.CommonUtil;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 18:24:56
- * To change this template use Options | File Templates.
+ * Core JLLL primitives and special forms.
+ *
+ * <p>
+ * Provides fundamental language constructs:
+ * </p>
+ * <ul>
+ * <li><b>Definitions:</b> define, set!, defmacro</li>
+ * <li><b>Control flow:</b> if, cond, case, begin</li>
+ * <li><b>Procedures:</b> lambda, apply, eval</li>
+ * <li><b>List operations:</b> cons, car, cdr, quote, quasiquote</li>
+ * <li><b>Higher-order:</b> map, mapall, filter</li>
+ * <li><b>Utilities:</b> concat, time, sleep, describe, exit</li>
+ * <li><b>Loading:</b> load-url, load-system-script</li>
+ * <li><b>Environment:</b> current-environment, top-environment</li>
+ * </ul>
  */
 public class KernelLib implements Library
 {

@@ -12,22 +12,29 @@ import ru.ydn.jlll.common.Symbol;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: May 6, 2003
- * Time: 4:25:17 PM
- * To change this template use Options | File Templates.
+ * Lexer for JLLL source code.
+ * Extends {@link StreamTokenizer} to recognize Lisp syntax elements including
+ * parentheses, quotes, symbols, numbers, strings, and comments.
  */
 public class JlllTokenizer extends StreamTokenizer
 {
     private boolean readList = false;
 
+    /**
+     * Creates a tokenizer for the given input.
+     *
+     * @param reader
+     *            the source to tokenize
+     */
     public JlllTokenizer(Reader reader)
     {
         super(reader);
         setSyntax();
     }
 
+    /**
+     * Configures the tokenizer syntax for JLLL.
+     */
     private void setSyntax()
     {
         //        resetSyntax();
@@ -80,6 +87,16 @@ public class JlllTokenizer extends StreamTokenizer
         //        ordinaryChar('@');
     }
 
+    /**
+     * Reads and returns the next JLLL object from the input.
+     * Handles atoms (symbols, numbers, strings) and compound structures (lists).
+     *
+     * @return the next parsed object, or null at end of input
+     * @throws IOException
+     *             if reading fails
+     * @throws JlllException
+     *             if syntax is invalid
+     */
     public Object nextObject() throws IOException, JlllException
     {
         nextToken();

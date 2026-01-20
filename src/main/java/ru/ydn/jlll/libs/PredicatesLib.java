@@ -9,11 +9,20 @@ import ru.ydn.jlll.common.ReflectionLibrary;
 import ru.ydn.jlll.common.annotation.JlllName;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: May 19, 2003
- * Time: 10:53:59 AM
- * To change this template use Options | File Templates.
+ * Type predicates and testing functions.
+ *
+ * <p>
+ * Provides type checking and value testing:
+ * </p>
+ * <ul>
+ * <li><b>null?:</b> tests if value is null/nil</li>
+ * <li><b>jlll-bound?:</b> tests if a symbol is bound in the environment</li>
+ * </ul>
+ *
+ * <p>
+ * Also loads predicates.jlll which provides additional predicates like
+ * list?, number?, string?, symbol?, procedure?, etc.
+ * </p>
  */
 public class PredicatesLib extends ReflectionLibrary
 {

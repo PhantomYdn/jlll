@@ -38,6 +38,12 @@ mvn test -Ddburl=<jdbc-url>
 
 # Code coverage report (generates target/site/jacoco/index.html)
 mvn verify
+
+# Check code formatting (CI uses this)
+mvn spotless:check
+
+# Auto-format all source files
+mvn spotless:apply
 ```
 
 ## Project Structure

@@ -3,11 +3,8 @@ package ru.ydn.jlll.common;
 import java.util.Iterator;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: May 6, 2003
- * Time: 8:08:16 PM
- * To change this template use Options | File Templates.
+ * Environment for procedure execution with bound arguments.
+ * Created when a procedure is called to bind parameter names to argument values.
  */
 public class ProcEnvironment extends Enviroment
 {

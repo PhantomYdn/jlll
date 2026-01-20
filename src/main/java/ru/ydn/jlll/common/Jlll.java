@@ -9,44 +9,126 @@ import ru.ydn.jlll.io.JlllTokenizer;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 3:17:43
- * To change this template use Options | File Templates.
+ * Main entry point for the JLLL interpreter.
+ * Provides static methods to evaluate Lisp expressions from strings, streams, files, and URLs.
+ *
+ * <p>
+ * Basic usage:
+ * </p>
+ *
+ * <pre>
+ * // Evaluate a simple expression
+ * Object result = Jlll.eval("(+ 1 2 3)");
+ * // Evaluate with custom environment
+ * Enviroment env = new Enviroment(Enviroment.top);
+ * Jlll.eval("(define x 10)", env);
+ * // Invoke with Java arguments accessible via $1, $2, etc.
+ * Object sum = Jlll.invoke("(+ $1 $2)", 10, 20);
+ * </pre>
  */
 public class Jlll
 {
+    /**
+     * Evaluates a parsed JLLL expression in the given environment.
+     *
+     * @param eval
+     *            the parsed expression (Cons, Symbol, or literal)
+     * @param env
+     *            the environment for variable bindings
+     * @return the result of evaluation
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object eval(Object eval, Enviroment env) throws JlllException
     {
         return Evaluator.eval(eval, env);
     }
 
+    /**
+     * Evaluates a parsed JLLL expression in the top-level environment.
+     *
+     * @param eval
+     *            the parsed expression
+     * @return the result of evaluation
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object eval(Object eval) throws JlllException
     {
         return eval(eval, Enviroment.top);
     }
 
+    /**
+     * Parses and evaluates a JLLL source string in the given environment.
+     *
+     * @param str
+     *            the JLLL source code
+     * @param env
+     *            the environment for variable bindings
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if parsing or evaluation fails
+     */
     public static Object eval(String str, Enviroment env) throws JlllException
     {
         return eval(new StringReader(str), env);
     }
 
+    /**
+     * Parses and evaluates a JLLL source string in the top-level environment.
+     *
+     * @param str
+     *            the JLLL source code
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if parsing or evaluation fails
+     */
     public static Object eval(String str) throws JlllException
     {
         return eval(str, Enviroment.top);
     }
 
+    /**
+     * Parses and evaluates JLLL source from an input stream.
+     *
+     * @param is
+     *            the input stream containing JLLL source
+     * @param env
+     *            the environment for variable bindings
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if parsing or evaluation fails
+     */
     public static Object eval(InputStream is, Enviroment env) throws JlllException
     {
         return eval(new InputStreamReader(is), env);
     }
 
+    /**
+     * Parses and evaluates JLLL source from an input stream in the top-level environment.
+     *
+     * @param is
+     *            the input stream containing JLLL source
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if parsing or evaluation fails
+     */
     public static Object eval(InputStream is) throws JlllException
     {
         return eval(is, Enviroment.top);
     }
 
+    /**
+     * Fetches and evaluates JLLL source from a URL.
+     *
+     * @param url
+     *            the URL pointing to JLLL source
+     * @param env
+     *            the environment for variable bindings
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if fetching, parsing, or evaluation fails
+     */
     public static Object eval(URL url, Enviroment env) throws JlllException
     {
         Object ret;
@@ -61,11 +143,32 @@ public class Jlll
         return ret;
     }
 
+    /**
+     * Fetches and evaluates JLLL source from a URL in the top-level environment.
+     *
+     * @param url
+     *            the URL pointing to JLLL source
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if fetching, parsing, or evaluation fails
+     */
     public static Object eval(URL url) throws JlllException
     {
         return eval(url, Enviroment.top);
     }
 
+    /**
+     * Parses and evaluates JLLL source from a reader.
+     * Reads and evaluates all expressions, returning the result of the last one.
+     *
+     * @param reader
+     *            the reader providing JLLL source
+     * @param env
+     *            the environment for variable bindings
+     * @return the result of the last expression, or null if empty
+     * @throws JlllException
+     *             if parsing or evaluation fails
+     */
     public static Object eval(Reader reader, Enviroment env) throws JlllException
     {
         JlllTokenizer jt = new JlllTokenizer(reader);
@@ -88,11 +191,31 @@ public class Jlll
         return ret;
     }
 
+    /**
+     * Parses and evaluates JLLL source from a reader in the top-level environment.
+     *
+     * @param reader
+     *            the reader providing JLLL source
+     * @return the result of the last expression
+     * @throws JlllException
+     *             if parsing or evaluation fails
+     */
     public static Object eval(Reader reader) throws JlllException
     {
         return eval(reader, Enviroment.top);
     }
 
+    /**
+     * Evaluates each element in a Cons list and returns a new list of results.
+     *
+     * @param cons
+     *            the list of expressions to evaluate
+     * @param env
+     *            the environment for variable bindings
+     * @return a new Cons list containing the evaluation results
+     * @throws JlllException
+     *             if evaluation of any element fails
+     */
     public static Cons evalEvery(Cons cons, Enviroment env) throws JlllException
     {
         Iterator<?> it = cons.iterator();
@@ -104,11 +227,36 @@ public class Jlll
         return ListUtil.arrayToCons(ret.toArray());
     }
 
+    /**
+     * Evaluates JLLL code with Java arguments accessible as $1, $2, $3, etc.
+     * Uses the top-level environment.
+     *
+     * @param code
+     *            the JLLL source code
+     * @param args
+     *            Java objects accessible in code as $1, $2, etc.
+     * @return the result of evaluation, or null if result is Null
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object invoke(String code, Object... args) throws JlllException
     {
         return invoke(code, Enviroment.top, args);
     }
 
+    /**
+     * Evaluates JLLL code with Java arguments accessible as $1, $2, $3, etc.
+     *
+     * @param code
+     *            the JLLL source code
+     * @param env
+     *            the parent environment
+     * @param args
+     *            Java objects accessible in code as $1, $2, etc.
+     * @return the result of evaluation, or null if result is Null
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object invoke(String code, Enviroment env, Object... args) throws JlllException
     {
         ArgsEnvironment newEnv = new ArgsEnvironment(env, args);
@@ -116,11 +264,33 @@ public class Jlll
         return ret == null || ret instanceof Null ? null : ret;
     }
 
+    /**
+     * Invokes a JLLL procedure by name with the given arguments.
+     *
+     * @param primitiveName
+     *            the name of the procedure to invoke
+     * @param env
+     *            the environment containing the procedure binding
+     * @param args
+     *            the arguments to pass to the procedure
+     * @return the result of the procedure call
+     * @throws JlllException
+     *             if the procedure is not found or execution fails
+     */
     public static Object invokeProcedure(String primitiveName, Enviroment env, Object... args) throws JlllException
     {
         return eval(new Cons(Symbol.intern(primitiveName), Cons.list(args)), env);
     }
 
+    /**
+     * Evaluates code and returns a debug description including execution time and result type.
+     *
+     * @param code
+     *            the JLLL source code to evaluate
+     * @param env
+     *            the environment for variable bindings
+     * @return a multi-line string describing the evaluation result
+     */
     public static String describeEval(String code, Enviroment env)
     {
         StringWriter sw = new StringWriter();
@@ -142,11 +312,31 @@ public class Jlll
         return sw.toString();
     }
 
+    /**
+     * Parses JLLL source code without evaluating it.
+     * Returns the parsed expression tree for later evaluation.
+     *
+     * @param str
+     *            the JLLL source code
+     * @return the parsed expression (Cons tree, Symbol, or literal)
+     * @throws JlllException
+     *             if parsing fails
+     */
     public static Object prepare(String str) throws JlllException
     {
         return prepare(new StringReader(str));
     }
 
+    /**
+     * Parses JLLL source from a reader without evaluating it.
+     * Multiple expressions are wrapped in a (begin ...) form.
+     *
+     * @param reader
+     *            the reader providing JLLL source
+     * @return the parsed expression tree
+     * @throws JlllException
+     *             if parsing fails
+     */
     public static Object prepare(Reader reader) throws JlllException
     {
         JlllTokenizer jt = new JlllTokenizer(reader);
@@ -186,6 +376,12 @@ public class Jlll
         return ret;
     }
 
+    /**
+     * Simple REPL for testing. For production use, see {@link ru.ydn.jlll.cli.JlllCli}.
+     *
+     * @param args
+     *            command line arguments (ignored)
+     */
     public static void main(String[] args)
     {
         try

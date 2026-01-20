@@ -1,15 +1,18 @@
 package ru.ydn.jlll.common;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: May 31, 2004
- * Time: 7:35:58 PM
- * To change this template use Options | File Templates.
+ * Singleton representing the empty list (nil) in JLLL.
+ * Used as the list terminator and as a false-like value in conditionals.
+ *
+ * <p>
+ * Access via {@link #NULL} - the constructor is private.
+ * Attempting to modify this object throws {@link IllegalAccessError}.
+ * </p>
  */
-public class Null extends Cons //implements Serializable
+public class Null extends Cons
 {
     private static final long serialVersionUID = 6499553304262659518L;
+    /** The singleton null/nil instance */
     public static final Null NULL = new Null();
 
     private Null()

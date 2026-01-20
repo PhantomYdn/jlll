@@ -4,14 +4,19 @@ import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Null;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: 07.09.2007
- * Time: 12:43:59
- * To change this template use File | Settings | File Templates.
+ * Renders Cons structures as tables using a pluggable handler.
+ * Supports both row-oriented and column-oriented output depending on data shape.
  */
 public class ConsRenderer
 {
+    /**
+     * Renders content as a table using the provided handler.
+     *
+     * @param content
+     *            the Cons structure to render (list of lists for table)
+     * @param renderHandler
+     *            callback for table rendering events
+     */
     public void render(Object content, ConsRenderHandler renderHandler)
     {
         if (content instanceof Cons)

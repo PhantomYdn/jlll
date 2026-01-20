@@ -6,21 +6,42 @@ import java.util.List;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Created by IntelliJ IDEA.
- * User: Eleas
- * Date: 18.05.2003
- * Time: 1:44:23
- * To change this template use Options | File Templates.
+ * Macro procedure that transforms code before evaluation.
+ * Unlike regular procedures, macros receive their arguments unevaluated and return
+ * code that will then be evaluated.
+ *
+ * <p>
+ * Created with {@code (defmacro name (args) body)} or {@code (macro (args) body)}.
+ * </p>
  */
 public class Macros extends CompaundProcedure
 {
     private static final long serialVersionUID = 6419680788279882844L;
 
+    /**
+     * Creates a new macro with the given parameter list and body.
+     *
+     * @param variables
+     *            the parameter list (Symbol or Cons of Symbols)
+     * @param body
+     *            the macro body expression
+     */
     public Macros(Object variables, Object body)
     {
         super(variables, body);
     }
 
+    /**
+     * Expands the macro and evaluates the result.
+     *
+     * @param values
+     *            the unevaluated argument expressions
+     * @param env
+     *            the evaluation environment
+     * @return the result of evaluating the expanded code
+     * @throws JlllException
+     *             if expansion or evaluation fails
+     */
     public Object applay(Cons values, Enviroment env) throws JlllException
     {
         Object eval = macroExpand(values, env);
@@ -39,11 +60,28 @@ public class Macros extends CompaundProcedure
         return ListUtil.arrayToCons(ret.toArray());
     }
 
+    /**
+     * Expands the macro without evaluating the result.
+     * Useful for debugging macro transformations.
+     *
+     * @param values
+     *            the unevaluated argument expressions
+     * @param env
+     *            the evaluation environment
+     * @return the expanded code (before evaluation)
+     * @throws JlllException
+     *             if expansion fails
+     */
     public Object macroExpand(Cons values, Enviroment env) throws JlllException
     {
         return super.applay(quoteAll(values), env);
     }
 
+    /**
+     * Returns a description of this macro for debugging.
+     *
+     * @return a string containing arguments and body
+     */
     public String describe()
     {
         return "Macros.\n" + "Doc: " + getDoc() + "\n" + "Arguments: " + variables + "\n" + "Body: " + body;

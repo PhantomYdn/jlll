@@ -1,23 +1,47 @@
 package ru.ydn.jlll.io;
 
 /**
- * Created by IntelliJ IDEA.
- * User: naryzhny
- * Date: 07.09.2007
- * Time: 12:34:20
- * To change this template use File | Settings | File Templates.
+ * Callback interface for rendering Cons structures as tables.
+ * Implement this interface to customize table output format (HTML, CSV, text, etc.).
  */
 public interface ConsRenderHandler
 {
+    /**
+     * Determines table orientation based on dimensions.
+     *
+     * @param width
+     *            the number of columns
+     * @param height
+     *            the number of rows
+     * @return true for transposed (column-first) output, false for row-first
+     */
     public boolean getOrientation(int width, int height);
 
+    /**
+     * Called at the start of table rendering.
+     */
     public void startTable();
 
+    /**
+     * Called at the start of each row.
+     */
     public void startRow();
 
+    /**
+     * Called to render a single cell value.
+     *
+     * @param value
+     *            the cell value to render
+     */
     public void renderCell(Object value);
 
+    /**
+     * Called at the end of each row.
+     */
     public void finishRow();
 
+    /**
+     * Called at the end of table rendering.
+     */
     public void finishTable();
 }
