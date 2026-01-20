@@ -11,6 +11,7 @@ JLLL is **not** Scheme, Clojure, or Common Lisp. While it shares Lisp syntax fun
 | Keywords | `:foo` (self-evaluating, distinct from symbols) | No standard | `:foo` | `:foo` (in KEYWORD package) |
 | Keyword arguments | `(func :arg value)` at call site | SRFI-89 only | Map destructuring | `&key` in lambda list |
 | Optional args with defaults | `(define (f (x 10)) ...)` | No standard | `[x 10]` in vector | `&optional (x 10)` |
+| Binding metadata | `(define x :doc "desc" 42)` | N/A | `(def ^{:doc "desc"} x 42)` | N/A |
 | Immediate evaluation | `!expr` reader macro | N/A | N/A | N/A |
 | Boolean values | `true`, `false`, `#t`, `#f` | `#t`, `#f` | `true`, `false` | `t`, `nil` |
 | Null/nil | `null`, `'()` | `'()` | `nil` | `nil` |
@@ -21,6 +22,7 @@ JLLL is **not** Scheme, Clojure, or Common Lisp. While it shares Lisp syntax fun
 - **[Syntax](syntax.md)** - Atoms, lists, reader macros, comments
 - **[Special Forms](special-forms.md)** - `define`, `if`, `lambda`, `let`, `cond`, `case`, `begin`
 - **[Procedures](procedures.md)** - Function definition, keyword arguments, defaults, rest arguments
+- **[Metadata](metadata.md)** - Documentation and metadata on bindings
 - **[Primitives](primitives.md)** - Built-in functions organized by library
 - **[Macros](macros.md)** - Macro definition and expansion
 - **[Java Interop](java-interop.md)** - Calling Java from JLLL

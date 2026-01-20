@@ -7,15 +7,18 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import ru.ydn.jlll.common.CompaundProcedure;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Enviroment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
+import ru.ydn.jlll.common.Keyword;
 import ru.ydn.jlll.common.Library;
 import ru.ydn.jlll.common.Macros;
 import ru.ydn.jlll.common.Null;
+import ru.ydn.jlll.common.ParameterParser;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
 import ru.ydn.jlll.common.Symbol;
@@ -53,30 +56,56 @@ public class KernelLib implements Library
             /**
              *
              */
-            private static final long serialVersionUID = -7343798584300580806L;
+            private static final long serialVersionUID = -7343798584300580807L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
             {
-                Object car = values.car();
-                if (car instanceof Symbol)
+                // Extract keywords (metadata) from the argument list
+                ParameterParser.KeywordExtraction extraction = ParameterParser.extractKeywords(values);
+                List<Object> positional = extraction.positional;
+                Map<Symbol, Object> metadata = extraction.keywords;
+                if (positional.isEmpty())
                 {
-                    Symbol symbol = (Symbol) car;
-                    Object value = Evaluator.eval(values.cadr(), env);
-                    env.addBinding(symbol, value);
+                    throw new JlllException("define requires at least a name");
+                }
+                Object first = positional.get(0);
+                if (first instanceof Symbol)
+                {
+                    // Simple variable definition: (define name value) or (define name :doc "..." value)
+                    Symbol symbol = (Symbol) first;
+                    if (positional.size() < 2)
+                    {
+                        throw new JlllException("define requires a value");
+                    }
+                    Object value = Evaluator.eval(positional.get(1), env);
+                    env.addBindingWithMeta(symbol, value, metadata);
                     return value;
                 }
-                else if (car instanceof Cons)
+                else if (first instanceof Cons)
                 {
-                    Cons def = (Cons) car;
+                    // Function definition: (define (name args...) body...)
+                    // or (define (name args...) :doc "..." body...)
+                    Cons def = (Cons) first;
                     String name = def.get(0).toString();
                     Object variables = def.cdr();
-                    Object body = values.tail(1);
+                    // Body is everything after the function signature in positional args
+                    Object body;
+                    if (positional.size() > 1)
+                    {
+                        // Build body from remaining positional args
+                        List<Object> bodyParts = positional.subList(1, positional.size());
+                        body = ru.ydn.jlll.util.ListUtil.arrayToCons(bodyParts.toArray());
+                    }
+                    else
+                    {
+                        body = Null.NULL;
+                    }
                     // Pass env for evaluating !defaults
                     CompaundProcedure procedure = new CompaundProcedure(variables, body, env);
-                    env.addBinding(Symbol.intern(name), procedure);
+                    env.addBindingWithMeta(Symbol.intern(name), procedure, metadata);
                     return procedure;
                 }
-                return null;
+                throw new JlllException("define: first argument must be symbol or list, got: " + first);
             }
         };
         new Primitive("apply", env)
@@ -673,19 +702,43 @@ public class KernelLib implements Library
             /**
              *
              */
-            private static final long serialVersionUID = 5164474211503405191L;
+            private static final long serialVersionUID = 5164474211503405192L;
 
             @Override
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Object obj = values.get(0);
+                StringBuilder sb = new StringBuilder();
                 if (obj instanceof Procedure)
                 {
-                    return ((Procedure) obj).describe();
+                    sb.append(((Procedure) obj).describe());
                 }
                 else if (obj instanceof Symbol)
                 {
-                    return "Symbol '" + ((Symbol) obj).getName() + "'";
+                    Symbol sym = (Symbol) obj;
+                    Object value = env.lookup(sym);
+                    if (value instanceof Procedure)
+                    {
+                        sb.append(((Procedure) value).describe());
+                    }
+                    else
+                    {
+                        sb.append("Symbol '").append(sym.getName()).append("'");
+                        if (value != null)
+                        {
+                            sb.append("\nValue: ").append(value);
+                        }
+                    }
+                    // Append metadata if present
+                    if (env.hasMeta(sym))
+                    {
+                        Map<Symbol, Object> meta = env.getAllMeta(sym);
+                        sb.append("\nMetadata:");
+                        for (Map.Entry<Symbol, Object> entry : meta.entrySet())
+                        {
+                            sb.append("\n  :").append(entry.getKey().getName()).append(" ").append(entry.getValue());
+                        }
+                    }
                 }
                 else if (obj instanceof Throwable)
                 {
@@ -693,12 +746,13 @@ public class KernelLib implements Library
                     PrintWriter out = new PrintWriter(sw);
                     out.println("Throwable: ");
                     ((Throwable) obj).printStackTrace(out);
-                    return sw.toString();
+                    sb.append(sw.toString());
                 }
                 else
                 {
-                    return "Instance of " + obj.getClass() + "\n" + "toString() : " + obj;
+                    sb.append("Instance of ").append(obj.getClass()).append("\n").append("toString() : ").append(obj);
                 }
+                return sb.toString();
             }
         };
         new Primitive("exlamation", env)
@@ -710,6 +764,190 @@ public class KernelLib implements Library
                 if (values.length() != 1)
                     throw new JlllException("exlamation requires exactly one argument");
                 return Evaluator.eval(values.car(), env);
+            }
+        };
+        // ============== Metadata Primitives ==============
+        new Primitive("doc", env)
+        {
+            private static final long serialVersionUID = 9182736450918273645L;
+
+            @Override
+            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            {
+                if (values.length() != 1)
+                    throw new JlllException("doc requires exactly one argument");
+                Object arg = values.get(0);
+                Symbol sym;
+                if (arg instanceof Symbol)
+                {
+                    sym = (Symbol) arg;
+                }
+                else if (arg instanceof Procedure)
+                {
+                    // For procedures passed directly, try to get their doc
+                    String doc = ((Procedure) arg).getDoc();
+                    return (doc != null && !doc.isEmpty()) ? doc : null;
+                }
+                else
+                {
+                    throw new JlllException("doc requires a symbol or procedure");
+                }
+                // First try metadata
+                Object doc = env.getMeta(sym, Symbol.intern("doc"));
+                if (doc != null)
+                {
+                    return doc;
+                }
+                // Fallback to Procedure.getDoc() for primitives
+                Object value = env.lookup(sym);
+                if (value instanceof Procedure)
+                {
+                    String procDoc = ((Procedure) value).getDoc();
+                    if (procDoc != null && !procDoc.isEmpty())
+                    {
+                        return procDoc;
+                    }
+                }
+                return null;
+            }
+        };
+        new Primitive("meta", env)
+        {
+            private static final long serialVersionUID = 9182736450918273646L;
+
+            @Override
+            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            {
+                if (values.length() == 1)
+                {
+                    // (meta sym) - return all metadata as association list
+                    Object arg = values.get(0);
+                    if (!(arg instanceof Symbol))
+                    {
+                        throw new JlllException("meta requires a symbol");
+                    }
+                    Map<Symbol, Object> allMeta = env.getAllMeta((Symbol) arg);
+                    if (allMeta.isEmpty())
+                    {
+                        return Null.NULL;
+                    }
+                    // Convert to association list ((key . value) ...)
+                    List<Object> pairs = new ArrayList<>();
+                    for (Map.Entry<Symbol, Object> entry : allMeta.entrySet())
+                    {
+                        pairs.add(new Cons(Keyword.fromSymbol(entry.getKey()), entry.getValue()));
+                    }
+                    return ru.ydn.jlll.util.ListUtil.arrayToCons(pairs.toArray());
+                }
+                else if (values.length() == 2)
+                {
+                    // (meta sym :key) - return specific metadata
+                    Object arg = values.get(0);
+                    Object keyArg = values.get(1);
+                    if (!(arg instanceof Symbol))
+                    {
+                        throw new JlllException("meta requires a symbol as first argument");
+                    }
+                    Symbol sym = (Symbol) arg;
+                    Symbol key;
+                    if (keyArg instanceof Keyword)
+                    {
+                        key = ((Keyword) keyArg).toSymbol();
+                    }
+                    else if (keyArg instanceof Symbol)
+                    {
+                        key = (Symbol) keyArg;
+                    }
+                    else
+                    {
+                        throw new JlllException("meta key must be a keyword or symbol");
+                    }
+                    return env.getMeta(sym, key);
+                }
+                else
+                {
+                    throw new JlllException("meta requires 1 or 2 arguments");
+                }
+            }
+        };
+        new Primitive("set-meta!", env)
+        {
+            private static final long serialVersionUID = 9182736450918273647L;
+
+            @Override
+            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            {
+                if (values.length() != 3)
+                {
+                    throw new JlllException("set-meta! requires 3 arguments: (set-meta! symbol :key value)");
+                }
+                Object arg = values.get(0);
+                Object keyArg = values.get(1);
+                Object value = values.get(2);
+                if (!(arg instanceof Symbol))
+                {
+                    throw new JlllException("set-meta! requires a symbol as first argument");
+                }
+                Symbol sym = (Symbol) arg;
+                // Verify binding exists
+                if (env.lookup(sym) == null)
+                {
+                    throw new JlllException("set-meta!: no binding for symbol " + sym);
+                }
+                Symbol key;
+                if (keyArg instanceof Keyword)
+                {
+                    key = ((Keyword) keyArg).toSymbol();
+                }
+                else if (keyArg instanceof Symbol)
+                {
+                    key = (Symbol) keyArg;
+                }
+                else
+                {
+                    throw new JlllException("set-meta! key must be a keyword or symbol");
+                }
+                env.setMeta(sym, key, value);
+                return value;
+            }
+        };
+        new Primitive("define-from", env)
+        {
+            private static final long serialVersionUID = 9182736450918273648L;
+
+            @Override
+            public Object applay(Cons values, Enviroment env) throws JlllException
+            {
+                if (values.length() != 2)
+                {
+                    throw new JlllException("define-from requires 2 arguments: (define-from new-name source-symbol)");
+                }
+                Object newNameArg = values.get(0);
+                Object sourceArg = values.get(1);
+                // First arg is unevaluated symbol (new name)
+                if (!(newNameArg instanceof Symbol))
+                {
+                    throw new JlllException("define-from: first argument must be a symbol");
+                }
+                Symbol newName = (Symbol) newNameArg;
+                // Second arg is evaluated to get the source symbol
+                Object evaluatedSource = Evaluator.eval(sourceArg, env);
+                if (!(evaluatedSource instanceof Symbol))
+                {
+                    throw new JlllException("define-from: second argument must evaluate to a symbol");
+                }
+                Symbol source = (Symbol) evaluatedSource;
+                // Get value from source
+                Object value = env.lookup(source);
+                if (value == null)
+                {
+                    throw new JlllException("define-from: no binding for source symbol " + source);
+                }
+                // Get metadata from source
+                Map<Symbol, Object> meta = env.getAllMeta(source);
+                // Create new binding with same value and metadata
+                env.addBindingWithMeta(newName, value, meta.isEmpty() ? null : meta);
+                return value;
             }
         };
         Jlll.eval("(load-system-script \"kernel.jlll\")", env);

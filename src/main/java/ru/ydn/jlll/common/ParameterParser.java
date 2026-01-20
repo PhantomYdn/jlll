@@ -1,7 +1,9 @@
 package ru.ydn.jlll.common;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Parses parameter lists for procedures, handling:
@@ -147,5 +149,62 @@ public class ParameterParser
             }
         }
         return false;
+    }
+
+    /**
+     * Result of extracting keywords from an argument list.
+     */
+    public static class KeywordExtraction
+    {
+        /** Positional arguments (non-keyword values) */
+        public final List<Object> positional;
+        /** Keyword arguments as Symbol->Value map */
+        public final Map<Symbol, Object> keywords;
+
+        public KeywordExtraction(List<Object> positional, Map<Symbol, Object> keywords)
+        {
+            this.positional = positional;
+            this.keywords = keywords;
+        }
+    }
+
+    /**
+     * Extracts keyword arguments from a Cons list.
+     * Keywords (:key value) are collected into a map, other values are positional.
+     *
+     * @param values
+     *            the argument list (may be null)
+     * @return extraction result with positional list and keyword map
+     * @throws JlllException
+     *             if keyword is missing its value
+     */
+    public static KeywordExtraction extractKeywords(Cons values) throws JlllException
+    {
+        Map<Symbol, Object> keywords = new HashMap<>();
+        List<Object> positional = new ArrayList<>();
+        if (values == null || values.isNull())
+        {
+            return new KeywordExtraction(positional, keywords);
+        }
+        java.util.Iterator<?> it = values.iterator();
+        while (it.hasNext())
+        {
+            Object arg = it.next();
+            if (arg instanceof Keyword)
+            {
+                Keyword kw = (Keyword) arg;
+                if (!it.hasNext())
+                {
+                    throw new JlllException("Missing value for keyword " + kw);
+                }
+                Object value = it.next();
+                keywords.put(kw.toSymbol(), value);
+            }
+            else
+            {
+                positional.add(arg);
+            }
+        }
+        return new KeywordExtraction(positional, keywords);
     }
 }

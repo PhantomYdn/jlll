@@ -18,10 +18,11 @@ Core language primitives.
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
-| `define` | Create binding | `(define x 10)` |
-| `set!` / `set` | Modify binding | `(set! x 20)` |
+| `define` | Create binding (with optional metadata) | `(define x :doc "desc" 10)` |
+| `set!` / `set` | Modify binding (preserves metadata) | `(set! x 20)` |
 | `lambda` | Create procedure | `(lambda (x) (* x x))` |
 | `defmacro` | Define macro | `(defmacro (when test . body) ...)` |
+| `define-from` | Copy binding with metadata | `(define-from y 'x)` |
 
 ### List Construction
 
@@ -83,7 +84,18 @@ Core language primitives.
 | `time` | Measure execution time (ms) | `(time (fib 30))` => `245` |
 | `sleep` | Pause execution (ms) | `(sleep 1000)` |
 | `quit` / `exit` | Exit JLLL | `(quit)` |
-| `describe` | Describe object | `(describe map)` |
+| `describe` | Describe object (includes metadata) | `(describe 'my-var)` |
+
+### Metadata
+
+See [Metadata](metadata.md) for detailed documentation.
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `doc` | Get `:doc` metadata | `(doc 'my-func)` => `"description"` |
+| `meta` | Get metadata by key | `(meta 'x :version)` => `"1.0"` |
+| `meta` | Get all metadata | `(meta 'x)` => `((:doc . "desc"))` |
+| `set-meta!` | Set metadata on binding | `(set-meta! 'x :author "Jane")` |
 
 ### Macro Utilities
 
@@ -191,7 +203,16 @@ Type checking and testing functions.
 | `null?` | Test for null | `(null? '())` => `true` |
 | `nil?` | Alias for null? | `(nil? null)` => `true` |
 | `list?` | Test for list | `(list? '(1 2))` => `true` |
+| `keyword?` | Test for keyword | `(keyword? :foo)` => `true` |
 | `jlll-bound?` | Test if symbol is bound | `(jlll-bound? 'x)` |
+
+### Keyword Conversions
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `keyword->symbol` | Convert keyword to symbol | `(keyword->symbol :foo)` => `foo` |
+| `symbol->keyword` | Convert symbol to keyword | `(symbol->keyword 'foo)` => `:foo` |
+| `keyword-name` | Get keyword name as string | `(keyword-name :foo)` => `"foo"` |
 
 ## IO Library
 

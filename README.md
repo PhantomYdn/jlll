@@ -26,7 +26,22 @@
 - **Embeddable** - Evaluate Lisp from Java with a single line of code
 - **Extensible** - Add custom primitives with simple annotations
 - **Rich CLI** - Interactive REPL with line editing, history, tab completion, and syntax highlighting
+- **Keyword Arguments** - Optional parameters with defaults: `(define (f (x 10)) ...)`
+- **Metadata** - Attach documentation and metadata to bindings: `(define x :doc "desc" 42)`
 - **Built-in Libraries** - Math, List, String, SQL, and more
+
+## Documentation
+
+See the [docs/](docs/) folder for comprehensive language documentation:
+
+- [Overview & Quick Start](docs/README.md)
+- [Syntax](docs/syntax.md) - Atoms, lists, keywords, reader macros
+- [Special Forms](docs/special-forms.md) - define, if, lambda, let, cond
+- [Procedures](docs/procedures.md) - Keyword arguments, defaults, rest args
+- [Metadata](docs/metadata.md) - Documentation and metadata on bindings
+- [Primitives](docs/primitives.md) - Built-in functions by library
+- [Macros](docs/macros.md) - Macro definition and expansion
+- [Java Interop](docs/java-interop.md) - Calling Java from JLLL
 
 ---
 

@@ -12,6 +12,7 @@ See [docs/](docs/) for comprehensive JLLL language documentation:
 - [Syntax](docs/syntax.md) - Atoms, lists, reader macros, keywords
 - [Special Forms](docs/special-forms.md) - define, if, lambda, let, cond
 - [Procedures](docs/procedures.md) - Keyword arguments, defaults, rest args
+- [Metadata](docs/metadata.md) - Documentation and metadata on bindings
 - [Primitives](docs/primitives.md) - Built-in functions by library
 - [Macros](docs/macros.md) - Macro definition and expansion
 - [Java Interop](docs/java-interop.md) - Calling Java from JLLL

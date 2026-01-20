@@ -14,9 +14,10 @@ import java.util.Map;
  */
 public class Enviroment implements Serializable
 {
-    private static final long serialVersionUID = 5024478830439245581L;
+    private static final long serialVersionUID = 5024478830439245582L;
     protected Enviroment parent = null;
     protected Map<Symbol, Object> current = new HashMap<Symbol, Object>();
+    protected Map<Symbol, Map<Symbol, Object>> metadata = new HashMap<Symbol, Map<Symbol, Object>>();
     /**
      * top Enviroment
      */
@@ -123,6 +124,125 @@ public class Enviroment implements Serializable
     public void addBinding(Symbol sym, Object obj)
     {
         current.put(sym, obj);
+    }
+
+    /**
+     * Adds new binding with metadata to the environment
+     *
+     * @param sym
+     *            Symbol to bind to
+     * @param obj
+     *            Object to bind
+     * @param meta
+     *            Metadata map (Symbol keys to values), may be null
+     */
+    public void addBindingWithMeta(Symbol sym, Object obj, Map<Symbol, Object> meta)
+    {
+        current.put(sym, obj);
+        if (meta != null && !meta.isEmpty())
+        {
+            metadata.put(sym, new HashMap<>(meta));
+        }
+    }
+
+    /**
+     * Sets a single metadata value on an existing binding.
+     * Creates the binding's metadata map if needed.
+     *
+     * @param sym
+     *            Symbol of the binding
+     * @param key
+     *            Metadata key
+     * @param value
+     *            Metadata value
+     */
+    public void setMeta(Symbol sym, Symbol key, Object value)
+    {
+        Map<Symbol, Object> meta = metadata.get(sym);
+        if (meta == null)
+        {
+            // Check if binding exists in this env or parent
+            if (!current.containsKey(sym))
+            {
+                if (parent != null && parent.lookup(sym) != null)
+                {
+                    // Binding is in parent, set metadata there
+                    parent.setMeta(sym, key, value);
+                    return;
+                }
+            }
+            meta = new HashMap<>();
+            metadata.put(sym, meta);
+        }
+        meta.put(key, value);
+    }
+
+    /**
+     * Gets a metadata value for a binding.
+     *
+     * @param sym
+     *            Symbol of the binding
+     * @param key
+     *            Metadata key
+     * @return the metadata value, or null if not found
+     */
+    public Object getMeta(Symbol sym, Symbol key)
+    {
+        Map<Symbol, Object> meta = metadata.get(sym);
+        if (meta != null)
+        {
+            Object value = meta.get(key);
+            if (value != null)
+            {
+                return value;
+            }
+        }
+        // Check parent environment
+        if (parent != null)
+        {
+            return parent.getMeta(sym, key);
+        }
+        return null;
+    }
+
+    /**
+     * Gets all metadata for a binding.
+     *
+     * @param sym
+     *            Symbol of the binding
+     * @return map of all metadata, or empty map if none
+     */
+    public Map<Symbol, Object> getAllMeta(Symbol sym)
+    {
+        Map<Symbol, Object> result = new HashMap<>();
+        // Start with parent metadata (will be overwritten by local)
+        if (parent != null)
+        {
+            result.putAll(parent.getAllMeta(sym));
+        }
+        // Add local metadata
+        Map<Symbol, Object> local = metadata.get(sym);
+        if (local != null)
+        {
+            result.putAll(local);
+        }
+        return result;
+    }
+
+    /**
+     * Checks if a binding has any metadata.
+     *
+     * @param sym
+     *            Symbol of the binding
+     * @return true if metadata exists
+     */
+    public boolean hasMeta(Symbol sym)
+    {
+        if (metadata.containsKey(sym) && !metadata.get(sym).isEmpty())
+        {
+            return true;
+        }
+        return parent != null && parent.hasMeta(sym);
     }
 
     /**
