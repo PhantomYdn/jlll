@@ -71,7 +71,8 @@ public class KernelLib implements Library
                     String name = def.get(0).toString();
                     Object variables = def.cdr();
                     Object body = values.tail(1);
-                    CompaundProcedure procedure = new CompaundProcedure(variables, body);
+                    // Pass env for evaluating !defaults
+                    CompaundProcedure procedure = new CompaundProcedure(variables, body, env);
                     env.addBinding(Symbol.intern(name), procedure);
                     return procedure;
                 }
@@ -230,9 +231,10 @@ public class KernelLib implements Library
 
             public Object applay(Cons values, Enviroment env) throws JlllException
             {
-                Cons variables = (Cons) values.get(0);
+                Object variables = values.get(0);
                 Object body = values.tail(1);
-                CompaundProcedure procedure = new CompaundProcedure(variables, body);
+                // Pass env for evaluating !defaults
+                CompaundProcedure procedure = new CompaundProcedure(variables, body, env);
                 return procedure;
             }
         };
@@ -697,6 +699,17 @@ public class KernelLib implements Library
                 {
                     return "Instance of " + obj.getClass() + "\n" + "toString() : " + obj;
                 }
+            }
+        };
+        new Primitive("exlamation", env)
+        {
+            private static final long serialVersionUID = 1827364509182736450L;
+
+            public Object applay(Cons values, Enviroment env) throws JlllException
+            {
+                if (values.length() != 1)
+                    throw new JlllException("exlamation requires exactly one argument");
+                return Evaluator.eval(values.car(), env);
             }
         };
         Jlll.eval("(load-system-script \"kernel.jlll\")", env);

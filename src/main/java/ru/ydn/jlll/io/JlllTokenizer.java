@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.JlllException;
+import ru.ydn.jlll.common.Keyword;
 import ru.ydn.jlll.common.Symbol;
 import ru.ydn.jlll.util.ListUtil;
 
@@ -70,7 +71,8 @@ public class JlllTokenizer extends StreamTokenizer
         //wordChars('!', '!');
         wordChars('<', '?'); // <=>?
         wordChars('-', '/'); // -./
-        wordChars(':', ':'); // colon is text (for filenames)
+        // Note: colon is now ordinary char to support keywords (:foo)
+        ordinaryChar(':');
         wordChars('\\', '\\'); // backslash is text (for filenames)
         wordChars('$', '&'); // $%&
         wordChars('~', '~'); // ~
@@ -78,11 +80,11 @@ public class JlllTokenizer extends StreamTokenizer
         //        wordChars('#', '#');		// ^_
         wordChars('{', '}'); // ^_
         wordChars('[', ']'); // ^_
+        wordChars('!', '!'); // Allow ! in symbols like set!
         quoteChar('"');
         commentChar(';');
         ordinaryChar('\''); // singlequote as token
         ordinaryChar('`'); // singlequote as token
-        ordinaryChar('!');
         ordinaryChar('#');
         //        ordinaryChar('@');
     }
@@ -110,6 +112,20 @@ public class JlllTokenizer extends StreamTokenizer
                 return nval;
             }
             case TT_WORD : {
+                // Check for ! prefix as reader macro (e.g., !expr becomes (! expr))
+                // But symbols ending in ! like set! should remain as-is
+                if (sval.startsWith("!") && sval.length() > 1)
+                {
+                    // Parse the rest as a separate token
+                    String rest = sval.substring(1);
+                    sval = rest;
+                    return ListUtil.list(Symbol.EXLAMATION, parseTTWord());
+                }
+                else if (sval.equals("!"))
+                {
+                    // Just "!" by itself - read next object
+                    return ListUtil.list(Symbol.EXLAMATION, nextObject());
+                }
                 return parseTTWord();
             }
             case '(' : {
@@ -145,11 +161,11 @@ public class JlllTokenizer extends StreamTokenizer
                     return ListUtil.list(Symbol.UNQUOTE, next);
                 }
             }
-            case '!' : {
-                return ListUtil.list(Symbol.EXLAMATION, nextObject());
-            }
             case '#' : {
                 return ListUtil.list(Symbol.SHARP, nextObject());
+            }
+            case ':' : {
+                return parseKeyword();
             }
             default : {
                 switch (ttype)
@@ -255,5 +271,46 @@ public class JlllTokenizer extends StreamTokenizer
         if (withSym && (ch == '+' || ch == '-' || ch == '.'))
             return true;
         return false;
+    }
+
+    /**
+     * Parses a keyword token starting with colon.
+     * Called after ':' has been read.
+     *
+     * @return the Keyword object
+     * @throws IOException
+     *             if reading fails
+     * @throws JlllException
+     *             if keyword syntax is invalid
+     */
+    private Object parseKeyword() throws IOException, JlllException
+    {
+        nextToken();
+        if (ttype == ':')
+        {
+            throw new JlllException("Invalid keyword syntax: double colon not allowed");
+        }
+        if (ttype != TT_WORD)
+        {
+            throw new JlllException("Invalid keyword: expected name after colon, got " + tokenDescription());
+        }
+        String name = sval;
+        // Apply same naming conversion as symbols
+        name = JlllSymbolNaming.convertFromInToSymbolName(name);
+        return Keyword.intern(name);
+    }
+
+    /**
+     * Returns a description of the current token for error messages.
+     */
+    private String tokenDescription()
+    {
+        if (ttype == TT_EOF)
+            return "end of file";
+        if (ttype == TT_WORD)
+            return "word '" + sval + "'";
+        if (ttype == TT_NUMBER)
+            return "number " + nval;
+        return "character '" + (char) ttype + "'";
     }
 }

@@ -4,8 +4,10 @@ import ru.ydn.jlll.common.Enviroment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
+import ru.ydn.jlll.common.Keyword;
 import ru.ydn.jlll.common.Null;
 import ru.ydn.jlll.common.ReflectionLibrary;
+import ru.ydn.jlll.common.Symbol;
 import ru.ydn.jlll.common.annotation.JlllName;
 
 /**
@@ -43,5 +45,29 @@ public class PredicatesLib extends ReflectionLibrary
     public boolean isJlllBound(Enviroment env, Object obj)
     {
         return env.lookup(obj.toString()) != null;
+    }
+
+    @JlllName("keyword?")
+    public boolean isKeyword(Object obj)
+    {
+        return obj instanceof Keyword;
+    }
+
+    @JlllName("keyword->symbol")
+    public Symbol keywordToSymbol(Keyword keyword)
+    {
+        return keyword.toSymbol();
+    }
+
+    @JlllName("symbol->keyword")
+    public Keyword symbolToKeyword(Symbol symbol) throws JlllException
+    {
+        return Keyword.fromSymbol(symbol);
+    }
+
+    @JlllName("keyword-name")
+    public String keywordName(Keyword keyword)
+    {
+        return keyword.getName();
     }
 }

@@ -4,6 +4,18 @@ Lightweight, embeddable Java library bringing Lisp-flavored programming to Java 
 
 **Requirements:** Java 17+
 
+## Language Documentation
+
+See [docs/](docs/) for comprehensive JLLL language documentation:
+
+- [Overview & Quick Start](docs/README.md)
+- [Syntax](docs/syntax.md) - Atoms, lists, reader macros, keywords
+- [Special Forms](docs/special-forms.md) - define, if, lambda, let, cond
+- [Procedures](docs/procedures.md) - Keyword arguments, defaults, rest args
+- [Primitives](docs/primitives.md) - Built-in functions by library
+- [Macros](docs/macros.md) - Macro definition and expansion
+- [Java Interop](docs/java-interop.md) - Calling Java from JLLL
+
 ## Build Commands
 
 ```bash
