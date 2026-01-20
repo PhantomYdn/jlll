@@ -19,8 +19,16 @@ mvn test -Dtest=JLLLTestCase
 # Run a single test method
 mvn test -Dtest=JLLLTestCase#testTokenizer
 
-# Package JAR
+# Package JARs (library + CLI fat JAR)
 mvn package
+# Output:
+#   target/jlll-*.jar       - Library JAR (for embedding)
+#   target/jlll-*-cli.jar   - Executable fat JAR with all dependencies
+
+# Run CLI
+java -jar target/jlll-*-cli.jar --help
+java -jar target/jlll-*-cli.jar -e '(+ 1 2)'
+java -jar target/jlll-*-cli.jar  # Start REPL
 
 # Full clean build and install
 mvn clean install
@@ -40,11 +48,13 @@ src/
 │   ├── java/ru/ydn/jlll/
 │   │   ├── common/           # Core: Jlll, Cons, Symbol, Enviroment, Evaluator
 │   │   │   └── annotation/   # @JlllName, @JlllDoc
+│   │   ├── cli/              # CLI: JlllCli, JlllRepl, JlllCompleter, JlllHighlighter
 │   │   ├── io/               # Tokenizer, Marshaller, Renderer
 │   │   ├── libs/             # Built-in libraries (Kernel, Math, List, etc.)
 │   │   └── util/             # Utility classes
 │   └── resources/ru/ydn/jlll/
 │       ├── common/           # init.jlll bootstrap
+│       ├── cli/              # version.properties (Maven-filtered)
 │       └── libs/             # Lisp scripts (math.jlll, list.jlll)
 └── test/
     └── java/ru/ydn/jlll/tests/   # Test cases

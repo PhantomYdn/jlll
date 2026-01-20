@@ -1,0 +1,182 @@
+package ru.ydn.jlll.cli;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
+
+import org.jline.reader.Candidate;
+import org.jline.reader.Completer;
+import org.jline.reader.LineReader;
+import org.jline.reader.ParsedLine;
+
+import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Macros;
+import ru.ydn.jlll.common.Primitive;
+import ru.ydn.jlll.common.Procedure;
+import ru.ydn.jlll.common.Symbol;
+
+/**
+ * Tab completion for JLLL REPL.
+ * Completes symbols, primitives, and keywords from the current environment.
+ */
+public class JlllCompleter implements Completer
+{
+    private final Enviroment env;
+
+    // Built-in Lisp keywords that are always available
+    private static final String[] KEYWORDS = {
+        "define", "defmacro", "lambda", "if", "cond", "case",
+        "let", "let*", "letrec", "begin", "quote", "quasiquote",
+        "set", "set!", "and", "or", "not",
+        "car", "cdr", "cons", "list", "append",
+        "map", "filter", "apply", "eval",
+        "true", "false", "null", "nil",
+        "load-lib", "load-url", "load-system-script",
+        "help", "quit", "exit", "env"
+    };
+
+    public JlllCompleter(Enviroment env)
+    {
+        this.env = env;
+    }
+
+    @Override
+    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates)
+    {
+        String word = line.word();
+        String buffer = line.line();
+        int cursor = line.cursor();
+
+        // Find the start of the current symbol
+        int wordStart = findSymbolStart(buffer, cursor);
+        String prefix = buffer.substring(wordStart, cursor);
+
+        // Collect all possible completions
+        TreeSet<String> completions = new TreeSet<>();
+
+        // Add keywords
+        for (String keyword : KEYWORDS)
+        {
+            if (keyword.startsWith(prefix))
+            {
+                completions.add(keyword);
+            }
+        }
+
+        // Add symbols from current environment
+        Map<Symbol, Object> bindings = env.getAllBindings();
+        for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
+        {
+            String name = entry.getKey().getName();
+            if (name.startsWith(prefix))
+            {
+                completions.add(name);
+            }
+        }
+
+        // Convert to candidates with descriptions
+        for (String completion : completions)
+        {
+            String description = getDescription(completion, bindings);
+            candidates.add(new Candidate(
+                completion,           // value
+                completion,           // display
+                null,                 // group
+                description,          // description
+                null,                 // suffix
+                null,                 // key
+                true                  // complete
+            ));
+        }
+    }
+
+    /**
+     * Find the start position of the current symbol being typed.
+     */
+    private int findSymbolStart(String buffer, int cursor)
+    {
+        int pos = cursor - 1;
+        while (pos >= 0)
+        {
+            char c = buffer.charAt(pos);
+            if (isSymbolTerminator(c))
+            {
+                break;
+            }
+            pos--;
+        }
+        return pos + 1;
+    }
+
+    /**
+     * Check if a character terminates a symbol.
+     */
+    private boolean isSymbolTerminator(char c)
+    {
+        return c == '(' || c == ')' || c == '[' || c == ']' ||
+               c == '\'' || c == '`' || c == ',' || c == '@' ||
+               c == '"' || c == ';' || Character.isWhitespace(c);
+    }
+
+    /**
+     * Get a short description for a symbol.
+     */
+    private String getDescription(String name, Map<Symbol, Object> bindings)
+    {
+        // Check special REPL commands
+        switch (name)
+        {
+            case "help":
+                return "Show help message";
+            case "quit":
+            case "exit":
+                return "Exit the REPL";
+            case "env":
+                return "Show environment bindings";
+        }
+
+        // Look up in environment
+        Symbol symbol = Symbol.intern(name);
+        Object value = bindings.get(symbol);
+
+        if (value == null)
+        {
+            return "keyword";
+        }
+        else if (value instanceof Primitive)
+        {
+            String desc = ((Primitive) value).describe();
+            // Truncate long descriptions
+            if (desc != null && desc.length() > 40)
+            {
+                desc = desc.substring(0, 37) + "...";
+            }
+            return desc != null ? desc : "primitive";
+        }
+        else if (value instanceof Macros)
+        {
+            return "macro";
+        }
+        else if (value instanceof Procedure)
+        {
+            return "procedure";
+        }
+        else if (value instanceof Boolean)
+        {
+            return "boolean";
+        }
+        else if (value instanceof Number)
+        {
+            return "number: " + value;
+        }
+        else if (value instanceof String)
+        {
+            return "string";
+        }
+        else
+        {
+            return value.getClass().getSimpleName();
+        }
+    }
+}

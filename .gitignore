@@ -6,6 +6,9 @@
 *.ear
 /target
 
+# Maven Shade Plugin generated file
+dependency-reduced-pom.xml
+
 .classpath
 .project
 .settings/

@@ -21,11 +21,11 @@
 
 ## Features
 
-- **Lightweight** - Zero runtime dependencies, small footprint
+- **Lightweight** - Minimal core library for embedding in your projects
 - **Full Java Interop** - Call any Java method, access fields, create objects
 - **Embeddable** - Evaluate Lisp from Java with a single line of code
 - **Extensible** - Add custom primitives with simple annotations
-- **Interactive REPL** - Experiment and prototype interactively
+- **Rich CLI** - Interactive REPL with line editing, history, tab completion, and syntax highlighting
 - **Built-in Libraries** - Math, List, String, SQL, and more
 
 ---
@@ -47,25 +47,41 @@ Object squared = Jlll.eval("(square 5)");
 System.out.println(squared); // 25
 ```
 
-### Interactive REPL
+### Command-Line Interface
 
 Build and run the interactive interpreter:
 
 ```bash
 mvn package
-java -jar target/jlll-*.jar
+java -jar target/jlll-*-cli.jar
 ```
+
+CLI options:
+
+```bash
+java -jar jlll-*-cli.jar --help           # Show help
+java -jar jlll-*-cli.jar --version        # Show version  
+java -jar jlll-*-cli.jar -e '(+ 1 2 3)'   # Evaluate expression
+java -jar jlll-*-cli.jar script.jlll      # Run script file
+java -jar jlll-*-cli.jar                  # Start interactive REPL
+```
+
+REPL features:
+- **Line editing** - Arrow keys, history navigation (Up/Down), search (Ctrl+R)
+- **Tab completion** - Complete symbols, primitives, keywords
+- **Multi-line input** - Automatic continuation for unbalanced parentheses
+- **Syntax highlighting** - Colorized keywords, strings, numbers
 
 Example session:
 
 ```
-> (define (factorial n)
-    (if (<= n 1) 
-        1 
-        (* n (factorial (- n 1)))))
-> (factorial 10)
+jlll> (define (factorial n)
+....>   (if (<= n 1) 
+....>     1 
+....>     (* n (factorial (- n 1)))))
+jlll> (factorial 10)
 3628800
-> (invoke "hello world" 'toUpperCase)
+jlll> (invoke "hello world" 'toUpperCase)
 HELLO WORLD
 ```
 
