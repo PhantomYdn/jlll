@@ -46,6 +46,14 @@ mvn spotless:check
 mvn spotless:apply
 ```
 
+## Workflow Rules
+
+Before committing or ending a session:
+
+1. **Format check**: `mvn spotless:check` (or `mvn spotless:apply` to fix)
+2. **Run tests**: `mvn test`
+3. **Verify build**: `mvn verify` (includes coverage)
+
 ## Project Structure
 
 ```
@@ -73,42 +81,13 @@ src/
 - **Brace style**: Allman (opening brace on new line)
 - **Indentation**: 4 spaces (no tabs)
 - **Line length**: No strict limit, but keep readable
-
-```java
-public class Example
-{
-    public void method()
-    {
-        if (condition)
-        {
-            // code
-        }
-        else
-        {
-            // code
-        }
-    }
-}
-```
+- **Enforcement**: Spotless plugin auto-formats code
 
 ### Imports
 
 - Use individual imports, not wildcards
 - Static imports allowed for test assertions
 - Order: java.*, then external libs, then project imports
-
-```java
-package ru.ydn.jlll.tests;
-
-import java.lang.reflect.Method;
-import java.math.BigInteger;
-
-import org.junit.Test;
-
-import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Jlll;
-import static org.junit.Assert.*;
-```
 
 ### Naming Conventions
 
@@ -128,54 +107,16 @@ import static org.junit.Assert.*;
 - Use generics where appropriate: `List<Object>`, `Map<String,Symbol>`
 - Prefer primitives and autoboxing over wrapper constructors
 
-```java
-public class Symbol implements Serializable
-{
-    private static final long serialVersionUID = 3176952970569428659L;
-    // ...
-}
-
-// Good: use autoboxing or Boolean constants
-return Boolean.TRUE;
-return 42;  // autoboxed to Integer
-
-// Avoid: deprecated wrapper constructors
-// return new Boolean(true);  // deprecated
-// return new Integer(42);    // deprecated
-```
-
 ### Error Handling
 
 - Use `JlllException` for interpreter/language errors
 - Wrap underlying exceptions with context
-
-```java
-public void method() throws JlllException
-{
-    try
-    {
-        // risky operation
-    }
-    catch (Exception e)
-    {
-        throw new JlllException("Context message", e);
-    }
-}
-```
 
 ### Annotations
 
 - `@JlllName("name")` - Bind Java method to Lisp function name
 - `@JlllDoc("description")` - Document a primitive
 - `@Override` - Always use when overriding methods
-
-```java
-@JlllName("testMethod")
-public int testMethod(Enviroment env, String arg)
-{
-    return 0;
-}
-```
 
 ## Testing Patterns
 
@@ -184,24 +125,6 @@ public int testMethod(Enviroment env, String arg)
 - Test classes extend nothing (JUnit 4 annotations)
 - Use `@Test` annotation on test methods
 - Test methods named `test*`
-
-```java
-public class ExampleTestCase
-{
-    private final Enviroment env;
-
-    public ExampleTestCase()
-    {
-        env = new Enviroment(Enviroment.top);
-    }
-
-    @Test
-    public void testFeature() throws Exception
-    {
-        // test code
-    }
-}
-```
 
 ### Common Test Helpers
 
