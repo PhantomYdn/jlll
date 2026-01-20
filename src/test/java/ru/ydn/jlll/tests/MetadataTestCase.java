@@ -191,13 +191,22 @@ public class MetadataTestCase
     }
 
     @Test
-    public void testDocFallsBackToProcedureDoc() throws Exception
+    public void testDocForBuiltinPrimitive() throws Exception
     {
-        // Built-in primitives with @JlllDoc should work
-        // For now, most don't have docs, so this mainly tests the fallback path
-        Object result = eval("(doc '+)");
-        // + doesn't have @JlllDoc, so returns null or describe output
-        // This is mainly testing that it doesn't crash
+        // Built-in primitives now store doc as metadata
+        // The doc primitive should have documentation set during construction
+        Object result = eval("(doc 'doc)");
+        assertNotNull(result);
+        assertTrue(result.toString().contains("documentation"));
+    }
+
+    @Test
+    public void testMetaForBuiltinPrimitive() throws Exception
+    {
+        // Built-in primitives should have :java-class metadata
+        Object javaClass = eval("(meta 'doc :java-class)");
+        assertNotNull(javaClass);
+        assertTrue(javaClass.toString().contains("KernelLib"));
     }
     // === describe Integration ===
 

@@ -50,7 +50,7 @@ Returns the `:doc` metadata for a symbol:
 (doc 'add)        ; => "Adds numbers"
 ```
 
-For built-in primitives without metadata, `doc` falls back to any `@JlllDoc` annotation.
+Built-in primitives automatically have their documentation (from JavaDoc comments) and tracing metadata (`:java-class`, `:java-method`) set during registration.
 
 ### meta
 
@@ -164,6 +164,71 @@ The `describe` function includes metadata in its output:
   :deprecated "2.0"
   :see-also "new-function"
   (new-function x))
+```
+
+## Java Integration
+
+### Built-in Primitives
+
+Built-in primitives automatically receive metadata during registration:
+
+- `:doc` - Documentation from JavaDoc comments (for named classes) or explicit constructor parameter
+- `:java-class` - The Java class implementing the primitive
+- `:java-method` - The method name (for `ReflectionPrimitive` based primitives)
+
+```lisp
+(meta 'doc :java-class)   ; => "ru.ydn.jlll.libs.KernelLib$42"
+(meta 'null? :java-method) ; => "isNull"
+```
+
+### Creating Primitives with Documentation
+
+For library developers, there are three ways to add documentation to primitives:
+
+1. **JavaDoc comments** (for named subclasses):
+   ```java
+   /**
+    * Adds two numbers together.
+    */
+   public class AddPrimitive extends Primitive {
+       public AddPrimitive(Enviroment env) {
+           super("+", env);
+       }
+       // ...
+   }
+   ```
+
+2. **Explicit doc parameter** (for anonymous primitives):
+   ```java
+   new Primitive("+", env, "Adds two numbers together") {
+       // ...
+   };
+   ```
+
+3. **Full metadata map**:
+   ```java
+   new Primitive("+", env, Map.of(
+       Symbol.intern("doc"), "Adds two numbers",
+       Symbol.intern("category"), "math"
+   )) {
+       // ...
+   };
+   ```
+
+### ReflectionLibrary Methods
+
+Methods in `ReflectionLibrary` subclasses get documentation from their JavaDoc:
+
+```java
+public class MathLib extends ReflectionLibrary {
+    /**
+     * Returns the absolute value of a number.
+     */
+    @JlllName("abs")
+    public Number abs(Number n) {
+        return Math.abs(n.doubleValue());
+    }
+}
 ```
 
 ## Summary

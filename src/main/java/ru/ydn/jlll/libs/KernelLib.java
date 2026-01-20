@@ -767,7 +767,8 @@ public class KernelLib implements Library
             }
         };
         // ============== Metadata Primitives ==============
-        new Primitive("doc", env)
+        new Primitive("doc", env, "Returns documentation for a symbol or procedure. "
+                + "Documentation is stored as :doc metadata on bindings.")
         {
             private static final long serialVersionUID = 9182736450918273645L;
 
@@ -792,13 +793,13 @@ public class KernelLib implements Library
                 {
                     throw new JlllException("doc requires a symbol or procedure");
                 }
-                // First try metadata
+                // Primary source: metadata on the binding
                 Object doc = env.getMeta(sym, Symbol.intern("doc"));
                 if (doc != null)
                 {
                     return doc;
                 }
-                // Fallback to Procedure.getDoc() for primitives
+                // Fallback: Procedure.getDoc() for backward compatibility
                 Object value = env.lookup(sym);
                 if (value instanceof Procedure)
                 {
@@ -811,7 +812,8 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("meta", env)
+        new Primitive("meta", env, "Returns metadata for a symbol. "
+                + "(meta sym) returns all metadata as alist; (meta sym :key) returns specific value.")
         {
             private static final long serialVersionUID = 9182736450918273646L;
 
@@ -870,7 +872,7 @@ public class KernelLib implements Library
                 }
             }
         };
-        new Primitive("set-meta!", env)
+        new Primitive("set-meta!", env, "Sets metadata on a symbol. Usage: (set-meta! sym :key value)")
         {
             private static final long serialVersionUID = 9182736450918273647L;
 
@@ -911,7 +913,8 @@ public class KernelLib implements Library
                 return value;
             }
         };
-        new Primitive("define-from", env)
+        new Primitive("define-from", env,
+                "Creates a new binding with copied value and metadata from an existing symbol.")
         {
             private static final long serialVersionUID = 9182736450918273648L;
 

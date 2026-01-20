@@ -186,10 +186,17 @@ public class CompaundProcedure extends Procedure
                 new Cons(variables, (body instanceof Cons ? ((Cons) body).clone() : body)));
     }
 
+    /**
+     * Returns the documentation string for this procedure.
+     * For user-defined procedures, documentation should be stored as metadata on the binding
+     * using {@code (define (name args) :doc "..." body)}.
+     *
+     * @return empty string (documentation is in metadata)
+     */
     @Override
     public String getDoc()
     {
-        return describe();
+        return "";
     }
 
     public String describe()

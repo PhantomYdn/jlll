@@ -82,8 +82,21 @@ public class Macros extends CompaundProcedure
      *
      * @return a string containing arguments and body
      */
+    @Override
     public String describe()
     {
-        return "Macros.\n" + "Doc: " + getDoc() + "\n" + "Arguments: " + variables + "\n" + "Body: " + body;
+        return "Macros.\n" + "Arguments: " + variables + "\n" + "Body: " + body;
+    }
+
+    /**
+     * Returns the documentation string for this macro.
+     * For user-defined macros, documentation should be stored as metadata on the binding.
+     *
+     * @return empty string (documentation is in metadata)
+     */
+    @Override
+    public String getDoc()
+    {
+        return "";
     }
 }

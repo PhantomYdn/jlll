@@ -56,11 +56,20 @@ public abstract class Procedure implements Serializable
     }
 
     /**
-     * Obtain documentation for this procedure
+     * Obtain documentation for this procedure.
      *
-     * @return documentation for this procedure
+     * <p>
+     * Note: Documentation should primarily be stored as metadata on the binding
+     * using the {@code :doc} key. This method is kept for backward compatibility.
+     * Use {@code (doc 'name)} or {@code (meta 'name :doc)} to retrieve documentation.
+     * </p>
+     *
+     * @return documentation for this procedure, or empty string if not available
      */
-    public abstract String getDoc();
+    public String getDoc()
+    {
+        return "";
+    }
 
     /**
      * Returns description of this procedure

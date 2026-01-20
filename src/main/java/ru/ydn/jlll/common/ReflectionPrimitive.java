@@ -6,28 +6,70 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
+import com.github.therapi.runtimejavadoc.CommentFormatter;
+import com.github.therapi.runtimejavadoc.MethodJavadoc;
+import com.github.therapi.runtimejavadoc.RuntimeJavadoc;
 import ru.ydn.jlll.common.Cons.ConsIterator;
-import ru.ydn.jlll.common.annotation.JlllDoc;
 import ru.ydn.jlll.common.annotation.JlllName;
 
+/**
+ * A primitive that wraps a Java method, exposing it as a JLLL function.
+ * Methods are discovered via the {@link JlllName} annotation.
+ *
+ * <p>
+ * Documentation is extracted from the method's JavaDoc comment at compile time
+ * using therapi-runtime-javadoc and stored as metadata on the binding.
+ * </p>
+ */
 public class ReflectionPrimitive extends Primitive
 {
-    /**
-     *
-     */
     private static final long serialVersionUID = -7400033818353226326L;
+    /** Shared formatter for converting JavaDoc comments to plain text */
+    private static final CommentFormatter FORMATTER = new CommentFormatter();
+    /** Symbol for documentation metadata key */
+    private static final Symbol DOC_KEY = Symbol.intern("doc");
+    /** Symbol for Java class metadata key */
+    private static final Symbol JAVA_CLASS_KEY = Symbol.intern("java-class");
+    /** Symbol for Java method metadata key */
+    private static final Symbol JAVA_METHOD_KEY = Symbol.intern("java-method");
     protected final Object obj;
     protected final Method method;
     protected boolean useEvaluated = true;
 
     private ReflectionPrimitive(String name, Enviroment env, Object obj, Method method, boolean useEvaluated)
     {
-        super(name, env);
+        // Use the doc-less super constructor to avoid double metadata setting
+        super(name, env, (String) null);
         this.obj = obj;
         this.method = method;
         this.useEvaluated = useEvaluated;
+        // Now set method-specific metadata
+        Symbol sym = Symbol.intern(name);
+        // Override java-class with the actual containing class (not the anonymous ReflectionPrimitive)
+        env.setMeta(sym, JAVA_CLASS_KEY, obj.getClass().getName());
+        // Add java-method metadata
+        env.setMeta(sym, JAVA_METHOD_KEY, method.getName());
+        // Extract and set documentation from method JavaDoc
+        String doc = extractMethodJavadoc();
+        if (doc != null && !doc.isEmpty())
+        {
+            env.setMeta(sym, DOC_KEY, doc);
+        }
     }
 
+    /**
+     * Creates a ReflectionPrimitive from a method annotated with {@link JlllName}.
+     *
+     * @param env
+     *            the environment to bind the primitive in
+     * @param obj
+     *            the object instance containing the method
+     * @param method
+     *            the method to wrap
+     * @return the created ReflectionPrimitive
+     * @throws JlllException
+     *             if the method is not properly annotated
+     */
     public static ReflectionPrimitive createReflectionPrimitive(Enviroment env, Object obj, Method method)
             throws JlllException
     {
@@ -41,11 +83,44 @@ public class ReflectionPrimitive extends Primitive
         return createReflectionPrimitive(env, obj, method, name, useEvaluated);
     }
 
+    /**
+     * Creates a ReflectionPrimitive with explicit name and evaluation settings.
+     *
+     * @param env
+     *            the environment to bind the primitive in
+     * @param obj
+     *            the object instance containing the method
+     * @param method
+     *            the method to wrap
+     * @param name
+     *            the JLLL name for the primitive
+     * @param useEvaluated
+     *            whether arguments should be evaluated before passing to the method
+     * @return the created ReflectionPrimitive
+     * @throws JlllException
+     *             if creation fails
+     */
     public static ReflectionPrimitive createReflectionPrimitive(Enviroment env, Object obj, Method method, String name,
             boolean useEvaluated) throws JlllException
     {
         ReflectionPrimitive primitive = new ReflectionPrimitive(name, env, obj, method, useEvaluated);
         return primitive;
+    }
+
+    /**
+     * Extracts JavaDoc comment for the wrapped method using therapi-runtime-javadoc.
+     *
+     * @return the JavaDoc comment as plain text, or null if not available
+     */
+    private String extractMethodJavadoc()
+    {
+        MethodJavadoc methodDoc = RuntimeJavadoc.getJavadoc(method);
+        if (methodDoc.isEmpty())
+        {
+            return null;
+        }
+        String formatted = FORMATTER.format(methodDoc.getComment());
+        return formatted.isEmpty() ? null : formatted;
     }
 
     @Override
@@ -160,8 +235,8 @@ public class ReflectionPrimitive extends Primitive
     @Override
     public String getDoc()
     {
-        JlllDoc doc = method.getAnnotation(JlllDoc.class);
-        return doc == null ? "" : doc.value();
+        String doc = extractMethodJavadoc();
+        return doc != null ? doc : "";
     }
 
     @Override
