@@ -8,13 +8,11 @@ import java.io.StringReader;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Callable;
-
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.IVersionProvider;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-
 import ru.ydn.jlll.common.Enviroment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -23,62 +21,33 @@ import ru.ydn.jlll.common.JlllException;
  * Command-line interface for JLLL interpreter.
  * Provides a modern CLI with proper argument parsing, help, and version support.
  */
-@Command(
-    name = "jlll",
-    mixinStandardHelpOptions = true,
-    versionProvider = JlllCli.VersionProvider.class,
-    description = "JLLL - Java Lisp Like Language interpreter",
-    footer = {
-        "",
-        "Examples:",
-        "  jlll                        Start interactive REPL",
-        "  jlll script.jlll            Execute script file",
-        "  jlll -e '(+ 1 2 3)'         Evaluate expression",
-        "  jlll -e '(+ 1 2)' file.jlll Evaluate expr, then run file"
-    }
-)
+@Command(name = "jlll", mixinStandardHelpOptions = true, versionProvider = JlllCli.VersionProvider.class, description = "JLLL - Java Lisp Like Language interpreter", footer =
+{"", "Examples:", "  jlll                        Start interactive REPL",
+        "  jlll script.jlll            Execute script file", "  jlll -e '(+ 1 2 3)'         Evaluate expression",
+        "  jlll -e '(+ 1 2)' file.jlll Evaluate expr, then run file"})
 public class JlllCli implements Callable<Integer>
 {
-    @Option(
-        names = {"-e", "--eval"},
-        description = "Evaluate expression(s) before files",
-        paramLabel = "EXPR"
-    )
+    @Option(names =
+    {"-e", "--eval"}, description = "Evaluate expression(s) before files", paramLabel = "EXPR")
     private List<String> expressions;
-
-    @Option(
-        names = {"-i", "--interactive"},
-        description = "Enter REPL after executing files/expressions"
-    )
+    @Option(names =
+    {"-i", "--interactive"}, description = "Enter REPL after executing files/expressions")
     private boolean forceInteractive;
-
-    @Option(
-        names = {"--no-color"},
-        description = "Disable ANSI colors in output"
-    )
+    @Option(names =
+    {"--no-color"}, description = "Disable ANSI colors in output")
     private boolean noColor;
-
-    @Option(
-        names = {"-q", "--quiet"},
-        description = "Suppress startup banner in REPL"
-    )
+    @Option(names =
+    {"-q", "--quiet"}, description = "Suppress startup banner in REPL")
     private boolean quiet;
-
-    @Parameters(
-        paramLabel = "FILE",
-        description = "Script file(s) to execute"
-    )
+    @Parameters(paramLabel = "FILE", description = "Script file(s) to execute")
     private List<File> files;
-
     private Enviroment env;
 
     @Override
     public Integer call() throws Exception
     {
         env = new Enviroment(Enviroment.top);
-
         boolean hasWork = false;
-
         // Evaluate -e expressions first
         if (expressions != null && !expressions.isEmpty())
         {
@@ -104,7 +73,6 @@ public class JlllCli implements Callable<Integer>
                 }
             }
         }
-
         // Execute files
         if (files != null && !files.isEmpty())
         {
@@ -121,7 +89,6 @@ public class JlllCli implements Callable<Integer>
                     System.err.println("Error: Cannot read file: " + file.getPath());
                     return 1;
                 }
-
                 try (FileReader reader = new FileReader(file))
                 {
                     Jlll.eval(reader, env);
@@ -137,7 +104,6 @@ public class JlllCli implements Callable<Integer>
                 }
             }
         }
-
         // Start REPL if no work done or --interactive flag
         if (!hasWork || forceInteractive)
         {
@@ -146,7 +112,6 @@ public class JlllCli implements Callable<Integer>
             repl.setQuiet(quiet);
             return repl.run();
         }
-
         return 0;
     }
 
@@ -155,9 +120,7 @@ public class JlllCli implements Callable<Integer>
      */
     public static void main(String[] args)
     {
-        int exitCode = new CommandLine(new JlllCli())
-            .setCaseInsensitiveEnumValuesAllowed(true)
-            .execute(args);
+        int exitCode = new CommandLine(new JlllCli()).setCaseInsensitiveEnumValuesAllowed(true).execute(args);
         System.exit(exitCode);
     }
 
@@ -177,14 +140,16 @@ public class JlllCli implements Callable<Integer>
                     props.load(is);
                     String version = props.getProperty("jlll.version", "unknown");
                     String name = props.getProperty("jlll.name", "JLLL");
-                    return new String[] { name + " " + version };
+                    return new String[]
+                    {name + " " + version};
                 }
             }
             catch (IOException e)
             {
                 // Fall through to default
             }
-            return new String[] { "JLLL (version unknown)" };
+            return new String[]
+            {"JLLL (version unknown)"};
         }
     }
 }

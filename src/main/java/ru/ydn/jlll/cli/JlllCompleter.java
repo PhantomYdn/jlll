@@ -1,15 +1,12 @@
 package ru.ydn.jlll.cli;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.ParsedLine;
-
 import ru.ydn.jlll.common.Enviroment;
 import ru.ydn.jlll.common.Macros;
 import ru.ydn.jlll.common.Primitive;
@@ -23,18 +20,12 @@ import ru.ydn.jlll.common.Symbol;
 public class JlllCompleter implements Completer
 {
     private final Enviroment env;
-
     // Built-in Lisp keywords that are always available
-    private static final String[] KEYWORDS = {
-        "define", "defmacro", "lambda", "if", "cond", "case",
-        "let", "let*", "letrec", "begin", "quote", "quasiquote",
-        "set", "set!", "and", "or", "not",
-        "car", "cdr", "cons", "list", "append",
-        "map", "filter", "apply", "eval",
-        "true", "false", "null", "nil",
-        "load-lib", "load-url", "load-system-script",
-        "help", "quit", "exit", "env"
-    };
+    private static final String[] KEYWORDS =
+    {"define", "defmacro", "lambda", "if", "cond", "case", "let", "let*", "letrec", "begin", "quote", "quasiquote",
+            "set", "set!", "and", "or", "not", "car", "cdr", "cons", "list", "append", "map", "filter", "apply", "eval",
+            "true", "false", "null", "nil", "load-lib", "load-url", "load-system-script", "help", "quit", "exit",
+            "env"};
 
     public JlllCompleter(Enviroment env)
     {
@@ -46,10 +37,8 @@ public class JlllCompleter implements Completer
     {
         // Use the word from the parser directly - it now correctly identifies Lisp symbols
         String prefix = line.word();
-
         // Collect all possible completions
         TreeSet<String> completions = new TreeSet<>();
-
         // Add keywords
         for (String keyword : KEYWORDS)
         {
@@ -58,7 +47,6 @@ public class JlllCompleter implements Completer
                 completions.add(keyword);
             }
         }
-
         // Add symbols from current environment
         Map<Symbol, Object> bindings = env.getAllBindings();
         for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
@@ -69,19 +57,17 @@ public class JlllCompleter implements Completer
                 completions.add(name);
             }
         }
-
         // Convert to candidates with descriptions
         for (String completion : completions)
         {
             String description = getDescription(completion, bindings);
-            candidates.add(new Candidate(
-                completion,           // value
-                completion,           // display
-                null,                 // group
-                description,          // description
-                null,                 // suffix
-                null,                 // key
-                true                  // complete
+            candidates.add(new Candidate(completion, // value
+                    completion, // display
+                    null, // group
+                    description, // description
+                    null, // suffix
+                    null, // key
+                    true // complete
             ));
         }
     }
@@ -94,19 +80,17 @@ public class JlllCompleter implements Completer
         // Check special REPL commands
         switch (name)
         {
-            case "help":
+            case "help" :
                 return "Show help message";
-            case "quit":
-            case "exit":
+            case "quit" :
+            case "exit" :
                 return "Exit the REPL";
-            case "env":
+            case "env" :
                 return "Show environment bindings";
         }
-
         // Look up in environment
         Symbol symbol = Symbol.intern(name);
         Object value = bindings.get(symbol);
-
         if (value == null)
         {
             return "keyword";

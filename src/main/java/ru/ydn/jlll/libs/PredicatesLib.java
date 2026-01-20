@@ -19,21 +19,20 @@ public class PredicatesLib extends ReflectionLibrary
 {
     public void load(Enviroment env) throws JlllException
     {
-    	super.load(env);    	                                    
-        Jlll.eval("(load-system-script \"predicates.jlll\")",env);
+        super.load(env);
+        Jlll.eval("(load-system-script \"predicates.jlll\")", env);
     }
-    
-    @JlllName(value="null?", useEvaluated=false)
+
+    @JlllName(value = "null?", useEvaluated = false)
     public boolean isNull(Enviroment env, Object obj) throws JlllException
     {
-    	Object firstArg = obj==null?null:Evaluator.eval(obj,env);
-        return firstArg==null || Null.NULL.equals(firstArg);
+        Object firstArg = obj == null ? null : Evaluator.eval(obj, env);
+        return firstArg == null || Null.NULL.equals(firstArg);
     }
-    
+
     @JlllName("jlll-bound?")
     public boolean isJlllBound(Enviroment env, Object obj)
     {
-    	return env.lookup(obj.toString())!=null;
+        return env.lookup(obj.toString()) != null;
     }
 }
-

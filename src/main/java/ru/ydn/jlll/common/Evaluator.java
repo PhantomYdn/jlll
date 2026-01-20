@@ -1,70 +1,74 @@
 package ru.ydn.jlll.common;
-
-import ru.ydn.jlll.util.CommonUtil;
-/** * Evaluator is the main class for evaluating of the equations * */
-    public class Evaluator
-{
-	/**	 * Main method to evaluate equestions	 * @param eval object to eval	 * @param env environment which is used during evaluation	 * @return result	 * @throws JlllException thrown if some unusual situation occured	 */    
-    public static Object eval(Object eval, Enviroment env) throws JlllException    
-{
-        Object ret = null;
-        if (eval instanceof Cons)        
-{
-        	Cons cons = (Cons) eval;
-        	if(cons.isNull()) ret = Null.NULL;
-        	else        	
-{
-	            try	            
-{
-	                Object car = eval(cons.car(), env);
-	                if (car instanceof Procedure)	                
-{
-	                	Procedure proc = (Procedure) car;
-	                	proc.cnt++;
-	                    ret = proc.applay(cons.cdr(), env);
-	                
-}
-	                else	                
-{
-	                    throw new JlllException("First argument is not Procedure: "+(car==null?"null":car.getClass().getName()));
-	                
-}
-	            
-}
-                catch(Throwable thr)                
-{
-                    if(thr instanceof JlllException)                    
-{
-                        JlllException exc = (JlllException)thr;
-                        exc.addJlllCouse(eval);
-                        throw exc;
-                    
-}
-                    else                    
-{
-                        throw new JlllException("Unexpected exception", eval, thr);
-                                            
-}
-                
-}
-        	
-}
-        
-}
-        else if (eval instanceof Symbol)        
-{
-            ret = env.lookup((Symbol) eval);
-            if (ret == null) throw new JlllException("Symbol is unbound: " + eval);
-        
-}
-        else        
-{
-            ret = eval;
-        
-}
-        return CommonUtil.prepareReturn(ret);
-    
-}
 
+import ru.ydn.jlll.util.CommonUtil;
+
+/**
+ * Evaluator is the main class for evaluating of the equations
+ *
+ */
+public class Evaluator
+{
+    /**
+     * Main method to evaluate equestions
+     *
+     * @param eval
+     *            object to eval
+     * @param env
+     *            environment which is used during evaluation
+     * @return result
+     * @throws JlllException
+     *             thrown if some unusual situation occured
+     */
+    public static Object eval(Object eval, Enviroment env) throws JlllException
+    {
+        Object ret = null;
+        if (eval instanceof Cons)
+        {
+            Cons cons = (Cons) eval;
+            if (cons.isNull())
+                ret = Null.NULL;
+            else
+            {
+                try
+                {
+                    Object car = eval(cons.car(), env);
+                    if (car instanceof Procedure)
+                    {
+                        Procedure proc = (Procedure) car;
+                        proc.cnt++;
+                        ret = proc.applay(cons.cdr(), env);
+                    }
+                    else
+                    {
+                        throw new JlllException("First argument is not Procedure: "
+                                + (car == null ? "null" : car.getClass().getName()));
+                    }
+                }
+                catch (Throwable thr)
+                {
+                    if (thr instanceof JlllException)
+                    {
+                        JlllException exc = (JlllException) thr;
+                        exc.addJlllCouse(eval);
+                        throw exc;
+                    }
+                    else
+                    {
+                        throw new JlllException("Unexpected exception", eval, thr);
+                    }
+                }
+            }
+        }
+        else if (eval instanceof Symbol)
+        {
+            ret = env.lookup((Symbol) eval);
+            if (ret == null)
+                throw new JlllException("Symbol is unbound: " + eval);
+        }
+        else
+        {
+            ret = eval;
+        }
+        return CommonUtil.prepareReturn(ret);
+    }
 }
-

@@ -10,9 +10,14 @@ package ru.ydn.jlll.io;
 public interface ConsRenderHandler
 {
     public boolean getOrientation(int width, int height);
+
     public void startTable();
+
     public void startRow();
+
     public void renderCell(Object value);
+
     public void finishRow();
+
     public void finishTable();
 }

@@ -3,7 +3,6 @@ package ru.ydn.jlll.cli;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
-
 import org.jline.reader.Highlighter;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
@@ -20,7 +19,6 @@ public class JlllHighlighter implements Highlighter
     private static final Set<String> KEYWORDS = new HashSet<>();
     private static final Set<String> SPECIAL_FORMS = new HashSet<>();
     private static final Set<String> BUILTINS = new HashSet<>();
-
     static
     {
         // Special forms (blue)
@@ -38,7 +36,6 @@ public class JlllHighlighter implements Highlighter
         SPECIAL_FORMS.add("quasiquote");
         SPECIAL_FORMS.add("set");
         SPECIAL_FORMS.add("set!");
-
         // Built-in functions (cyan)
         BUILTINS.add("car");
         BUILTINS.add("cdr");
@@ -58,7 +55,6 @@ public class JlllHighlighter implements Highlighter
         BUILTINS.add("println");
         BUILTINS.add("concat");
         BUILTINS.add("describe");
-
         // Constants/keywords (magenta)
         KEYWORDS.add("true");
         KEYWORDS.add("false");
@@ -68,7 +64,6 @@ public class JlllHighlighter implements Highlighter
         KEYWORDS.add("#t");
         KEYWORDS.add("#f");
     }
-
     // Styles
     private static final AttributedStyle STYLE_DEFAULT = AttributedStyle.DEFAULT;
     private static final AttributedStyle STYLE_SPECIAL_FORM = AttributedStyle.BOLD.foreground(AttributedStyle.BLUE);
@@ -76,7 +71,8 @@ public class JlllHighlighter implements Highlighter
     private static final AttributedStyle STYLE_KEYWORD = AttributedStyle.DEFAULT.foreground(AttributedStyle.MAGENTA);
     private static final AttributedStyle STYLE_STRING = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN);
     private static final AttributedStyle STYLE_NUMBER = AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW);
-    private static final AttributedStyle STYLE_COMMENT = AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT).italic();
+    private static final AttributedStyle STYLE_COMMENT = AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT)
+            .italic();
     private static final AttributedStyle STYLE_PAREN = AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT);
     private static final AttributedStyle STYLE_QUOTE = AttributedStyle.DEFAULT.foreground(AttributedStyle.RED);
     private static final AttributedStyle STYLE_ERROR = AttributedStyle.DEFAULT.foreground(AttributedStyle.RED).bold();
@@ -85,24 +81,21 @@ public class JlllHighlighter implements Highlighter
     public AttributedString highlight(LineReader reader, String buffer)
     {
         AttributedStringBuilder sb = new AttributedStringBuilder();
-
         int i = 0;
         int parenDepth = 0;
-
         while (i < buffer.length())
         {
             char c = buffer.charAt(i);
-
             // Comment (starts with ;)
             if (c == ';')
             {
                 int end = buffer.indexOf('\n', i);
-                if (end == -1) end = buffer.length();
+                if (end == -1)
+                    end = buffer.length();
                 sb.styled(STYLE_COMMENT, buffer.substring(i, end));
                 i = end;
                 continue;
             }
-
             // String literal
             if (c == '"')
             {
@@ -111,7 +104,6 @@ public class JlllHighlighter implements Highlighter
                 i = end;
                 continue;
             }
-
             // Quote characters
             if (c == '\'' || c == '`' || c == ',')
             {
@@ -125,13 +117,13 @@ public class JlllHighlighter implements Highlighter
                 }
                 continue;
             }
-
             // Parentheses
             if (c == '(' || c == ')')
             {
-                if (c == '(') parenDepth++;
-                if (c == ')') parenDepth--;
-
+                if (c == '(')
+                    parenDepth++;
+                if (c == ')')
+                    parenDepth--;
                 if (parenDepth < 0)
                 {
                     // Unmatched closing paren - highlight as error
@@ -144,7 +136,6 @@ public class JlllHighlighter implements Highlighter
                 i++;
                 continue;
             }
-
             // Brackets (alternative list syntax)
             if (c == '[' || c == ']')
             {
@@ -152,7 +143,6 @@ public class JlllHighlighter implements Highlighter
                 i++;
                 continue;
             }
-
             // Whitespace
             if (Character.isWhitespace(c))
             {
@@ -160,16 +150,13 @@ public class JlllHighlighter implements Highlighter
                 i++;
                 continue;
             }
-
             // Symbol or number
             int start = i;
             while (i < buffer.length() && !isDelimiter(buffer.charAt(i)))
             {
                 i++;
             }
-
             String token = buffer.substring(start, i);
-
             if (isNumber(token))
             {
                 sb.styled(STYLE_NUMBER, token);
@@ -191,7 +178,6 @@ public class JlllHighlighter implements Highlighter
                 sb.styled(STYLE_DEFAULT, token);
             }
         }
-
         return sb.toAttributedString();
     }
 
@@ -235,9 +221,8 @@ public class JlllHighlighter implements Highlighter
      */
     private boolean isDelimiter(char c)
     {
-        return c == '(' || c == ')' || c == '[' || c == ']' ||
-               c == '\'' || c == '`' || c == ',' || c == '@' ||
-               c == '"' || c == ';' || Character.isWhitespace(c);
+        return c == '(' || c == ')' || c == '[' || c == ']' || c == '\'' || c == '`' || c == ',' || c == '@' || c == '"'
+                || c == ';' || Character.isWhitespace(c);
     }
 
     /**
@@ -249,35 +234,35 @@ public class JlllHighlighter implements Highlighter
         {
             return false;
         }
-
         int start = 0;
         if (token.charAt(0) == '-' || token.charAt(0) == '+')
         {
-            if (token.length() == 1) return false;
+            if (token.length() == 1)
+                return false;
             start = 1;
         }
-
         boolean hasDecimal = false;
         boolean hasExponent = false;
-
         for (int i = start; i < token.length(); i++)
         {
             char c = token.charAt(i);
-
             if (c == '.')
             {
-                if (hasDecimal || hasExponent) return false;
+                if (hasDecimal || hasExponent)
+                    return false;
                 hasDecimal = true;
             }
             else if (c == 'e' || c == 'E')
             {
-                if (hasExponent) return false;
+                if (hasExponent)
+                    return false;
                 hasExponent = true;
                 // Allow sign after exponent
                 if (i + 1 < token.length())
                 {
                     char next = token.charAt(i + 1);
-                    if (next == '+' || next == '-') i++;
+                    if (next == '+' || next == '-')
+                        i++;
                 }
             }
             else if (!Character.isDigit(c))
@@ -285,7 +270,6 @@ public class JlllHighlighter implements Highlighter
                 return false;
             }
         }
-
         return true;
     }
 }

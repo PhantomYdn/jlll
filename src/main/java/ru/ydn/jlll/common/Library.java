@@ -1,6 +1,5 @@
 package ru.ydn.jlll.common;
 
-
 /**
  * Created by IntelliJ IDEA.
  * User: Eleas

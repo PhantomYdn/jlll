@@ -36,6 +36,7 @@
         <central-publishing-plugin.version>0.9.0</central-publishing-plugin.version>
         <jacoco-plugin.version>0.8.12</jacoco-plugin.version>
         <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+        <spotless-plugin.version>2.44.0</spotless-plugin.version>
     </properties>
 
     <scm>
@@ -225,6 +226,26 @@
                 <configuration>
                     <publishingServerId>central</publishingServerId>
                     <autoPublish>false</autoPublish>
+                </configuration>
+            </plugin>
+
+            <!-- Spotless for code formatting -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless-plugin.version}</version>
+                <configuration>
+                    <java>
+                        <importOrder>
+                            <order>java,javax,org,com,</order>
+                        </importOrder>
+                        <removeUnusedImports/>
+                        <eclipse>
+                            <file>${project.basedir}/eclipse-formatter.xml</file>
+                        </eclipse>
+                        <trimTrailingWhitespace/>
+                        <endWithNewline/>
+                    </java>
                 </configuration>
             </plugin>
         </plugins>

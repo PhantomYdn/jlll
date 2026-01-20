@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
@@ -16,7 +15,6 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
-
 import ru.ydn.jlll.common.Enviroment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -31,11 +29,9 @@ public class JlllRepl
     private static final String HISTORY_FILE = ".jlll_history";
     private static final String PRIMARY_PROMPT = "jlll> ";
     private static final String CONTINUATION_PROMPT = "....> ";
-
     private final Enviroment env;
     private boolean colorEnabled = true;
     private boolean quiet = false;
-
     private Terminal terminal;
     private LineReader reader;
     private PrintWriter out;
@@ -57,6 +53,7 @@ public class JlllRepl
 
     /**
      * Runs the REPL loop.
+     *
      * @return exit code (0 for normal exit)
      */
     public int run()
@@ -81,24 +78,14 @@ public class JlllRepl
 
     private void initTerminal() throws IOException
     {
-        terminal = TerminalBuilder.builder()
-            .system(true)
-            .build();
-
+        terminal = TerminalBuilder.builder().system(true).build();
         out = terminal.writer();
-
         Path historyPath = Paths.get(System.getProperty("user.home"), HISTORY_FILE);
         History history = new DefaultHistory();
-
-        reader = LineReaderBuilder.builder()
-            .terminal(terminal)
-            .history(history)
-            .variable(LineReader.HISTORY_FILE, historyPath)
-            .parser(new JlllParser())
-            .completer(new JlllCompleter(env))
-            .highlighter(colorEnabled ? new JlllHighlighter() : null)
-            .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
-            .build();
+        reader = LineReaderBuilder.builder().terminal(terminal).history(history)
+                .variable(LineReader.HISTORY_FILE, historyPath).parser(new JlllParser())
+                .completer(new JlllCompleter(env)).highlighter(colorEnabled ? new JlllHighlighter() : null)
+                .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true).build();
     }
 
     private void printBanner()
@@ -107,17 +94,12 @@ public class JlllRepl
         {
             return;
         }
-
         if (colorEnabled)
         {
-            out.println(new AttributedString(
-                "JLLL - Java Lisp Like Language",
-                AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)
-            ).toAnsi(terminal));
-            out.println(new AttributedString(
-                "Type (help) for commands, Ctrl+D to exit",
-                AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT)
-            ).toAnsi(terminal));
+            out.println(new AttributedString("JLLL - Java Lisp Like Language",
+                    AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)).toAnsi(terminal));
+            out.println(new AttributedString("Type (help) for commands, Ctrl+D to exit",
+                    AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT)).toAnsi(terminal));
         }
         else
         {
@@ -131,40 +113,32 @@ public class JlllRepl
     private void replLoop()
     {
         StringBuilder buffer = new StringBuilder();
-
         while (true)
         {
             String prompt = buffer.length() == 0 ? PRIMARY_PROMPT : CONTINUATION_PROMPT;
-
             try
             {
                 String line = reader.readLine(prompt);
-
                 if (line == null)
                 {
                     // EOF (Ctrl+D)
                     break;
                 }
-
                 buffer.append(line).append("\n");
-
                 // Check if expression is complete (balanced parentheses)
                 if (isExpressionComplete(buffer.toString()))
                 {
                     String code = buffer.toString().trim();
                     buffer.setLength(0);
-
                     if (code.isEmpty())
                     {
                         continue;
                     }
-
                     // Handle special REPL commands
                     if (handleReplCommand(code))
                     {
                         continue;
                     }
-
                     // Evaluate the expression
                     evaluate(code);
                 }
@@ -182,7 +156,6 @@ public class JlllRepl
                 break;
             }
         }
-
         out.println();
         out.println("Goodbye!");
         out.flush();
@@ -194,7 +167,6 @@ public class JlllRepl
         int bracketCount = 0;
         boolean inString = false;
         boolean escape = false;
-
         for (char c : code.toCharArray())
         {
             if (escape)
@@ -202,41 +174,36 @@ public class JlllRepl
                 escape = false;
                 continue;
             }
-
             if (c == '\\')
             {
                 escape = true;
                 continue;
             }
-
             if (c == '"')
             {
                 inString = !inString;
                 continue;
             }
-
             if (inString)
             {
                 continue;
             }
-
             switch (c)
             {
-                case '(':
+                case '(' :
                     parenCount++;
                     break;
-                case ')':
+                case ')' :
                     parenCount--;
                     break;
-                case '[':
+                case '[' :
                     bracketCount++;
                     break;
-                case ']':
+                case ']' :
                     bracketCount--;
                     break;
             }
         }
-
         // Expression is complete if all parens/brackets are balanced
         // and we're not in the middle of a string
         return parenCount <= 0 && bracketCount <= 0 && !inString;
@@ -245,27 +212,23 @@ public class JlllRepl
     private boolean handleReplCommand(String code)
     {
         String trimmed = code.trim();
-
         // Handle quit/exit commands
         if (trimmed.equals("(quit)") || trimmed.equals("(exit)"))
         {
             throw new EndOfFileException();
         }
-
         // Handle help command
         if (trimmed.equals("(help)"))
         {
             printHelp();
             return true;
         }
-
         // Handle env command - show current environment bindings
         if (trimmed.equals("(env)"))
         {
             printEnvironment();
             return true;
         }
-
         return false;
     }
 
@@ -324,10 +287,8 @@ public class JlllRepl
         {
             if (colorEnabled)
             {
-                out.println(new AttributedString(
-                    "nil",
-                    AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT)
-                ).toAnsi(terminal));
+                out.println(new AttributedString("nil", AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT))
+                        .toAnsi(terminal));
             }
             else
             {
@@ -338,10 +299,8 @@ public class JlllRepl
         {
             if (colorEnabled)
             {
-                out.println(new AttributedString(
-                    result.toString(),
-                    AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN)
-                ).toAnsi(terminal));
+                out.println(new AttributedString(result.toString(),
+                        AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN)).toAnsi(terminal));
             }
             else
             {
@@ -358,19 +317,16 @@ public class JlllRepl
         {
             message = e.getClass().getSimpleName();
         }
-
         if (colorEnabled)
         {
-            out.println(new AttributedString(
-                "Error: " + message,
-                AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)
-            ).toAnsi(terminal));
+            out.println(
+                    new AttributedString("Error: " + message, AttributedStyle.DEFAULT.foreground(AttributedStyle.RED))
+                            .toAnsi(terminal));
         }
         else
         {
             out.println("Error: " + message);
         }
-
         if (e.getCause() != null)
         {
             String causeMsg = e.getCause().getMessage();
@@ -378,10 +334,8 @@ public class JlllRepl
             {
                 if (colorEnabled)
                 {
-                    out.println(new AttributedString(
-                        "  Caused by: " + causeMsg,
-                        AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW)
-                    ).toAnsi(terminal));
+                    out.println(new AttributedString("  Caused by: " + causeMsg,
+                            AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW)).toAnsi(terminal));
                 }
                 else
                 {

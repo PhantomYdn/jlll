@@ -2,7 +2,6 @@ package ru.ydn.jlll.cli;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.jline.reader.CompletingParsedLine;
 import org.jline.reader.ParsedLine;
 import org.jline.reader.Parser;
@@ -18,29 +17,24 @@ public class JlllParser implements Parser
     {
         List<String> words = new ArrayList<>();
         List<Integer> wordPositions = new ArrayList<>();
-
         int wordStart = -1;
         boolean inString = false;
         boolean escape = false;
         int currentWordIndex = -1;
         int wordCursor = 0;
-
         for (int i = 0; i < line.length(); i++)
         {
             char c = line.charAt(i);
-
             if (escape)
             {
                 escape = false;
                 continue;
             }
-
             if (c == '\\' && inString)
             {
                 escape = true;
                 continue;
             }
-
             if (c == '"')
             {
                 if (!inString)
@@ -56,12 +50,10 @@ public class JlllParser implements Parser
                 inString = !inString;
                 continue;
             }
-
             if (inString)
             {
                 continue;
             }
-
             if (isSymbolTerminator(c))
             {
                 // End current word if any
@@ -81,23 +73,19 @@ public class JlllParser implements Parser
                 }
             }
         }
-
         // Handle word at end of line
         if (wordStart >= 0)
         {
             words.add(line.substring(wordStart));
             wordPositions.add(wordStart);
         }
-
         // Find which word the cursor is in (or at the end of)
         String currentWord = "";
         int currentWordStart = cursor;
-
         for (int i = 0; i < words.size(); i++)
         {
             int start = wordPositions.get(i);
             int end = start + words.get(i).length();
-
             if (cursor >= start && cursor <= end)
             {
                 currentWordIndex = i;
@@ -107,7 +95,6 @@ public class JlllParser implements Parser
                 break;
             }
         }
-
         // If cursor is not in any word, check if we're starting a new word
         if (currentWordIndex < 0)
         {
@@ -115,7 +102,6 @@ public class JlllParser implements Parser
             currentWord = "";
             currentWordStart = cursor;
             wordCursor = 0;
-
             // Look backwards to see if we should be continuing a word
             int pos = cursor - 1;
             while (pos >= 0 && !isSymbolTerminator(line.charAt(pos)) && line.charAt(pos) != '"')
@@ -129,9 +115,7 @@ public class JlllParser implements Parser
                 wordCursor = cursor - currentWordStart;
             }
         }
-
-        return new JlllParsedLine(line, cursor, words, currentWordIndex, currentWord,
-            currentWordStart, wordCursor);
+        return new JlllParsedLine(line, cursor, words, currentWordIndex, currentWord, currentWordStart, wordCursor);
     }
 
     /**
@@ -139,9 +123,8 @@ public class JlllParser implements Parser
      */
     private boolean isSymbolTerminator(char c)
     {
-        return c == '(' || c == ')' || c == '[' || c == ']' ||
-               c == '\'' || c == '`' || c == ',' || c == '@' ||
-               c == '"' || c == ';' || Character.isWhitespace(c);
+        return c == '(' || c == ')' || c == '[' || c == ']' || c == '\'' || c == '`' || c == ',' || c == '@' || c == '"'
+                || c == ';' || Character.isWhitespace(c);
     }
 
     /**
@@ -157,8 +140,8 @@ public class JlllParser implements Parser
         private final int wordStart;
         private final int wordCursor;
 
-        JlllParsedLine(String line, int cursor, List<String> words, int wordIndex,
-            String word, int wordStart, int wordCursor)
+        JlllParsedLine(String line, int cursor, List<String> words, int wordIndex, String word, int wordStart,
+                int wordCursor)
         {
             this.line = line;
             this.cursor = cursor;
@@ -204,7 +187,6 @@ public class JlllParser implements Parser
         {
             return cursor;
         }
-
         // CompletingParsedLine methods for proper completion insertion
 
         @Override

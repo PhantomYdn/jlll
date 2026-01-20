@@ -2,7 +2,6 @@ package ru.ydn.jlll.libs;
 
 import java.util.Collection;
 import java.util.Iterator;
-
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Enviroment;
 import ru.ydn.jlll.common.Jlll;
@@ -25,35 +24,31 @@ public class ListLib implements Library
         new Primitive("list->vector", env)
         {
             /**
-			 * 
-			 */
-			private static final long serialVersionUID = -4084286307884490319L;
+             *
+             */
+            private static final long serialVersionUID = -4084286307884490319L;
 
-			public Object applay(Cons vaCons, Enviroment env) throws JlllException
+            public Object applay(Cons vaCons, Enviroment env) throws JlllException
             {
                 return ListUtil.listVector((Cons) vaCons.cdr());
             }
         };
         new Primitive("collection->list", env)
-        {            
-			private static final long serialVersionUID = -6045559114098496174L;
+        {
+            private static final long serialVersionUID = -6045559114098496174L;
 
-			public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
-
+            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Collection<?> col = (Collection<?>) values.get(0);
                 Cons ret = new Cons();
                 for (Iterator<?> it = col.iterator(); it.hasNext();)
                 {
                     Object o = it.next();
-                    ListUtil.append(ret,o);
+                    ListUtil.append(ret, o);
                 }
                 return ret;
             }
         };
-
-        Jlll.eval("(load-system-script \"list.jlll\")",env);
-
+        Jlll.eval("(load-system-script \"list.jlll\")", env);
     }
-
 }

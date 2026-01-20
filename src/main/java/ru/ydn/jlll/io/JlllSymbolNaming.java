@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-
 import ru.ydn.jlll.common.JlllException;
 
 /**
@@ -18,33 +17,35 @@ public class JlllSymbolNaming
 {
     public static String convertFromInToSymbolName(String str) throws JlllException
     {
-        if(str.indexOf("\\")>=0)
+        if (str.indexOf("\\") >= 0)
         {
             StringReader sr = new StringReader(str);
             BufferedReader br = new BufferedReader(sr);
             StringWriter sw = new StringWriter();
             try
             {
-                while(true)
+                while (true)
                 {
                     int next = br.read();
-                    if(next==-1) break;
-                    if(next=='\\')
+                    if (next == -1)
+                        break;
+                    if (next == '\\')
                     {
                         int next2 = br.read();
-                        if(next2==-1) throw new JlllException("Broken symbol name1");
-                        switch(next2)
+                        if (next2 == -1)
+                            throw new JlllException("Broken symbol name1");
+                        switch (next2)
                         {
-                            case '\\':
+                            case '\\' :
                                 sw.write('\\');
                                 break;
-                            case 'n':
+                            case 'n' :
                                 sw.write('\n');
                                 break;
-                            case 's':
+                            case 's' :
                                 sw.write(' ');
                                 break;
-                            default:
+                            default :
                                 throw new JlllException("Broken symbol name");
                         }
                     }
@@ -56,7 +57,7 @@ public class JlllSymbolNaming
             }
             catch (IOException e)
             {
-                throw new JlllException("IOException while parsing",e);
+                throw new JlllException("IOException while parsing", e);
             }
             return sw.toString();
         }
@@ -68,6 +69,6 @@ public class JlllSymbolNaming
 
     public static String convertFromSymbolNameToOut(String str)
     {
-        return str.replace("\\","\\\\").replace(" ","\\s").replace("\n","\\n");
+        return str.replace("\\", "\\\\").replace(" ", "\\s").replace("\n", "\\n");
     }
 }

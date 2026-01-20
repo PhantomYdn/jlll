@@ -13,24 +13,23 @@ public class Primitive extends Procedure
 {
     private static final long serialVersionUID = -9190619708410061311L;
     protected final String originalName;
-    
+
     public Primitive(String name, Enviroment env)
     {
         env.addBinding(Symbol.intern(name), this);
-        originalName=name;
+        originalName = name;
     }
-    
+
     public String describe()
     {
-    	return "JLLL primitive with original name: "+originalName+"\n"+
-    			"Doc: "+getDoc();
+        return "JLLL primitive with original name: " + originalName + "\n" + "Doc: " + getDoc();
     }
 
-
-	@Override
-	public String getDoc() {
-		Class<?> clazz = this.getClass();
-		JlllDoc doc = clazz.getAnnotation(JlllDoc.class);
-		return doc==null?"":doc.value();
-	}
+    @Override
+    public String getDoc()
+    {
+        Class<?> clazz = this.getClass();
+        JlllDoc doc = clazz.getAnnotation(JlllDoc.class);
+        return doc == null ? "" : doc.value();
+    }
 }

@@ -7,26 +7,21 @@ package ru.ydn.jlll.tests;
  * Time: 14:02:35
  * To change this template use File | Settings | File Templates.
  */
-
+import static org.junit.Assert.*;
 import org.junit.Test;
-
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.io.ConsRenderHandler;
 import ru.ydn.jlll.io.ConsRenderer;
-import static org.junit.Assert.*;
 
 public class RendererTestCase
 {
     private ConsRenderer renderer = new ConsRenderer();
 
-
     private static class SimpleRenderHandler implements ConsRenderHandler
     {
         private StringBuffer content = new StringBuffer();
-
         public boolean orientation;
-
 
         public SimpleRenderHandler(boolean orientation)
         {
@@ -95,8 +90,6 @@ public class RendererTestCase
         assertEquals("TRabrRcdrt", render(obj, false));
         assertEquals("TRacrRbdrt", render(obj, true));
     }
-
-
 
     private String render(Object val, boolean orientation) throws Exception
     {

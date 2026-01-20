@@ -6,8 +6,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.TYPE})
-public @interface JlllDoc 
+@Target(
+{ElementType.METHOD, ElementType.TYPE})
+public @interface JlllDoc
 {
-	public String value() default "";
+    public String value() default "";
 }
