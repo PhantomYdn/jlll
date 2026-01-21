@@ -84,7 +84,7 @@ public class JlllCompleter implements Completer
                     description, // description
                     null, // suffix
                     null, // key
-                    true // complete
+                    true // complete - adds trailing space
             ));
         }
     }

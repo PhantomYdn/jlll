@@ -9,11 +9,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jline.reader.Buffer;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.Reference;
 import org.jline.reader.UserInterruptException;
+import org.jline.reader.Widget;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
@@ -124,6 +127,20 @@ public class JlllRepl
                 .variable(LineReader.HISTORY_FILE, historyPath).parser(new JlllParser())
                 .completer(new JlllCompleter(env)).highlighter(colorEnabled ? new JlllHighlighter(this) : null)
                 .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true).build();
+        // Bind ) to a widget that removes trailing space before inserting
+        // This makes "(+ xvar )" become "(+ xvar)" after tab completion
+        Widget closeParenWidget = () ->
+        {
+            Buffer buf = reader.getBuffer();
+            if (buf.cursor() > 0 && buf.atChar(buf.cursor() - 1) == ' ')
+            {
+                buf.backspace();
+            }
+            buf.write(')');
+            return true;
+        };
+        reader.getWidgets().put("close-paren", closeParenWidget);
+        reader.getKeyMaps().get(LineReader.MAIN).bind(new Reference("close-paren"), ")");
     }
 
     private void printBanner()
