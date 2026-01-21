@@ -1,41 +1,80 @@
-(define (list . li) li)
-(define vector->list collection->list)
-(define (caar x) (car (car x)))
-(define (cadr x) (car (cdr x)))
-(define (cdar x) (cdr (car x)))
-(define (cddr x) (cdr (cdr x)))
+(define (list . li)
+  :doc "Creates a list from its arguments."
+  li)
 
-(define (caaar x) (car (car (car x))))
-(define (caadr x) (car (car (cdr x))))
-(define (cadar x) (car (cdr (car x))))
-(define (caddr x) (car (cdr (cdr x))))
+(define vector->list
+  :doc "Converts a vector/collection to a list."
+  collection->list)
 
-(define (cdaar x) (cdr (car (car x))))
-(define (cdadr x) (cdr (car (cdr x))))
-(define (cddar x) (cdr (cdr (car x))))
-(define (cdddr x) (cdr (cdr (cdr x))))
+(define (caar x)
+  :doc "Returns the first element of the first element."
+  (car (car x)))
+
+(define (cadr x)
+  :doc "Returns the second element of a list."
+  (car (cdr x)))
+
+(define (cdar x)
+  :doc "Returns the tail of the first element."
+  (cdr (car x)))
+
+(define (cddr x)
+  :doc "Returns the tail of the tail."
+  (cdr (cdr x)))
+
+(define (caaar x)
+  :doc "Returns car of car of car."
+  (car (car (car x))))
+
+(define (caadr x)
+  :doc "Returns car of car of cdr."
+  (car (car (cdr x))))
+
+(define (cadar x)
+  :doc "Returns car of cdr of car."
+  (car (cdr (car x))))
+
+(define (caddr x)
+  :doc "Returns the third element of a list."
+  (car (cdr (cdr x))))
+
+(define (cdaar x)
+  :doc "Returns cdr of car of car."
+  (cdr (car (car x))))
+
+(define (cdadr x)
+  :doc "Returns cdr of car of cdr."
+  (cdr (car (cdr x))))
+
+(define (cddar x)
+  :doc "Returns cdr of cdr of car."
+  (cdr (cdr (car x))))
+
+(define (cdddr x)
+  :doc "Returns cdr of cdr of cdr."
+  (cdr (cdr (cdr x))))
 
 (define (length li)
-    (if (nil? li)
-        0
-        (+ 1 (length (cdr li)))
-        ))
+  :doc "Returns the number of elements in a list."
+  (if (nil? li)
+      0
+      (+ 1 (length (cdr li)))))
+
 (define (append lif lis)
-    (if (nil? lif)
-        lis
-        (cons
-            (car lif)
-            (append (cdr lif) lis)
-            )))
+  :doc "Concatenates two lists."
+  (if (nil? lif)
+      lis
+      (cons
+          (car lif)
+          (append (cdr lif) lis))))
 
 (define (last li)
-    (if (null? (cdr li)) (car li) (last (cdr li)))
-)
-            
-(define (reverse li)
-        (if (nil? li)
-            '()
-            (append (reverse (cdr li))
-                    (list (car li))
-                    )))
+  :doc "Returns the last element of a list."
+  (if (null? (cdr li)) (car li) (last (cdr li))))
 
+(define (reverse li)
+  :doc "Returns a list with elements in reverse order."
+  (if (nil? li)
+      '()
+      (append (reverse (cdr li))
+              (list (car li)))))

@@ -149,28 +149,45 @@ public class KernelLib implements Library
             }
         };
         env.addBinding("set!", env.lookup("set"));
-        new Primitive("defmacro", env, "Defines a macro. (defmacro (name args...) body...). "
-                + "Macros transform code at expansion time before evaluation.")
+        new Primitive("defmacro", env,
+                "Defines a macro. (defmacro (name args...) body...). "
+                        + "Macros transform code at expansion time before evaluation. "
+                        + "Supports :doc and other metadata keywords.")
         {
             private static final long serialVersionUID = 1953809997016714629L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
             {
-                Object car = values.car();
-                if (!(car instanceof Cons))
+                // Extract keywords (metadata) from the argument list
+                ParameterParser.KeywordExtraction extraction = ParameterParser.extractKeywords(values);
+                List<Object> positional = extraction.positional;
+                Map<Symbol, Object> metadata = extraction.keywords;
+                if (positional.isEmpty())
+                {
+                    throw new JlllException("defmacro requires at least a signature");
+                }
+                Object first = positional.get(0);
+                if (!(first instanceof Cons))
                 {
                     throw new JlllException("Symbol in defmacro is not allowed");
                 }
+                Cons def = (Cons) first;
+                String name = def.get(0).toString();
+                Object variables = def.cdr();
+                // Body is everything after the signature in positional args
+                Object body;
+                if (positional.size() > 1)
+                {
+                    List<Object> bodyParts = positional.subList(1, positional.size());
+                    body = ru.ydn.jlll.util.ListUtil.arrayToCons(bodyParts.toArray());
+                }
                 else
                 {
-                    Cons def = (Cons) car;
-                    String name = def.get(0).toString();
-                    Object variables = def.cdr();
-                    Object body = values.tail(1);
-                    Macros macros = new Macros(variables, body);
-                    env.addBinding(Symbol.intern(name), macros);
-                    return macros;
+                    body = Null.NULL;
                 }
+                Macros macros = new Macros(variables, body);
+                env.addBindingWithMeta(Symbol.intern(name), macros, metadata);
+                return macros;
             }
         };
         new Primitive("if", env, "Conditional expression. (if condition then-expr else-expr). "

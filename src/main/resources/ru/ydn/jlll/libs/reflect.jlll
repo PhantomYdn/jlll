@@ -1,7 +1,13 @@
-(define (get-classname object) (invoke (invoke object 'getClass) 'getName))
+(define (get-classname object)
+  :doc "Returns the fully qualified class name of an object."
+  (invoke (invoke object 'getClass) 'getName))
 
-(define (to-string obj) (invoke obj 'toString))
+(define (to-string obj)
+  :doc "Converts an object to its string representation."
+  (invoke obj 'toString))
 
-(define (to-symbol str) (invoke-static 'ru.ydn.jlll.common.Symbol 'intern str))
+(define (to-symbol str)
+  :doc "Converts a string to a symbol."
+  (invoke-static 'ru.ydn.jlll.common.Symbol 'intern str))
 
 (define jlll-convertors '())

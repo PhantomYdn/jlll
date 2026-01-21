@@ -1,1 +1,3 @@
-(define (println . rest) (eval (cons 'print (append rest '("\n")))) )
+(define (println . rest)
+  :doc "Prints arguments followed by a newline."
+  (eval (cons 'print (append rest '("\n")))))

@@ -4,10 +4,31 @@
 ;char?
 ;vector?
 ;port?
-(define nil? null?)
-(define (list? list) (instanceof? list 'ru.ydn.jlll.common.Cons))
-(define (boolean? obj) (instanceof? obj 'java.lang.Boolean))
-(define (string? obj) (instanceof? obj 'java.lang.String))
-(define (symbol? obj) (instanceof? obj 'ru.ydn.jlll.common.Symbol))
-(define (procedure? obj) (instanceof? obj 'ru.ydn.jlll.common.Procedure))
-(define (equal? obj1 obj2) (invoke obj1 'equals obj2))
+
+(define nil?
+  :doc "Returns true if the argument is null/nil."
+  null?)
+
+(define (list? list)
+  :doc "Returns true if the argument is a list (Cons)."
+  (instanceof? list 'ru.ydn.jlll.common.Cons))
+
+(define (boolean? obj)
+  :doc "Returns true if the argument is a boolean."
+  (instanceof? obj 'java.lang.Boolean))
+
+(define (string? obj)
+  :doc "Returns true if the argument is a string."
+  (instanceof? obj 'java.lang.String))
+
+(define (symbol? obj)
+  :doc "Returns true if the argument is a symbol."
+  (instanceof? obj 'ru.ydn.jlll.common.Symbol))
+
+(define (procedure? obj)
+  :doc "Returns true if the argument is a procedure."
+  (instanceof? obj 'ru.ydn.jlll.common.Procedure))
+
+(define (equal? obj1 obj2)
+  :doc "Returns true if two objects are equal."
+  (invoke obj1 'equals obj2))

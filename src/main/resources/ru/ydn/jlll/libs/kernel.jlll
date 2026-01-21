@@ -30,6 +30,7 @@
 
 
 (defmacro (letrec clauses . body)
+  :doc "Binds variables with mutual recursion support."
 
   `((lambda ,(map car clauses)
 
@@ -50,8 +51,10 @@
 
 
 
+(define (quit)
+  :doc "Exits the JLLL interpreter."
+  (invoke-static 'java.lang.System 'exit 0))
 
-(define (quit) (invoke-static 'java.lang.System 'exit 0))
-
-(define exit quit)
-
+(define exit
+  :doc "Exits the JLLL interpreter."
+  quit)
