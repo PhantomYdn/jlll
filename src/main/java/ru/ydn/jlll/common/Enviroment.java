@@ -57,7 +57,7 @@ public class Enviroment implements Serializable
         {
             private static final long serialVersionUID = -7181172149106048903L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 String path = values.get(0).toString();
                 try

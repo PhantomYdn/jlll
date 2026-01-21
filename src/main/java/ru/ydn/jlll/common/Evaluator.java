@@ -36,7 +36,7 @@ public class Evaluator
                     {
                         Procedure proc = (Procedure) car;
                         proc.cnt++;
-                        ret = proc.applay(cons.cdr(), env);
+                        ret = proc.apply(cons.cdr(), env);
                     }
                     else
                     {

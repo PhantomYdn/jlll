@@ -46,7 +46,7 @@
 
 
 
-;(define (applay . args) (print args) (eval args))
+;(define (apply . args) (print args) (eval args))
 
 
 

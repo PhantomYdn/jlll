@@ -11,8 +11,8 @@ import com.github.therapi.runtimejavadoc.RuntimeJavadoc;
  * Primitives are automatically bound to the environment upon construction.
  *
  * <p>
- * Subclasses must implement {@link Procedure#applay(Cons, Enviroment)} or
- * {@link Procedure#applayEvaluated(Cons, Enviroment)} to define the primitive's behavior.
+ * Subclasses must implement {@link Procedure#apply(Cons, Enviroment)} or
+ * {@link Procedure#applyEvaluated(Cons, Enviroment)} to define the primitive's behavior.
  * </p>
  *
  * <p>

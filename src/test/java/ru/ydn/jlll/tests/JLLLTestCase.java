@@ -301,16 +301,17 @@ public class JLLLTestCase
     public void testReflectPrimitives() throws Exception
     {
         Enviroment env = Enviroment.top;
-        assertEquals(((Procedure) env.lookup("new")).applay(env, Cons.class), new Cons());
-        assertEquals(((Primitive) env.lookup("new")).applayEvaluated(env, Cons.class, Symbol.intern("a"),
-                Symbol.intern("b")), new Cons(Symbol.intern("a"), Symbol.intern("b")));
+        assertEquals(((Procedure) env.lookup("new")).apply(env, Cons.class), new Cons());
+        assertEquals(
+                ((Primitive) env.lookup("new")).applyEvaluated(env, Cons.class, Symbol.intern("a"), Symbol.intern("b")),
+                new Cons(Symbol.intern("a"), Symbol.intern("b")));
     }
 
     @Test
     public void testMath() throws Exception
     {
         Enviroment env = Enviroment.top;
-        assertEquals(((Procedure) env.lookup("+")).applay(env, 2, 2), 4);
+        assertEquals(((Procedure) env.lookup("+")).apply(env, 2, 2), 4);
         eval(true, "(< 2 3)");
         eval(false, "(< 3 2)");
         eval(true, "(and (= 2 2) (> 2 1))");

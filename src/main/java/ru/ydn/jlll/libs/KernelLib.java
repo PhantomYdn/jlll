@@ -57,7 +57,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -7343798584300580807L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 // Extract keywords (metadata) from the argument list
                 ParameterParser.KeywordExtraction extraction = ParameterParser.extractKeywords(values);
@@ -112,12 +112,12 @@ public class KernelLib implements Library
             private static final long serialVersionUID = -5122951526914178471L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Procedure proc = (Procedure) values.get(0);
                 Cons args = (Cons) values.get(1);
                 //System.out.println(args);
-                return proc.applayEvaluated(args, env);
+                return proc.applyEvaluated(args, env);
             }
         };
         new Primitive("set", env, "Modifies an existing binding. (set! name value) for variables, "
@@ -125,7 +125,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 7346093880732180126L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object car = values.car();
                 if (car instanceof Symbol)
@@ -156,7 +156,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 1953809997016714629L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 // Extract keywords (metadata) from the argument list
                 ParameterParser.KeywordExtraction extraction = ParameterParser.extractKeywords(values);
@@ -195,7 +195,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 8411805766481542038L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object dec = Evaluator.eval(values.get(0), env);
                 Cons args = (Cons) values.cdr();
@@ -214,7 +214,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -83499329550871262L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 for (Object next : values)
                 {
@@ -235,7 +235,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -8203023265311714220L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object caseObject = Evaluator.eval(values.car(), env);
                 Iterator<?> it = values.iterator();
@@ -260,7 +260,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -840641725868209645L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object variables = values.get(0);
                 Object body = values.tail(1);
@@ -273,7 +273,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -7652629513702176997L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 return new Cons(values.get(0), values.get(1));
             }
@@ -283,7 +283,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 2744358405000249124L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object ret = null;
                 Iterator<?> it = values.iterator();
@@ -299,7 +299,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -8365426058879553368L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 if (values.length() > 1)
                     throw new JlllException("So many parameters");
@@ -310,7 +310,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 6224440278990904488L;
 
-            public Object applay(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Enviroment env) throws JlllException
             {
                 Object obj = Evaluator.eval(vaCons.car(), env);
                 if (!(obj instanceof Cons))
@@ -322,7 +322,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 3572491558064466506L;
 
-            public Object applay(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Enviroment env) throws JlllException
             {
                 Object obj = Evaluator.eval(vaCons.car(), env);
                 if (!(obj instanceof Cons))
@@ -335,7 +335,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 8816274024795448776L;
 
-            public Object applay(Object vaCons, Enviroment env) throws JlllException
+            public Object apply(Object vaCons, Enviroment env) throws JlllException
             {
                 return ListUtil.toCons(env.getAllBindings().keySet().toArray());
             }
@@ -345,7 +345,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -2819367499932684513L;
 
-            public Object applay(Object vaCons, Enviroment env) throws JlllException
+            public Object apply(Object vaCons, Enviroment env) throws JlllException
             {
                 return ListUtil.toCons(env.getTopEnvironment().getAllBindings().keySet().toArray());
             }
@@ -356,7 +356,7 @@ public class KernelLib implements Library
          * {
          *
          *
-         * public Object applay(Object vaCons, Enviroment env) throws JlllException
+         * public Object apply(Object vaCons, Enviroment env) throws JlllException
          *
          * {
          *
@@ -375,7 +375,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -8036963916533498346L;
 
-            public Object applay(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Enviroment env) throws JlllException
             {
                 Jlll.eval(KernelLib.class.getResourceAsStream(Evaluator.eval(vaCons.get(0), env).toString()));
                 return null;
@@ -386,7 +386,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -8736628261895814580L;
 
-            public Object applayEvaluated(Cons vaCons, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons vaCons, Enviroment env) throws JlllException
             {
                 try
                 {
@@ -419,7 +419,7 @@ public class KernelLib implements Library
                 }
             }
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object what = values.get(0);
                 return evalQQ(what, env).object;
@@ -491,7 +491,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -8630743653655996673L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 //                System.out.println(values);
                 return Evaluator.eval(values.get(0), env);
@@ -502,7 +502,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 1296484298301550805L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Object toEval = values.get(0);
                 long start = System.currentTimeMillis();
@@ -523,7 +523,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 5958807729111336106L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Object toEval = values.get(0);
                 try
@@ -541,7 +541,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -2789439764629510145L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Iterator<?> it = values.iterator();
                 String ret = "";
@@ -558,7 +558,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = -6920908225941152717L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Procedure proc = (Procedure) values.get(0);
                 Iterator<?> it = ((Cons) values.get(1)).iterator();
@@ -566,7 +566,7 @@ public class KernelLib implements Library
                 while (it.hasNext())
                 {
                     Object next = it.next();
-                    ret.add(proc.applayEvaluated(env, next));
+                    ret.add(proc.applyEvaluated(env, next));
                 }
                 return ListUtil.arrayToCons(ret.toArray());
             }
@@ -575,7 +575,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 7289150232747124300L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Procedure proc = (Procedure) values.get(0);
                 return mapAll(proc, (Cons) values.get(1), env);
@@ -590,7 +590,7 @@ public class KernelLib implements Library
                  *
                  * Object next = it.next();
                  *
-                 * ret.add(proc.applay(env, next));
+                 * ret.add(proc.apply(env, next));
                  *
                  *
                  * }
@@ -608,7 +608,7 @@ public class KernelLib implements Library
                     Object next = it.next();
                     Object toSet = (next instanceof Cons && !((Cons) next).isNull())
                             ? mapAll(proc, (Cons) next, env)
-                            : proc.applay(new Cons(next), env);
+                            : proc.apply(new Cons(next), env);
                     ret.add(toSet);
                 }
                 return ListUtil.arrayToCons(ret.toArray());
@@ -619,7 +619,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 6564713665261707057L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Procedure proc = (Procedure) values.get(0);
                 Iterator<?> it = ((Cons) values.get(1)).iterator();
@@ -627,7 +627,7 @@ public class KernelLib implements Library
                 while (it.hasNext())
                 {
                     Object next = it.next();
-                    if (CommonUtil.getBoolean(proc.applayEvaluated(env, next)))
+                    if (CommonUtil.getBoolean(proc.applyEvaluated(env, next)))
                         ret.add(next);
                 }
                 return ListUtil.arrayToCons(ret.toArray());
@@ -638,7 +638,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 4782501546001349950L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Object function = values.get(0);
                 if (!(function instanceof CompaundProcedure))
@@ -651,7 +651,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 3835175014722360095L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 Object function = Evaluator.eval(values.get(0), env);
                 if (!(function instanceof Macros))
@@ -665,7 +665,7 @@ public class KernelLib implements Library
             private static final long serialVersionUID = 5164474211503405192L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Object obj = values.get(0);
                 StringBuilder sb = new StringBuilder();
@@ -720,7 +720,7 @@ public class KernelLib implements Library
         {
             private static final long serialVersionUID = 1827364509182736450L;
 
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 if (values.length() != 1)
                     throw new JlllException("exlamation requires exactly one argument");
@@ -734,7 +734,7 @@ public class KernelLib implements Library
             private static final long serialVersionUID = 9182736450918273645L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 if (values.length() != 1)
                     throw new JlllException("doc requires exactly one argument");
@@ -779,7 +779,7 @@ public class KernelLib implements Library
             private static final long serialVersionUID = 9182736450918273646L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 if (values.length() == 1)
                 {
@@ -838,7 +838,7 @@ public class KernelLib implements Library
             private static final long serialVersionUID = 9182736450918273647L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 if (values.length() != 3)
                 {
@@ -880,7 +880,7 @@ public class KernelLib implements Library
             private static final long serialVersionUID = 9182736450918273648L;
 
             @Override
-            public Object applay(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Enviroment env) throws JlllException
             {
                 if (values.length() != 2)
                 {

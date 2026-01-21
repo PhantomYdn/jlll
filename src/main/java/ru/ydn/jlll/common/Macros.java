@@ -42,7 +42,7 @@ public class Macros extends CompaundProcedure
      * @throws JlllException
      *             if expansion or evaluation fails
      */
-    public Object applay(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Enviroment env) throws JlllException
     {
         Object eval = macroExpand(values, env);
         //        Logger.getLogger(Macros.class).debug("Macroexpand: "+eval );
@@ -74,7 +74,7 @@ public class Macros extends CompaundProcedure
      */
     public Object macroExpand(Cons values, Enviroment env) throws JlllException
     {
-        return super.applay(quoteAll(values), env);
+        return super.apply(quoteAll(values), env);
     }
 
     /**

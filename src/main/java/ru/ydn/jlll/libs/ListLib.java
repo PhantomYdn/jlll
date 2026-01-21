@@ -36,7 +36,7 @@ public class ListLib implements Library
         {
             private static final long serialVersionUID = -4084286307884490319L;
 
-            public Object applay(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Enviroment env) throws JlllException
             {
                 return ListUtil.listVector((Cons) vaCons.cdr());
             }
@@ -46,7 +46,7 @@ public class ListLib implements Library
         {
             private static final long serialVersionUID = -6045559114098496174L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 Collection<?> col = (Collection<?>) values.get(0);
                 Cons ret = new Cons();

@@ -190,7 +190,7 @@ public class IOLib implements Library
             private static final long serialVersionUID = -8955658976965979264L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 try
                 {
@@ -213,7 +213,7 @@ public class IOLib implements Library
             private static final long serialVersionUID = 498385309144215955L;
 
             @Override
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 try
                 {
@@ -250,7 +250,7 @@ public class IOLib implements Library
         {
             private static final long serialVersionUID = -92971491929006863L;
 
-            public Object applay(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Enviroment env) throws JlllException
             {
                 Iterator<?> it = vaCons.iterator();
                 Object outObject = env.lookup(Symbol.STDOUT);

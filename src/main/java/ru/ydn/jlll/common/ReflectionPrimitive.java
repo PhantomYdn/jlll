@@ -124,15 +124,15 @@ public class ReflectionPrimitive extends Primitive
     }
 
     @Override
-    public Object applay(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Enviroment env) throws JlllException
     {
-        return useEvaluated ? super.applay(values, env) : invoke(values, env);
+        return useEvaluated ? super.apply(values, env) : invoke(values, env);
     }
 
     @Override
-    public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+    public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
     {
-        return useEvaluated ? invoke(values, env) : super.applayEvaluated(values, env);
+        return useEvaluated ? invoke(values, env) : super.applyEvaluated(values, env);
     }
 
     protected Object invoke(Cons values, Enviroment env) throws JlllException

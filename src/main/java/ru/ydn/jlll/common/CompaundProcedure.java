@@ -116,7 +116,7 @@ public class CompaundProcedure extends Procedure
      * </p>
      */
     @Override
-    public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+    public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
     {
         ProcEnvironment pe;
         // Decide whether to use keyword-aware binding:

@@ -7,9 +7,9 @@ import ru.ydn.jlll.util.ListUtil;
  * Abstract base class for all JLLL procedures.
  *
  * <p>
- * During evaluation of a procedure call, the {@code applay} method is invoked
- * with the supplied arguments. Subclasses implement either {@code applay} for
- * unevaluated arguments or {@code applayEvaluated} for pre-evaluated arguments.
+ * During evaluation of a procedure call, the {@code apply} method is invoked
+ * with the supplied arguments. Subclasses implement either {@code apply} for
+ * unevaluated arguments or {@code applyEvaluated} for pre-evaluated arguments.
  * </p>
  */
 public abstract class Procedure implements Serializable
@@ -29,9 +29,9 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if an error occurs
      */
-    public final Object applay(Enviroment env, Object... args) throws JlllException
+    public final Object apply(Enviroment env, Object... args) throws JlllException
     {
-        return applay(ListUtil.arrayToCons(args), env);
+        return apply(ListUtil.arrayToCons(args), env);
     }
 
     /**
@@ -45,14 +45,14 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if values is not a valid argument list
      */
-    public Object applay(Object values, Enviroment env) throws JlllException
+    public Object apply(Object values, Enviroment env) throws JlllException
     {
         if (Null.NULL.equals(values))
             values = Null.NULL;//new Cons();
         if (!(values instanceof Cons))
             throw new JlllException("values not a Cons. Class of values: " + values.getClass().getName()
                     + " toString():" + values.toString());
-        return applay((Cons) values, env);
+        return apply((Cons) values, env);
     }
 
     /**
@@ -66,9 +66,9 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             when some error occured
      */
-    public Object applay(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Enviroment env) throws JlllException
     {
-        return applayEvaluated(Jlll.evalEvery(values, env), env);
+        return applyEvaluated(Jlll.evalEvery(values, env), env);
     }
 
     /**
@@ -82,9 +82,9 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if an error occurs
      */
-    public final Object applayEvaluated(Enviroment env, Object... objects) throws JlllException
+    public final Object applyEvaluated(Enviroment env, Object... objects) throws JlllException
     {
-        return applayEvaluated(Cons.list(objects), env);
+        return applyEvaluated(Cons.list(objects), env);
     }
 
     /**
@@ -99,9 +99,9 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if procedure doesn't support evaluated args or error occurs
      */
-    public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+    public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
     {
-        throw new JlllException("You try to use procedure that dosn't allow to applay already evaluated values");
+        throw new JlllException("You try to use procedure that dosn't allow to apply already evaluated values");
     }
 
     /**

@@ -227,7 +227,7 @@ public class SQLLib implements Library
         {
             private static final long serialVersionUID = -1621139488315593668L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 String sql = values.get(0).toString();
                 Connection conn = getConnection(env);
@@ -274,7 +274,7 @@ public class SQLLib implements Library
         {
             private static final long serialVersionUID = 8261547122480573498L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 String sql = values.get(0).toString();
                 Connection conn = getConnection(env);
@@ -327,7 +327,7 @@ public class SQLLib implements Library
         {
             private static final long serialVersionUID = -7111241343538667181L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 String sql = values.get(0).toString();
                 Connection conn = getConnection(env);
@@ -398,7 +398,7 @@ public class SQLLib implements Library
         if (getConnectionProcedure == null)
             throw new JlllException("Please define 'sql-get-connection' procedure before sql-* invokations");
         Object conn = Evaluator.eval(getConnectionProcedure, env);
-        conn = ((Procedure) conn).applay(Null.NULL, env);
+        conn = ((Procedure) conn).apply(Null.NULL, env);
         if (conn instanceof Connection)
             return (Connection) conn;
         else

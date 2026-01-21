@@ -29,7 +29,7 @@ public class SQLLibTestCase
              */
             private static final long serialVersionUID = -2592105929018393189L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 try
                 {
@@ -64,7 +64,7 @@ public class SQLLibTestCase
              */
             private static final long serialVersionUID = 3226129210267326830L;
 
-            public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
             {
                 try
                 {

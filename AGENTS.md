@@ -112,7 +112,7 @@ src/
 |---------|------------|---------|
 | Classes | PascalCase | `KernelLib`, `ConsRenderer` |
 | Interfaces | PascalCase | `Library`, `ConsRenderHandler` |
-| Methods | camelCase | `applayEvaluated`, `getFieldA` |
+| Methods | camelCase | `applyEvaluated`, `getFieldA` |
 | Variables | camelCase | `fieldA`, `jlllCouse` |
 | Constants | UPPER_SNAKE_CASE | `GENERIC_COMPARATOR`, `TRUE` |
 | Packages | lowercase | `ru.ydn.jlll.common` |
@@ -194,7 +194,7 @@ new Primitive("my-func", env)
 {
     private static final long serialVersionUID = 1L;
 
-    public Object applay(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Enviroment env) throws JlllException
     {
         // Implementation
         return result;
