@@ -44,6 +44,7 @@ import ru.ydn.jlll.util.ListUtil;
  */
 public class KernelLib implements Library
 {
+    /** {@inheritDoc} */
     public void load(Enviroment env) throws JlllException
     {
         env.addBinding(Symbol.TRUE, Boolean.TRUE);
@@ -51,11 +52,9 @@ public class KernelLib implements Library
         env.addBinding(Symbol.FALSE, Boolean.FALSE);
         //       env.addBinding(Symbol.FALSE2, new Boolean(false));
         env.addBinding(Symbol.NULL, Null.NULL);
-        new Primitive("define", env)
+        new Primitive("define", env, "Defines a new binding. (define name value) for variables, "
+                + "(define (name args...) body...) for functions. Supports :doc and other metadata keywords.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -7343798584300580807L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -108,11 +107,8 @@ public class KernelLib implements Library
                 throw new JlllException("define: first argument must be symbol or list, got: " + first);
             }
         };
-        new Primitive("apply", env)
+        new Primitive("apply", env, "Applies a procedure to a list of arguments. (apply proc args-list)")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -5122951526914178471L;
 
             @Override
@@ -124,11 +120,9 @@ public class KernelLib implements Library
                 return proc.applayEvaluated(args, env);
             }
         };
-        new Primitive("set", env)
+        new Primitive("set", env, "Modifies an existing binding. (set! name value) for variables, "
+                + "(set! (name args...) body...) for functions. Alias: set!")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 7346093880732180126L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -155,11 +149,9 @@ public class KernelLib implements Library
             }
         };
         env.addBinding("set!", env.lookup("set"));
-        new Primitive("defmacro", env)
+        new Primitive("defmacro", env, "Defines a macro. (defmacro (name args...) body...). "
+                + "Macros transform code at expansion time before evaluation.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 1953809997016714629L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -181,11 +173,9 @@ public class KernelLib implements Library
                 }
             }
         };
-        new Primitive("if", env)
+        new Primitive("if", env, "Conditional expression. (if condition then-expr else-expr). "
+                + "Evaluates then-expr if condition is true, else-expr otherwise.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 8411805766481542038L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -202,11 +192,9 @@ public class KernelLib implements Library
                 }
             }
         };
-        new Primitive("cond", env)
+        new Primitive("cond", env, "Multi-way conditional. (cond (test1 expr1...) (test2 expr2...) (else default...)). "
+                + "Evaluates first clause whose test is true.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -83499329550871262L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -224,11 +212,10 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("case", env)
+        new Primitive("case", env,
+                "Value-based dispatch. (case value ((key1 key2) expr1...) ((key3) expr2...) (else default...)). "
+                        + "Matches value against key lists.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -8203023265311714220L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -251,11 +238,9 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("lambda", env)
+        new Primitive("lambda", env, "Creates an anonymous procedure. (lambda (args...) body...). "
+                + "Supports keyword args, defaults, and rest parameters.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -840641725868209645L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -267,11 +252,8 @@ public class KernelLib implements Library
                 return procedure;
             }
         };
-        new Primitive("cons", env)
+        new Primitive("cons", env, "Constructs a pair. (cons a b) creates a cons cell with car=a and cdr=b.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -7652629513702176997L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -279,11 +261,9 @@ public class KernelLib implements Library
                 return new Cons(values.get(0), values.get(1));
             }
         };
-        new Primitive("begin", env)
+        new Primitive("begin", env,
+                "Evaluates expressions sequentially. (begin expr1 expr2 ...). Returns the last result.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 2744358405000249124L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -297,7 +277,8 @@ public class KernelLib implements Library
                 return ret;
             }
         };
-        new Primitive("quote", env)
+        new Primitive("quote", env,
+                "Returns argument unevaluated. (quote x) or 'x. Prevents evaluation of the expression.")
         {
             private static final long serialVersionUID = -8365426058879553368L;
 
@@ -308,11 +289,8 @@ public class KernelLib implements Library
                 return values.car();
             }
         };
-        new Primitive("car", env)
+        new Primitive("car", env, "Returns the first element of a pair/list. (car '(a b c)) returns a.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 6224440278990904488L;
 
             public Object applay(Cons vaCons, Enviroment env) throws JlllException
@@ -323,11 +301,8 @@ public class KernelLib implements Library
                 return ((Cons) obj).car();
             }
         };
-        new Primitive("cdr", env)
+        new Primitive("cdr", env, "Returns the rest of a pair/list. (cdr '(a b c)) returns (b c).")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 3572491558064466506L;
 
             public Object applay(Cons vaCons, Enviroment env) throws JlllException
@@ -338,11 +313,9 @@ public class KernelLib implements Library
                 return ((Cons) obj).cdr();
             }
         };
-        new Primitive("current-environment", env)
+        new Primitive("current-environment", env,
+                "Returns a list of all symbols bound in the current environment scope.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 8816274024795448776L;
 
             public Object applay(Object vaCons, Enviroment env) throws JlllException
@@ -350,11 +323,9 @@ public class KernelLib implements Library
                 return ListUtil.toCons(env.getAllBindings().keySet().toArray());
             }
         };
-        new Primitive("top-environment", env)
+        new Primitive("top-environment", env,
+                "Returns a list of all symbols bound in the top-level (global) environment.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -2819367499932684513L;
 
             public Object applay(Object vaCons, Enviroment env) throws JlllException
@@ -383,11 +354,8 @@ public class KernelLib implements Library
          * }
          * ;
          */
-        new Primitive("load-system-script", env)
+        new Primitive("load-system-script", env, "Loads and evaluates a JLLL script from the classpath resources.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -8036963916533498346L;
 
             public Object applay(Cons vaCons, Enviroment env) throws JlllException
@@ -396,11 +364,9 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("load-url", env)
+        new Primitive("load-url", env,
+                "Loads and evaluates a JLLL script from a URL. (load-url \"http://example.com/script.jlll\")")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -8736628261895814580L;
 
             public Object applayEvaluated(Cons vaCons, Enviroment env) throws JlllException
@@ -418,11 +384,10 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("quasiquote", env)
+        new Primitive("quasiquote", env,
+                "Template with selective evaluation. `(a ,b ,@c) quotes a, evaluates b, splices c. "
+                        + "Use , for unquote and ,@ for unquote-splicing.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 2509375750196259260L;
 
             class RetObject
@@ -504,11 +469,9 @@ public class KernelLib implements Library
                 }
             }
         };
-        new Primitive("eval", env)
+        new Primitive("eval", env,
+                "Evaluates an expression. (eval '(+ 1 2)) returns 3. Useful for dynamic code execution.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -8630743653655996673L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -517,11 +480,9 @@ public class KernelLib implements Library
                 return Evaluator.eval(values.get(0), env);
             }
         };
-        new Primitive("time", env)
+        new Primitive("time", env,
+                "Measures execution time. (time expr) evaluates expr and returns elapsed milliseconds.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 1296484298301550805L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -540,11 +501,9 @@ public class KernelLib implements Library
                 return (int) (finish - start);
             }
         };
-        new Primitive("sleep", env)
+        new Primitive("sleep", env,
+                "Pauses execution. (sleep milliseconds) suspends the current thread for the specified duration.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 5958807729111336106L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -561,11 +520,8 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("concat", env)
+        new Primitive("concat", env, "Concatenates values to a string. (concat \"a\" 1 \"b\") returns \"a1b\".")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -2789439764629510145L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -580,11 +536,9 @@ public class KernelLib implements Library
                 return ret;
             }
         };
-        new Primitive("map", env)
+        new Primitive("map", env,
+                "Applies a procedure to each element. (map proc list) returns a new list with results.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -6920908225941152717L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -600,11 +554,8 @@ public class KernelLib implements Library
                 return ListUtil.arrayToCons(ret.toArray());
             }
         };
-        new Primitive("mapall", env)
+        new Primitive("mapall", env, "Recursively applies a procedure to all elements in nested lists.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 7289150232747124300L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -646,11 +597,9 @@ public class KernelLib implements Library
                 return ListUtil.arrayToCons(ret.toArray());
             }
         };
-        new Primitive("filter", env)
+        new Primitive("filter", env,
+                "Filters a list by predicate. (filter pred list) returns elements where (pred elem) is true.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 6564713665261707057L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -667,11 +616,9 @@ public class KernelLib implements Library
                 return ListUtil.arrayToCons(ret.toArray());
             }
         };
-        new Primitive("jlll-extract-body", env)
+        new Primitive("jlll-extract-body", env,
+                "Returns the body of a compound procedure. For introspection and debugging.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 4782501546001349950L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -682,11 +629,9 @@ public class KernelLib implements Library
                 return ((CompaundProcedure) function).getBody();
             }
         };
-        new Primitive("jlll-macro-expand", env)
+        new Primitive("jlll-macro-expand", env,
+                "Expands a macro without evaluating. (jlll-macro-expand macro-name args...) shows expansion result.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 3835175014722360095L;
 
             public Object applay(Cons values, Enviroment env) throws JlllException
@@ -697,11 +642,9 @@ public class KernelLib implements Library
                 return ((Macros) function).macroExpand(values.tail(1), env);
             }
         };
-        new Primitive("describe", env)
+        new Primitive("describe", env,
+                "Returns a description of a value. Works with procedures, symbols, throwables, and any object.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 5164474211503405192L;
 
             @Override
@@ -755,7 +698,8 @@ public class KernelLib implements Library
                 return sb.toString();
             }
         };
-        new Primitive("exlamation", env)
+        new Primitive("exlamation", env,
+                "Evaluates and returns the argument. Used for !default syntax in parameter definitions.")
         {
             private static final long serialVersionUID = 1827364509182736450L;
 

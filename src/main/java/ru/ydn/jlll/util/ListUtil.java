@@ -19,9 +19,21 @@ public class ListUtil
 
     /**
      * Comparator that delegates to Comparable.compareTo().
+     * Used for sorting lists containing Comparable elements.
      */
     public static class GenericComparator implements Comparator<Object>
     {
+        /**
+         * Compares two objects using Comparable interface.
+         *
+         * @param o1
+         *            first object (must be Comparable)
+         * @param o2
+         *            second object
+         * @return comparison result
+         * @throws IllegalArgumentException
+         *             if o1 is not Comparable
+         */
         public int compare(Object o1, Object o2)
         {
             if (!(o1 instanceof Comparable))
@@ -119,6 +131,15 @@ public class ListUtil
         return arrayToCons(array, null);
     }
 
+    /**
+     * Converts an array to a Cons list with optional dotted tail.
+     *
+     * @param array
+     *            the array to convert
+     * @param dotted
+     *            the dotted tail element (or null for proper list)
+     * @return a new Cons list
+     */
     public static Cons arrayToCons(Object[] array, Object dotted)
     {
         if (array == null || array.length == 0)
@@ -140,6 +161,13 @@ public class ListUtil
         return ret;
     }
 
+    /**
+     * Returns the last cons cell in a list.
+     *
+     * @param cons
+     *            the list
+     * @return the last cons cell
+     */
     public static Cons getLastCons(Cons cons)
     {
         while ((cons.cdr() instanceof Cons) && !((Cons) cons.cdr()).isNull())
@@ -149,6 +177,15 @@ public class ListUtil
         return cons;
     }
 
+    /**
+     * Creates a two-element list.
+     *
+     * @param obj1
+     *            first element
+     * @param obj2
+     *            second element
+     * @return a Cons list (obj1 obj2)
+     */
     public static Cons list(Object obj1, Object obj2)
     {
         return new Cons(obj1, new Cons(obj2));

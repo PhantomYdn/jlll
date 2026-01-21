@@ -135,6 +135,19 @@ public class CommonUtil
         throw new JlllException("Now such method: " + object.getClass().getName() + "." + methodS + "()");
     }
 
+    /**
+     * Invokes a static method using reflection.
+     *
+     * @param clss
+     *            the class containing the method
+     * @param methodS
+     *            the method name
+     * @param params
+     *            method arguments
+     * @return the method result
+     * @throws JlllException
+     *             if method not found or invocation fails
+     */
     public static Object invokeStatic(Class<?> clss, String methodS, Object[] params) throws JlllException
     {
         if (clss == null)
@@ -158,6 +171,17 @@ public class CommonUtil
         throw new JlllException("Now such method: " + clss.getName() + "." + methodS + "()");
     }
 
+    /**
+     * Gets an instance field value using reflection.
+     *
+     * @param object
+     *            the target object
+     * @param field
+     *            the field name
+     * @return the field value
+     * @throws JlllException
+     *             if field access fails
+     */
     public static Object peek(Object object, String field) throws JlllException
     {
         if (object == null)
@@ -174,6 +198,19 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Sets an instance field value using reflection.
+     *
+     * @param object
+     *            the target object
+     * @param field
+     *            the field name
+     * @param value
+     *            the value to set
+     * @return the value that was set
+     * @throws JlllException
+     *             if field access fails
+     */
     public static Object poke(Object object, String field, Object value) throws JlllException
     {
         if (object == null)
@@ -191,6 +228,17 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Gets a static field value using reflection.
+     *
+     * @param clss
+     *            the class containing the field
+     * @param field
+     *            the field name
+     * @return the field value
+     * @throws JlllException
+     *             if field access fails
+     */
     public static Object peekStatic(Class<?> clss, String field) throws JlllException
     {
         if (clss == null)
@@ -207,6 +255,19 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Sets a static field value using reflection.
+     *
+     * @param clss
+     *            the class containing the field
+     * @param field
+     *            the field name
+     * @param value
+     *            the value to set
+     * @return the value that was set
+     * @throws JlllException
+     *             if field access fails
+     */
     public static Object pokeStatic(Class<?> clss, String field, Object value) throws JlllException
     {
         if (clss == null)
@@ -224,6 +285,13 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Extracts Class objects from an array of objects.
+     *
+     * @param objects
+     *            the objects
+     * @return array of their Class types
+     */
     public static Class<?>[] objectsToClasses(Object[] objects)
     {
         Class<?>[] classes = new Class[objects.length];
@@ -234,6 +302,15 @@ public class CommonUtil
         return classes;
     }
 
+    /**
+     * Checks if objects can be passed as parameters to a method with given parameter types.
+     *
+     * @param classes
+     *            the method parameter types
+     * @param last
+     *            the actual argument objects
+     * @return true if arguments match parameters
+     */
     public static boolean matchClasses(Class<?>[] classes, Object[] last)
     {
         if (classes == null || classes.length == 0)
@@ -248,6 +325,15 @@ public class CommonUtil
         return true;
     }
 
+    /**
+     * Checks if an object is assignable to a class (null-safe, handles primitives).
+     *
+     * @param clss
+     *            the target class
+     * @param object
+     *            the object to check
+     * @return true if object can be assigned to clss
+     */
     public static boolean isInstance(Class<?> clss, Object object)
     {
         if (object == null || Null.NULL.equals(object))
@@ -264,6 +350,15 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Finds a method by name in a class (returns first match).
+     *
+     * @param clazz
+     *            the class to search
+     * @param name
+     *            the method name
+     * @return the Method, or null if not found
+     */
     public static Method getMethodByName(Class<?> clazz, String name)
     {
         Method[] methods = clazz.getMethods();
@@ -276,6 +371,17 @@ public class CommonUtil
         return null;
     }
 
+    /**
+     * Creates a Number instance of the specified type from a double value.
+     *
+     * @param ret
+     *            the double value
+     * @param clazz
+     *            the desired Number class (Integer, Double, etc.)
+     * @return a Number instance of the specified type
+     * @throws JlllException
+     *             if instantiation fails
+     */
     public static Object getNumber(double ret, Class<?> clazz) throws JlllException
     {
         try
@@ -310,6 +416,14 @@ public class CommonUtil
         }
     }
 
+    /**
+     * Converts a JLLL value to a boolean.
+     * null, Null.NULL, and empty Cons are false; everything else is true.
+     *
+     * @param obj
+     *            the value to convert
+     * @return the boolean interpretation
+     */
     public static boolean getBoolean(Object obj)
     {
         boolean decide = true;

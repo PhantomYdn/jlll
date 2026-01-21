@@ -1,73 +1,41 @@
 package ru.ydn.jlll.cli;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.regex.Pattern;
 import org.jline.reader.Highlighter;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
+import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Macros;
+import ru.ydn.jlll.common.Primitive;
+import ru.ydn.jlll.common.Procedure;
+import ru.ydn.jlll.common.Symbol;
 
 /**
  * Syntax highlighter for JLLL REPL.
- * Colorizes keywords, strings, numbers, comments, and parentheses.
+ *
+ * <p>
+ * Provides context-aware highlighting based on actual environment bindings:
+ * </p>
+ * <ul>
+ * <li><b>Blue:</b> Callable bindings (Procedure, Primitive, Macros)</li>
+ * <li><b>Cyan:</b> Variable bindings (non-callable values)</li>
+ * <li><b>Default:</b> Unbound symbols</li>
+ * <li><b>Magenta:</b> Keywords (:foo syntax)</li>
+ * <li><b>Green:</b> String literals</li>
+ * <li><b>Yellow:</b> Numbers</li>
+ * <li><b>Gray/italic:</b> Comments</li>
+ * <li><b>Red:</b> Quote characters and unmatched parens</li>
+ * </ul>
  */
 public class JlllHighlighter implements Highlighter
 {
-    // Keywords to highlight
-    private static final Set<String> KEYWORDS = new HashSet<>();
-    private static final Set<String> SPECIAL_FORMS = new HashSet<>();
-    private static final Set<String> BUILTINS = new HashSet<>();
-    static
-    {
-        // Special forms (blue)
-        SPECIAL_FORMS.add("define");
-        SPECIAL_FORMS.add("defmacro");
-        SPECIAL_FORMS.add("lambda");
-        SPECIAL_FORMS.add("if");
-        SPECIAL_FORMS.add("cond");
-        SPECIAL_FORMS.add("case");
-        SPECIAL_FORMS.add("let");
-        SPECIAL_FORMS.add("let*");
-        SPECIAL_FORMS.add("letrec");
-        SPECIAL_FORMS.add("begin");
-        SPECIAL_FORMS.add("quote");
-        SPECIAL_FORMS.add("quasiquote");
-        SPECIAL_FORMS.add("set");
-        SPECIAL_FORMS.add("set!");
-        // Built-in functions (cyan)
-        BUILTINS.add("car");
-        BUILTINS.add("cdr");
-        BUILTINS.add("cons");
-        BUILTINS.add("list");
-        BUILTINS.add("append");
-        BUILTINS.add("map");
-        BUILTINS.add("filter");
-        BUILTINS.add("apply");
-        BUILTINS.add("eval");
-        BUILTINS.add("and");
-        BUILTINS.add("or");
-        BUILTINS.add("not");
-        BUILTINS.add("load-lib");
-        BUILTINS.add("load-url");
-        BUILTINS.add("print");
-        BUILTINS.add("println");
-        BUILTINS.add("concat");
-        BUILTINS.add("describe");
-        // Constants/keywords (magenta)
-        KEYWORDS.add("true");
-        KEYWORDS.add("false");
-        KEYWORDS.add("null");
-        KEYWORDS.add("nil");
-        KEYWORDS.add("else");
-        KEYWORDS.add("#t");
-        KEYWORDS.add("#f");
-    }
+    private final JlllRepl repl;
     // Styles
     private static final AttributedStyle STYLE_DEFAULT = AttributedStyle.DEFAULT;
-    private static final AttributedStyle STYLE_SPECIAL_FORM = AttributedStyle.BOLD.foreground(AttributedStyle.BLUE);
-    private static final AttributedStyle STYLE_BUILTIN = AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN);
+    private static final AttributedStyle STYLE_CALLABLE = AttributedStyle.DEFAULT.foreground(AttributedStyle.BLUE);
+    private static final AttributedStyle STYLE_VARIABLE = AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN);
     private static final AttributedStyle STYLE_KEYWORD = AttributedStyle.DEFAULT.foreground(AttributedStyle.MAGENTA);
     private static final AttributedStyle STYLE_STRING = AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN);
     private static final AttributedStyle STYLE_NUMBER = AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW);
@@ -77,6 +45,26 @@ public class JlllHighlighter implements Highlighter
     private static final AttributedStyle STYLE_QUOTE = AttributedStyle.DEFAULT.foreground(AttributedStyle.RED);
     private static final AttributedStyle STYLE_ERROR = AttributedStyle.DEFAULT.foreground(AttributedStyle.RED).bold();
 
+    /**
+     * Creates a highlighter for the given REPL session.
+     *
+     * @param repl
+     *            the REPL session to get environment from
+     */
+    public JlllHighlighter(JlllRepl repl)
+    {
+        this.repl = repl;
+    }
+
+    /**
+     * Highlights a line of JLLL code with syntax coloring.
+     *
+     * @param reader
+     *            the line reader
+     * @param buffer
+     *            the input text to highlight
+     * @return the highlighted attributed string
+     */
     @Override
     public AttributedString highlight(LineReader reader, String buffer)
     {
@@ -161,24 +149,43 @@ public class JlllHighlighter implements Highlighter
             {
                 sb.styled(STYLE_NUMBER, token);
             }
-            else if (SPECIAL_FORMS.contains(token))
-            {
-                sb.styled(STYLE_SPECIAL_FORM, token);
-            }
-            else if (BUILTINS.contains(token))
-            {
-                sb.styled(STYLE_BUILTIN, token);
-            }
-            else if (KEYWORDS.contains(token))
-            {
-                sb.styled(STYLE_KEYWORD, token);
-            }
             else
             {
-                sb.styled(STYLE_DEFAULT, token);
+                sb.styled(getStyleForToken(token), token);
             }
         }
         return sb.toAttributedString();
+    }
+
+    /**
+     * Determines the style for a token based on its binding in the environment.
+     */
+    private AttributedStyle getStyleForToken(String token)
+    {
+        // Check for keyword syntax (:foo)
+        if (token.startsWith(":"))
+        {
+            return STYLE_KEYWORD;
+        }
+        // Look up in current environment
+        Enviroment env = repl.getEnvironment();
+        Symbol sym = Symbol.intern(token);
+        Object value = env.lookup(sym);
+        if (value == null)
+        {
+            // Unbound - default color
+            return STYLE_DEFAULT;
+        }
+        else if (value instanceof Procedure || value instanceof Primitive || value instanceof Macros)
+        {
+            // Callable - blue
+            return STYLE_CALLABLE;
+        }
+        else
+        {
+            // Variable (non-callable) - cyan
+            return STYLE_VARIABLE;
+        }
     }
 
     @Override

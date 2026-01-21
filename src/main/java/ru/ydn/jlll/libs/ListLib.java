@@ -28,13 +28,12 @@ import ru.ydn.jlll.util.ListUtil;
  */
 public class ListLib implements Library
 {
+    /** {@inheritDoc} */
     public void load(Enviroment env) throws JlllException
     {
-        new Primitive("list->vector", env)
+        new Primitive("list->vector", env,
+                "Converts a Cons list to a Java Object array. (list->vector '(a b c)) returns an Object[].")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -4084286307884490319L;
 
             public Object applay(Cons vaCons, Enviroment env) throws JlllException
@@ -42,7 +41,8 @@ public class ListLib implements Library
                 return ListUtil.listVector((Cons) vaCons.cdr());
             }
         };
-        new Primitive("collection->list", env)
+        new Primitive("collection->list", env,
+                "Converts a Java Collection to a Cons list. (collection->list java-list) returns a JLLL list.")
         {
             private static final long serialVersionUID = -6045559114098496174L;
 

@@ -340,6 +340,10 @@ public class Enviroment implements Serializable
         }
     }
 
+    /**
+     * Clears all bindings in this environment and all parent environments.
+     * Use with caution as this removes all definitions.
+     */
     public void clear()
     {
         current.clear();

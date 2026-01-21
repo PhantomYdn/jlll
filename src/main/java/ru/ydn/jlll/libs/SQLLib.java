@@ -21,19 +21,57 @@ import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
 import ru.ydn.jlll.util.ListUtil;
 
+/**
+ * SQL database access primitives for JLLL.
+ *
+ * <p>
+ * Provides database operations that work with JDBC connections. Before using
+ * any sql-* primitive, you must define a {@code sql-get-connection} procedure
+ * that returns a JDBC Connection.
+ * </p>
+ *
+ * <p>
+ * Primitives:
+ * </p>
+ * <ul>
+ * <li><b>sql-execute:</b> Execute raw SQL string</li>
+ * <li><b>sql-execute-ps:</b> Execute with positional parameters (?)</li>
+ * <li><b>sql-execute-mps:</b> Execute with named parameters ($name$)</li>
+ * </ul>
+ *
+ * <p>
+ * Set {@code sql-allow-generatedkeys} to true to return generated keys
+ * from INSERT/UPDATE/DELETE operations.
+ * </p>
+ */
 public class SQLLib implements Library
 {
+    /** SQL statement types for determining execution method. */
     private enum SQLType
     {
         CREATE, DROP, SELECT, UPDATE, INSERT, DELETE, UNKNOWN;
     }
 
+    /**
+     * Parses SQL with named parameters ($name$) and creates PreparedStatements.
+     *
+     * <p>
+     * Named parameters use the format {@code $name$} where name is looked up
+     * in the environment or a Map when creating the PreparedStatement.
+     * </p>
+     */
     public static class MappedSQL
     {
         private static final Pattern pattern = Pattern.compile("\\$(\\S*)\\$");
         private List<String> mapping = new ArrayList<String>();
         String ps = null;
 
+        /**
+         * Parses SQL and extracts named parameter mappings.
+         *
+         * @param sql
+         *            SQL string with $name$ placeholders
+         */
         public MappedSQL(String sql)
         {
             Matcher matcher = pattern.matcher(sql);
@@ -45,16 +83,39 @@ public class SQLLib implements Library
             ps = pattern.matcher(sql).replaceAll("?");
         }
 
+        /**
+         * Returns the SQL with named parameters replaced by ? placeholders.
+         *
+         * @return the prepared statement SQL
+         */
         public String getPS()
         {
             return ps;
         }
 
+        /**
+         * Returns the ordered list of parameter names extracted from SQL.
+         *
+         * @return parameter names in order of appearance
+         */
         public List<String> getMapping()
         {
             return mapping;
         }
 
+        /**
+         * Creates a PreparedStatement with values from a Map.
+         *
+         * @param conn
+         *            the database connection
+         * @param map
+         *            parameter name to value mapping
+         * @param gkFlag
+         *            generated keys flag (Statement.RETURN_GENERATED_KEYS or NO_GENERATED_KEYS)
+         * @return configured PreparedStatement
+         * @throws SQLException
+         *             if statement creation fails
+         */
         public PreparedStatement getPreparedStatement(Connection conn, Map<String, Object> map, int gkFlag)
                 throws SQLException
         {
@@ -63,6 +124,17 @@ public class SQLLib implements Library
             return pst;
         }
 
+        /**
+         * Creates a PreparedStatement with values from a Map.
+         *
+         * @param conn
+         *            the database connection
+         * @param map
+         *            parameter name to value mapping
+         * @return configured PreparedStatement
+         * @throws SQLException
+         *             if statement creation fails
+         */
         public PreparedStatement getPreparedStatement(Connection conn, Map<String, Object> map) throws SQLException
         {
             PreparedStatement pst = conn.prepareStatement(getPS());
@@ -70,6 +142,17 @@ public class SQLLib implements Library
             return pst;
         }
 
+        /**
+         * Creates a PreparedStatement with values looked up from environment.
+         *
+         * @param conn
+         *            the database connection
+         * @param env
+         *            environment for looking up parameter values
+         * @return configured PreparedStatement
+         * @throws SQLException
+         *             if statement creation fails
+         */
         public PreparedStatement getPreparedStatement(Connection conn, Enviroment env) throws SQLException
         {
             PreparedStatement pst = conn.prepareStatement(getPS());
@@ -77,6 +160,19 @@ public class SQLLib implements Library
             return pst;
         }
 
+        /**
+         * Creates a PreparedStatement with values from environment and generated keys flag.
+         *
+         * @param conn
+         *            the database connection
+         * @param env
+         *            environment for looking up parameter values
+         * @param gkFlag
+         *            generated keys flag
+         * @return configured PreparedStatement
+         * @throws SQLException
+         *             if statement creation fails
+         */
         public PreparedStatement getPreparedStatement(Connection conn, Enviroment env, int gkFlag) throws SQLException
         {
             PreparedStatement pst = gkFlag == Statement.NO_GENERATED_KEYS
@@ -86,6 +182,16 @@ public class SQLLib implements Library
             return pst;
         }
 
+        /**
+         * Substitutes parameter values from a Map into a PreparedStatement.
+         *
+         * @param ps
+         *            the prepared statement
+         * @param map
+         *            parameter name to value mapping
+         * @throws SQLException
+         *             if setting parameters fails
+         */
         public void substitute(PreparedStatement ps, Map<String, Object> map) throws SQLException
         {
             for (int i = 0; i < mapping.size(); i++)
@@ -94,6 +200,16 @@ public class SQLLib implements Library
             }
         }
 
+        /**
+         * Substitutes parameter values from environment into a PreparedStatement.
+         *
+         * @param ps
+         *            the prepared statement
+         * @param env
+         *            environment for looking up values
+         * @throws SQLException
+         *             if setting parameters fails
+         */
         public void substitute(PreparedStatement ps, Enviroment env) throws SQLException
         {
             for (int i = 0; i < mapping.size(); i++)
@@ -103,13 +219,12 @@ public class SQLLib implements Library
         }
     }
 
+    /** {@inheritDoc} */
     public void load(Enviroment env) throws JlllException
     {
-        new Primitive("sql-execute", env)
+        new Primitive("sql-execute", env, "Executes a raw SQL string. Returns result set as list of lists for SELECT, "
+                + "row count for UPDATE/DELETE, or generated keys if sql-allow-generatedkeys is true.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -1621139488315593668L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -153,11 +268,10 @@ public class SQLLib implements Library
                 return ret;
             }
         };
-        new Primitive("sql-execute-ps", env)
+        new Primitive("sql-execute-ps", env,
+                "Executes SQL with positional parameters. Usage: (sql-execute-ps \"SELECT * FROM t WHERE id=?\" 123). "
+                        + "Parameters are passed after the SQL string in order.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 8261547122480573498L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
@@ -207,11 +321,10 @@ public class SQLLib implements Library
                 return ret;
             }
         };
-        new Primitive("sql-execute-mps", env)
+        new Primitive("sql-execute-mps", env,
+                "Executes SQL with named parameters from environment. Usage: (sql-execute-mps \"SELECT * FROM t WHERE id=$id$\"). "
+                        + "Parameters use $name$ syntax and are looked up in the current environment.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -7111241343538667181L;
 
             public Object applayEvaluated(Cons values, Enviroment env) throws JlllException

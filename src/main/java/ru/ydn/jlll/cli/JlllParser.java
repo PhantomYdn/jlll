@@ -12,6 +12,18 @@ import org.jline.reader.Parser;
  */
 public class JlllParser implements Parser
 {
+    /**
+     * Parses a line of JLLL input, identifying symbol boundaries.
+     * Handles strings, comments, and Lisp-specific delimiters correctly.
+     *
+     * @param line
+     *            the input line
+     * @param cursor
+     *            current cursor position
+     * @param context
+     *            parsing context
+     * @return the parsed line with word boundaries
+     */
     @Override
     public ParsedLine parse(String line, int cursor, ParseContext context)
     {
@@ -129,6 +141,7 @@ public class JlllParser implements Parser
 
     /**
      * Parsed line implementation for Lisp input.
+     * Implements CompletingParsedLine for proper tab completion support.
      */
     private static class JlllParsedLine implements CompletingParsedLine
     {
@@ -140,6 +153,24 @@ public class JlllParser implements Parser
         private final int wordStart;
         private final int wordCursor;
 
+        /**
+         * Creates a parsed line result.
+         *
+         * @param line
+         *            the original line
+         * @param cursor
+         *            cursor position
+         * @param words
+         *            list of parsed words
+         * @param wordIndex
+         *            index of current word
+         * @param word
+         *            current word text
+         * @param wordStart
+         *            start position of current word
+         * @param wordCursor
+         *            cursor position within current word
+         */
         JlllParsedLine(String line, int cursor, List<String> words, int wordIndex, String word, int wordStart,
                 int wordCursor)
         {

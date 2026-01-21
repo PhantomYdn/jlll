@@ -42,16 +42,55 @@ import ru.ydn.jlll.io.MultiPartFormOutputStream;
  */
 public class IOLib implements Library
 {
+    /**
+     * Evaluates code on a remote server and returns description.
+     *
+     * @param remoteURL
+     *            the remote JLLL server URL
+     * @param code
+     *            the JLLL code to evaluate
+     * @return string description of the result
+     * @throws IOException
+     *             if network error occurs
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object remoteDescribeEval(URL remoteURL, String code) throws IOException, JlllException
     {
         return remoteEval(remoteURL, code, true, true);
     }
 
+    /**
+     * Evaluates source code on a remote JLLL server.
+     *
+     * @param remoteURL
+     *            the remote server URL
+     * @param code
+     *            the JLLL source code string
+     * @return the evaluation result
+     * @throws IOException
+     *             if network error occurs
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object remoteEval(URL remoteURL, String code) throws IOException, JlllException
     {
         return remoteEval(remoteURL, code, true, false);
     }
 
+    /**
+     * Evaluates a serialized object on a remote JLLL server.
+     *
+     * @param remoteURL
+     *            the remote server URL
+     * @param code
+     *            the object to serialize and evaluate
+     * @return the evaluation result
+     * @throws IOException
+     *             if network error occurs
+     * @throws JlllException
+     *             if evaluation fails
+     */
     public static Object remoteEval(URL remoteURL, Object code) throws IOException, JlllException
     {
         return remoteEval(remoteURL, code, false, false);
@@ -108,6 +147,15 @@ public class IOLib implements Library
         }
     }
 
+    /**
+     * Reads all content from a Reader into a String.
+     *
+     * @param reader
+     *            the reader to consume
+     * @return the complete content as a string
+     * @throws RuntimeException
+     *             wrapping IOException if read fails
+     */
     public static String getReaderAsString(Reader reader)
     {
         char[] buf = new char[1024];
@@ -130,15 +178,15 @@ public class IOLib implements Library
         return sw.toString();
     }
 
+    /** {@inheritDoc} */
     public void load(Enviroment env) throws JlllException
     {
         env.addBinding(Symbol.STDIN, new InputStreamReader(System.in));
         env.addBinding(Symbol.STDOUT, new PrintWriter(System.out));
-        new Primitive("remote-eval", env)
+        new Primitive("remote-eval", env,
+                "Evaluates code on a remote JLLL server. (remote-eval code) or (remote-eval code url). "
+                        + "Uses 'remote-host binding if URL not specified.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -8955658976965979264L;
 
             @Override
@@ -159,11 +207,9 @@ public class IOLib implements Library
                 }
             }
         };
-        new Primitive("remote-login", env)
+        new Primitive("remote-login", env, "Authenticates with a remote JLLL server. (remote-login username password). "
+                + "Uses 'remote-host binding for server URL.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = 498385309144215955L;
 
             @Override
@@ -199,11 +245,9 @@ public class IOLib implements Library
                 }
             }
         };
-        new Primitive("print", env)
+        new Primitive("print", env,
+                "Outputs values to stdout (or *stdout* binding). (print a b c) prints without newline.")
         {
-            /**
-             *
-             */
             private static final long serialVersionUID = -92971491929006863L;
 
             public Object applay(Cons vaCons, Enviroment env) throws JlllException

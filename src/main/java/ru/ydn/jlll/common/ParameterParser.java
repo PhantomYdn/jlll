@@ -153,14 +153,23 @@ public class ParameterParser
 
     /**
      * Result of extracting keywords from an argument list.
+     * Separates keyword arguments (:key value) from positional arguments.
      */
     public static class KeywordExtraction
     {
-        /** Positional arguments (non-keyword values) */
+        /** Positional arguments (non-keyword values) in order of appearance. */
         public final List<Object> positional;
-        /** Keyword arguments as Symbol->Value map */
+        /** Keyword arguments as Symbol-to-Value map. */
         public final Map<Symbol, Object> keywords;
 
+        /**
+         * Creates an extraction result.
+         *
+         * @param positional
+         *            the positional arguments
+         * @param keywords
+         *            the keyword arguments
+         */
         public KeywordExtraction(List<Object> positional, Map<Symbol, Object> keywords)
         {
             this.positional = positional;

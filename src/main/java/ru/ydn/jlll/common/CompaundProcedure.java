@@ -19,9 +19,13 @@ import java.util.List;
 public class CompaundProcedure extends Procedure
 {
     private static final long serialVersionUID = -7249454179972745005L;
+    /** The parameter specification (symbol, list, or dotted list for rest params). */
     protected final Object variables;
+    /** The procedure body (single expression or begin block). */
     protected final Object body;
+    /** Parsed parameter info for keyword/default support, or null for legacy binding. */
     protected final List<ParameterInfo> parameters;
+    /** True if using new parameter binding with keywords/defaults support. */
     protected final boolean useNewParameterBinding;
 
     /**
@@ -103,6 +107,14 @@ public class CompaundProcedure extends Procedure
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * Binds arguments to parameters (with keyword/default support if enabled),
+     * creates a procedure environment, and evaluates the body.
+     * </p>
+     */
     @Override
     public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
     {
@@ -180,6 +192,11 @@ public class CompaundProcedure extends Procedure
         return false;
     }
 
+    /**
+     * Returns the procedure as a lambda expression for introspection.
+     *
+     * @return a lambda expression representing this procedure
+     */
     public Object getBody()
     {
         return new Cons(Symbol.intern("lambda"),
@@ -199,6 +216,7 @@ public class CompaundProcedure extends Procedure
         return "";
     }
 
+    /** {@inheritDoc} */
     public String describe()
     {
         if (useNewParameterBinding && parameters != null)

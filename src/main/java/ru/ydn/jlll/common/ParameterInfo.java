@@ -73,31 +73,61 @@ public class ParameterInfo implements Serializable
         this.isRest = isRest;
     }
 
+    /**
+     * Returns the parameter name.
+     *
+     * @return the parameter symbol
+     */
     public Symbol getName()
     {
         return name;
     }
 
+    /**
+     * Returns the default expression or pre-evaluated value.
+     *
+     * @return the default, or null if no default
+     */
     public Object getDefaultExpression()
     {
         return defaultExpression;
     }
 
+    /**
+     * Returns whether this parameter has a default value.
+     *
+     * @return true if optional with default
+     */
     public boolean hasDefault()
     {
         return hasDefault;
     }
 
+    /**
+     * Returns whether the default was evaluated at definition time.
+     *
+     * @return true if using !default syntax
+     */
     public boolean isDefaultEvaluatedAtDefinition()
     {
         return defaultEvaluatedAtDefinition;
     }
 
+    /**
+     * Returns whether this is a rest parameter (collects remaining args).
+     *
+     * @return true if rest parameter
+     */
     public boolean isRest()
     {
         return isRest;
     }
 
+    /**
+     * Returns whether this parameter is required (no default, not rest).
+     *
+     * @return true if required
+     */
     public boolean isRequired()
     {
         return !hasDefault && !isRest;

@@ -43,6 +43,13 @@ public class JlllCli implements Callable<Integer>
     private List<File> files;
     private Enviroment env;
 
+    /**
+     * Executes the CLI command - evaluates expressions, runs files, and/or starts REPL.
+     *
+     * @return exit code (0 for success, 1 for error)
+     * @throws Exception
+     *             if unexpected error occurs
+     */
     @Override
     public Integer call() throws Exception
     {
@@ -126,9 +133,17 @@ public class JlllCli implements Callable<Integer>
 
     /**
      * Provides version information from the Maven-filtered properties file.
+     * Reads jlll.version and jlll.name from version.properties resource.
      */
     static class VersionProvider implements IVersionProvider
     {
+        /**
+         * Returns version strings for --version option.
+         *
+         * @return array containing version string
+         * @throws Exception
+         *             if resource loading fails
+         */
         @Override
         public String[] getVersion() throws Exception
         {

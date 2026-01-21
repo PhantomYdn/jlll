@@ -4,21 +4,47 @@ import java.io.Serializable;
 import ru.ydn.jlll.util.ListUtil;
 
 /**
- * Abstact class for all jlll procedures.
- * During evaluating of value of the procedure applay method
- * is invoked with specified arguments
+ * Abstract base class for all JLLL procedures.
  *
+ * <p>
+ * During evaluation of a procedure call, the {@code applay} method is invoked
+ * with the supplied arguments. Subclasses implement either {@code applay} for
+ * unevaluated arguments or {@code applayEvaluated} for pre-evaluated arguments.
+ * </p>
  */
 public abstract class Procedure implements Serializable
 {
     private static final long serialVersionUID = -8521523401153038007L;
+    /** Invocation counter for debugging and profiling. */
     public transient int cnt = 0;
 
+    /**
+     * Convenience method to apply with varargs. Wraps arguments in a Cons list.
+     *
+     * @param env
+     *            the environment to evaluate in
+     * @param args
+     *            arguments for this procedure
+     * @return result of application
+     * @throws JlllException
+     *             if an error occurs
+     */
     public final Object applay(Enviroment env, Object... args) throws JlllException
     {
         return applay(ListUtil.arrayToCons(args), env);
     }
 
+    /**
+     * Applies the procedure to values (as Object). Validates and delegates to Cons version.
+     *
+     * @param values
+     *            arguments as Object (must be Cons or Null)
+     * @param env
+     *            the environment to evaluate in
+     * @return result of application
+     * @throws JlllException
+     *             if values is not a valid argument list
+     */
     public Object applay(Object values, Enviroment env) throws JlllException
     {
         if (Null.NULL.equals(values))
@@ -45,11 +71,34 @@ public abstract class Procedure implements Serializable
         return applayEvaluated(Jlll.evalEvery(values, env), env);
     }
 
+    /**
+     * Convenience method to apply with pre-evaluated varargs.
+     *
+     * @param env
+     *            the environment
+     * @param objects
+     *            pre-evaluated arguments
+     * @return result of application
+     * @throws JlllException
+     *             if an error occurs
+     */
     public final Object applayEvaluated(Enviroment env, Object... objects) throws JlllException
     {
         return applayEvaluated(Cons.list(objects), env);
     }
 
+    /**
+     * Applies the procedure to pre-evaluated arguments.
+     * Override this for procedures that work with already-evaluated values.
+     *
+     * @param values
+     *            pre-evaluated arguments as a Cons list
+     * @param env
+     *            the environment
+     * @return result of application
+     * @throws JlllException
+     *             if procedure doesn't support evaluated args or error occurs
+     */
     public Object applayEvaluated(Cons values, Enviroment env) throws JlllException
     {
         throw new JlllException("You try to use procedure that dosn't allow to applay already evaluated values");

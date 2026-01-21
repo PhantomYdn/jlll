@@ -27,11 +27,28 @@ public class JlllCompleter implements Completer
             "true", "false", "null", "nil", "load-lib", "load-url", "load-system-script", "help", "quit", "exit",
             "env"};
 
+    /**
+     * Creates a completer for the given environment.
+     *
+     * @param env
+     *            the JLLL environment to provide completions from
+     */
     public JlllCompleter(Enviroment env)
     {
         this.env = env;
     }
 
+    /**
+     * Provides completion candidates for the current input.
+     * Matches symbols and keywords that start with the current word prefix.
+     *
+     * @param reader
+     *            the line reader
+     * @param line
+     *            the parsed line
+     * @param candidates
+     *            list to add completion candidates to
+     */
     @Override
     public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates)
     {
@@ -74,6 +91,7 @@ public class JlllCompleter implements Completer
 
     /**
      * Get a short description for a symbol.
+     * Prefers :doc metadata when available for cleaner completion hints.
      */
     private String getDescription(String name, Map<Symbol, Object> bindings)
     {
@@ -86,24 +104,27 @@ public class JlllCompleter implements Completer
             case "exit" :
                 return "Exit the REPL";
             case "env" :
-                return "Show environment bindings";
+                return "Show environment bindings (with optional filter)";
+            case "doc" :
+                return "Show documentation for a symbol";
         }
         // Look up in environment
         Symbol symbol = Symbol.intern(name);
         Object value = bindings.get(symbol);
+        // Try to get doc from metadata first
+        Object doc = env.getMeta(symbol, Symbol.intern("doc"));
+        if (doc != null && !doc.toString().isEmpty())
+        {
+            return truncateDoc(doc.toString(), 60);
+        }
+        // Fall back to type-based description
         if (value == null)
         {
             return "keyword";
         }
         else if (value instanceof Primitive)
         {
-            String desc = ((Primitive) value).describe();
-            // Truncate long descriptions
-            if (desc != null && desc.length() > 40)
-            {
-                desc = desc.substring(0, 37) + "...";
-            }
-            return desc != null ? desc : "primitive";
+            return "primitive";
         }
         else if (value instanceof Macros)
         {
@@ -115,7 +136,7 @@ public class JlllCompleter implements Completer
         }
         else if (value instanceof Boolean)
         {
-            return "boolean";
+            return "boolean: " + value;
         }
         else if (value instanceof Number)
         {
@@ -129,5 +150,30 @@ public class JlllCompleter implements Completer
         {
             return value.getClass().getSimpleName();
         }
+    }
+
+    /**
+     * Truncates documentation to fit in completion description.
+     * Prefers ending at sentence boundary.
+     */
+    private String truncateDoc(String doc, int maxLen)
+    {
+        if (doc.length() <= maxLen)
+        {
+            return doc;
+        }
+        // Try to end at first sentence
+        int period = doc.indexOf('.');
+        if (period > 0 && period < maxLen)
+        {
+            return doc.substring(0, period + 1);
+        }
+        // Otherwise truncate at word boundary
+        int end = doc.lastIndexOf(' ', maxLen - 3);
+        if (end < maxLen / 2)
+        {
+            end = maxLen - 3;
+        }
+        return doc.substring(0, end) + "...";
     }
 }
