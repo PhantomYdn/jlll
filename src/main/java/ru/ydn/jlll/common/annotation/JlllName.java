@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
  *
  * <pre>
  * &#64;JlllName("my-function")
- * public Object myFunction(Enviroment env, Object arg) { ... }
+ * public Object myFunction(Environment env, Object arg) { ... }
  * </pre>
  */
 @Retention(RetentionPolicy.RUNTIME)

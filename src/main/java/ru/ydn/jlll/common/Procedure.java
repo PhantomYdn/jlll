@@ -29,7 +29,7 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if an error occurs
      */
-    public final Object apply(Enviroment env, Object... args) throws JlllException
+    public final Object apply(Environment env, Object... args) throws JlllException
     {
         return apply(ListUtil.arrayToCons(args), env);
     }
@@ -45,7 +45,7 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if values is not a valid argument list
      */
-    public Object apply(Object values, Enviroment env) throws JlllException
+    public Object apply(Object values, Environment env) throws JlllException
     {
         if (Null.NULL.equals(values))
             values = Null.NULL;//new Cons();
@@ -66,7 +66,7 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             when some error occured
      */
-    public Object apply(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Environment env) throws JlllException
     {
         return applyEvaluated(Jlll.evalEvery(values, env), env);
     }
@@ -82,7 +82,7 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if an error occurs
      */
-    public final Object applyEvaluated(Enviroment env, Object... objects) throws JlllException
+    public final Object applyEvaluated(Environment env, Object... objects) throws JlllException
     {
         return applyEvaluated(Cons.list(objects), env);
     }
@@ -99,7 +99,7 @@ public abstract class Procedure implements Serializable
      * @throws JlllException
      *             if procedure doesn't support evaluated args or error occurs
      */
-    public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+    public Object applyEvaluated(Cons values, Environment env) throws JlllException
     {
         throw new JlllException("You try to use procedure that dosn't allow to apply already evaluated values");
     }

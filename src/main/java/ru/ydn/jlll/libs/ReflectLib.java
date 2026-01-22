@@ -1,6 +1,6 @@
 package ru.ydn.jlll.libs;
 
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.ReflectionLibrary;
@@ -26,7 +26,7 @@ import ru.ydn.jlll.util.CommonUtil;
 public class ReflectLib extends ReflectionLibrary
 {
     /** {@inheritDoc} */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         super.load(env);
         Jlll.invokeProcedure("load-system-script", env, "reflect.jlll");

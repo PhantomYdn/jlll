@@ -13,7 +13,7 @@ import java.util.Map;
  * transparent wrappers that don't introduce a new scope level.
  * </p>
  */
-public class DelegateEnvironment extends Enviroment
+public class DelegateEnvironment extends Environment
 {
     private static final long serialVersionUID = -8776861114285131541L;
 
@@ -23,7 +23,7 @@ public class DelegateEnvironment extends Enviroment
      * @param parent
      *            the environment to delegate to
      */
-    public DelegateEnvironment(Enviroment parent)
+    public DelegateEnvironment(Environment parent)
     {
         super(parent);
     }
@@ -44,7 +44,7 @@ public class DelegateEnvironment extends Enviroment
 
     /** {@inheritDoc} Looks up in parent environment. */
     @Override
-    protected Object lookup(Symbol sym, List<Enviroment> trace)
+    protected Object lookup(Symbol sym, List<Environment> trace)
     {
         return parent.lookup(sym, trace);
     }

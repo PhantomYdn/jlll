@@ -1,6 +1,6 @@
 package ru.ydn.jlll.libs;
 
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -29,7 +29,7 @@ import ru.ydn.jlll.common.annotation.JlllName;
 public class PredicatesLib extends ReflectionLibrary
 {
     /** {@inheritDoc} */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         super.load(env);
         Jlll.eval("(load-system-script \"predicates.jlll\")", env);
@@ -47,7 +47,7 @@ public class PredicatesLib extends ReflectionLibrary
      *             if evaluation fails
      */
     @JlllName(value = "null?", useEvaluated = false)
-    public boolean isNull(Enviroment env, Object obj) throws JlllException
+    public boolean isNull(Environment env, Object obj) throws JlllException
     {
         Object firstArg = obj == null ? null : Evaluator.eval(obj, env);
         return firstArg == null || Null.NULL.equals(firstArg);
@@ -63,7 +63,7 @@ public class PredicatesLib extends ReflectionLibrary
      * @return true if a binding exists
      */
     @JlllName("jlll-bound?")
-    public boolean isJlllBound(Enviroment env, Object obj)
+    public boolean isJlllBound(Environment env, Object obj)
     {
         return env.lookup(obj.toString()) != null;
     }

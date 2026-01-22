@@ -20,7 +20,7 @@ import ru.ydn.jlll.util.ListUtil;
  * // Evaluate a simple expression
  * Object result = Jlll.eval("(+ 1 2 3)");
  * // Evaluate with custom environment
- * Enviroment env = new Enviroment(Enviroment.top);
+ * Environment env = new Environment(Environment.top);
  * Jlll.eval("(define x 10)", env);
  * // Invoke with Java arguments accessible via $1, $2, etc.
  * Object sum = Jlll.invoke("(+ $1 $2)", 10, 20);
@@ -39,7 +39,7 @@ public class Jlll
      * @throws JlllException
      *             if evaluation fails
      */
-    public static Object eval(Object eval, Enviroment env) throws JlllException
+    public static Object eval(Object eval, Environment env) throws JlllException
     {
         return Evaluator.eval(eval, env);
     }
@@ -55,7 +55,7 @@ public class Jlll
      */
     public static Object eval(Object eval) throws JlllException
     {
-        return eval(eval, Enviroment.top);
+        return eval(eval, Environment.top);
     }
 
     /**
@@ -69,7 +69,7 @@ public class Jlll
      * @throws JlllException
      *             if parsing or evaluation fails
      */
-    public static Object eval(String str, Enviroment env) throws JlllException
+    public static Object eval(String str, Environment env) throws JlllException
     {
         return eval(new StringReader(str), env);
     }
@@ -85,7 +85,7 @@ public class Jlll
      */
     public static Object eval(String str) throws JlllException
     {
-        return eval(str, Enviroment.top);
+        return eval(str, Environment.top);
     }
 
     /**
@@ -99,7 +99,7 @@ public class Jlll
      * @throws JlllException
      *             if parsing or evaluation fails
      */
-    public static Object eval(InputStream is, Enviroment env) throws JlllException
+    public static Object eval(InputStream is, Environment env) throws JlllException
     {
         return eval(new InputStreamReader(is), env);
     }
@@ -115,7 +115,7 @@ public class Jlll
      */
     public static Object eval(InputStream is) throws JlllException
     {
-        return eval(is, Enviroment.top);
+        return eval(is, Environment.top);
     }
 
     /**
@@ -129,7 +129,7 @@ public class Jlll
      * @throws JlllException
      *             if fetching, parsing, or evaluation fails
      */
-    public static Object eval(URL url, Enviroment env) throws JlllException
+    public static Object eval(URL url, Environment env) throws JlllException
     {
         Object ret;
         try
@@ -154,7 +154,7 @@ public class Jlll
      */
     public static Object eval(URL url) throws JlllException
     {
-        return eval(url, Enviroment.top);
+        return eval(url, Environment.top);
     }
 
     /**
@@ -169,7 +169,7 @@ public class Jlll
      * @throws JlllException
      *             if parsing or evaluation fails
      */
-    public static Object eval(Reader reader, Enviroment env) throws JlllException
+    public static Object eval(Reader reader, Environment env) throws JlllException
     {
         JlllTokenizer jt = new JlllTokenizer(reader);
         Object ret = null;
@@ -202,7 +202,7 @@ public class Jlll
      */
     public static Object eval(Reader reader) throws JlllException
     {
-        return eval(reader, Enviroment.top);
+        return eval(reader, Environment.top);
     }
 
     /**
@@ -216,7 +216,7 @@ public class Jlll
      * @throws JlllException
      *             if evaluation of any element fails
      */
-    public static Cons evalEvery(Cons cons, Enviroment env) throws JlllException
+    public static Cons evalEvery(Cons cons, Environment env) throws JlllException
     {
         Iterator<?> it = cons.iterator();
         List<Object> ret = new ArrayList<Object>();
@@ -241,7 +241,7 @@ public class Jlll
      */
     public static Object invoke(String code, Object... args) throws JlllException
     {
-        return invoke(code, Enviroment.top, args);
+        return invoke(code, Environment.top, args);
     }
 
     /**
@@ -257,7 +257,7 @@ public class Jlll
      * @throws JlllException
      *             if evaluation fails
      */
-    public static Object invoke(String code, Enviroment env, Object... args) throws JlllException
+    public static Object invoke(String code, Environment env, Object... args) throws JlllException
     {
         ArgsEnvironment newEnv = new ArgsEnvironment(env, args);
         Object ret = Jlll.eval(code, newEnv);
@@ -277,7 +277,7 @@ public class Jlll
      * @throws JlllException
      *             if the procedure is not found or execution fails
      */
-    public static Object invokeProcedure(String primitiveName, Enviroment env, Object... args) throws JlllException
+    public static Object invokeProcedure(String primitiveName, Environment env, Object... args) throws JlllException
     {
         return eval(new Cons(Symbol.intern(primitiveName), Cons.list(args)), env);
     }
@@ -291,7 +291,7 @@ public class Jlll
      *            the environment for variable bindings
      * @return a multi-line string describing the evaluation result
      */
-    public static String describeEval(String code, Enviroment env)
+    public static String describeEval(String code, Environment env)
     {
         StringWriter sw = new StringWriter();
         PrintWriter out = new PrintWriter(sw);
@@ -388,7 +388,7 @@ public class Jlll
         {
             Reader in = new InputStreamReader(System.in);
             BufferedReader br = new BufferedReader(in);
-            Enviroment env = new Enviroment(Enviroment.top);
+            Environment env = new Environment(Environment.top);
             while (true)
             {
                 System.out.print(">");

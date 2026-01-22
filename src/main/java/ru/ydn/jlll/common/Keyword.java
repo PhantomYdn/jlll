@@ -1,8 +1,8 @@
 package ru.ydn.jlll.common;
 
 import java.io.Serializable;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Interned keyword representing a self-evaluating identifier.
@@ -30,7 +30,7 @@ import java.util.WeakHashMap;
 public class Keyword implements Serializable
 {
     private static final long serialVersionUID = 7823456789012345678L;
-    private static final Map<String, Keyword> intern = new WeakHashMap<String, Keyword>();
+    private static final ConcurrentMap<String, Keyword> intern = new ConcurrentHashMap<>();
     private final String name;
 
     private Keyword(String name)
@@ -41,6 +41,7 @@ public class Keyword implements Serializable
     /**
      * Returns the interned keyword for the given name.
      * Creates a new keyword if one doesn't exist, otherwise returns the existing one.
+     * This method is thread-safe.
      *
      * @param name
      *            the keyword name (without the leading colon)
@@ -58,13 +59,7 @@ public class Keyword implements Serializable
         {
             throw new JlllException("Keyword name cannot start with colon: " + name);
         }
-        Keyword ret = intern.get(name);
-        if (ret == null)
-        {
-            ret = new Keyword(name);
-            intern.put(name, ret);
-        }
-        return ret;
+        return intern.computeIfAbsent(name, Keyword::new);
     }
 
     /**

@@ -16,7 +16,7 @@ import java.util.Map;
  * All other operations (add, set, remove) are delegated to the parent environment.
  * </p>
  */
-public class ArgsEnvironment extends Enviroment
+public class ArgsEnvironment extends Environment
 {
     private static final long serialVersionUID = 7866903478037016312L;
     /** The positional arguments accessible via $1, $2, etc. */
@@ -30,7 +30,7 @@ public class ArgsEnvironment extends Enviroment
      * @param args
      *            the arguments accessible via $1, $2, etc.
      */
-    public ArgsEnvironment(Enviroment parent, Object[] args)
+    public ArgsEnvironment(Environment parent, Object[] args)
     {
         super(parent);
         this.args = args;
@@ -59,7 +59,7 @@ public class ArgsEnvironment extends Enviroment
      * </p>
      */
     @Override
-    protected Object lookup(Symbol sym, List<Enviroment> trace)
+    protected Object lookup(Symbol sym, List<Environment> trace)
     {
         if (sym.getName().startsWith("$"))
         {

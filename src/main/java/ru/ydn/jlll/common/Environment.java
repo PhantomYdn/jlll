@@ -8,20 +8,18 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Environment (sory for mistake in Class name) is a data structure
- * to store variables of the calculation environment
- *
+ * Environment is a data structure to store variables of the calculation environment.
  */
-public class Enviroment implements Serializable
+public class Environment implements Serializable
 {
     private static final long serialVersionUID = 5024478830439245582L;
-    protected Enviroment parent = null;
+    protected Environment parent = null;
     protected Map<Symbol, Object> current = new HashMap<Symbol, Object>();
     protected Map<Symbol, Map<Symbol, Object>> metadata = new HashMap<Symbol, Map<Symbol, Object>>();
     /**
-     * top Enviroment
+     * top Environment
      */
-    public static Enviroment top = null;
+    public static Environment top = null;
     static
     {
         String topClass = null;
@@ -39,32 +37,32 @@ public class Enviroment implements Serializable
             {
                 Class<?> clazz = Class.forName(topClass);
                 Constructor<?> constructor = clazz.getConstructor(new Class[]
-                {Enviroment.class});
-                top = (Enviroment) constructor.newInstance(new Object[]
+                {Environment.class});
+                top = (Environment) constructor.newInstance(new Object[]
                 {null});
             }
             catch (Exception e)
             {
-                throw new RuntimeException("Can't initialize enviroment. Check \"jlll.top-class\" property.", e);
+                throw new RuntimeException("Can't initialize environment. Check \"jlll.top-class\" property.", e);
             }
         }
         else
         {
-            top = new Enviroment(null);
+            top = new Environment(null);
         }
-        //        top = new SkyNetEnviroment(null);
+        //        top = new SkyNetEnvironment(null);
         new Primitive("load-lib", top)
         {
             private static final long serialVersionUID = -7181172149106048903L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 String path = values.get(0).toString();
                 try
                 {
-                    Object lib = Class.forName(path).newInstance();
+                    Object lib = Class.forName(path).getDeclaredConstructor().newInstance();
                     if (!(lib instanceof Library))
-                        throw new JlllException("This is not a library" + path);
+                        throw new JlllException("This is not a library: " + path);
                     Library library = (Library) lib;
                     library.load(env);
                 }
@@ -95,7 +93,7 @@ public class Enviroment implements Serializable
      * @param parent
      *            parent environment
      */
-    public Enviroment(Enviroment parent)
+    public Environment(Environment parent)
     {
         this.parent = parent;
     }
@@ -266,10 +264,10 @@ public class Enviroment implements Serializable
      */
     public final Object lookup(Symbol sym)
     {
-        return lookup(sym, new ArrayList<Enviroment>(5));
+        return lookup(sym, new ArrayList<Environment>(5));
     }
 
-    protected Object lookup(Symbol sym, List<Enviroment> trace)
+    protected Object lookup(Symbol sym, List<Environment> trace)
     {
         if (sym == null)
             return null;
@@ -303,7 +301,7 @@ public class Enviroment implements Serializable
      *
      * @return top environment
      */
-    public Enviroment getTopEnvironment()
+    public Environment getTopEnvironment()
     {
         if (parent != null)
         {
@@ -384,7 +382,7 @@ public class Enviroment implements Serializable
      *
      * @return parent environment
      */
-    public Enviroment getParent()
+    public Environment getParent()
     {
         return parent;
     }

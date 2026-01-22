@@ -5,7 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import org.junit.Test;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Keyword;
@@ -16,11 +16,11 @@ import ru.ydn.jlll.common.Symbol;
  */
 public class KeywordTestCase
 {
-    private final Enviroment env;
+    private final Environment env;
 
     public KeywordTestCase()
     {
-        env = new Enviroment(Enviroment.top);
+        env = new Environment(Environment.top);
     }
 
     private Object eval(String code) throws Exception

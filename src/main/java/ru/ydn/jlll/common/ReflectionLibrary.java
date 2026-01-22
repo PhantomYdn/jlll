@@ -15,7 +15,7 @@ import ru.ydn.jlll.common.annotation.JlllName;
  * public class MyLib extends ReflectionLibrary
  * {
  *     &#64;JlllName("greet")
- *     public String greet(Enviroment env, String name)
+ *     public String greet(Environment env, String name)
  *     {
  *         return "Hello, " + name;
  *     }
@@ -32,7 +32,7 @@ public abstract class ReflectionLibrary implements Library
      * @throws JlllException
      *             if loading fails
      */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         loadMethods(this, env);
     }
@@ -47,7 +47,7 @@ public abstract class ReflectionLibrary implements Library
      * @throws JlllException
      *             if registration fails
      */
-    public static void loadMethods(Object obj, Enviroment env) throws JlllException
+    public static void loadMethods(Object obj, Environment env) throws JlllException
     {
         Method[] methods = obj.getClass().getMethods();
         for (int i = 0; i < methods.length; i++)

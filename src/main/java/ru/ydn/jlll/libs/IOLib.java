@@ -14,7 +14,7 @@ import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.List;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -179,7 +179,7 @@ public class IOLib implements Library
     }
 
     /** {@inheritDoc} */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         env.addBinding(Symbol.STDIN, new InputStreamReader(System.in));
         env.addBinding(Symbol.STDOUT, new PrintWriter(System.out));
@@ -190,7 +190,7 @@ public class IOLib implements Library
             private static final long serialVersionUID = -8955658976965979264L;
 
             @Override
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 try
                 {
@@ -213,7 +213,7 @@ public class IOLib implements Library
             private static final long serialVersionUID = 498385309144215955L;
 
             @Override
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 try
                 {
@@ -250,7 +250,7 @@ public class IOLib implements Library
         {
             private static final long serialVersionUID = -92971491929006863L;
 
-            public Object apply(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Environment env) throws JlllException
             {
                 Iterator<?> it = vaCons.iterator();
                 Object outObject = env.lookup(Symbol.STDOUT);

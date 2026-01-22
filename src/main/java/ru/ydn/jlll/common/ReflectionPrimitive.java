@@ -36,7 +36,7 @@ public class ReflectionPrimitive extends Primitive
     protected final Method method;
     protected boolean useEvaluated = true;
 
-    private ReflectionPrimitive(String name, Enviroment env, Object obj, Method method, boolean useEvaluated)
+    private ReflectionPrimitive(String name, Environment env, Object obj, Method method, boolean useEvaluated)
     {
         // Use the doc-less super constructor to avoid double metadata setting
         super(name, env, (String) null);
@@ -70,7 +70,7 @@ public class ReflectionPrimitive extends Primitive
      * @throws JlllException
      *             if the method is not properly annotated
      */
-    public static ReflectionPrimitive createReflectionPrimitive(Enviroment env, Object obj, Method method)
+    public static ReflectionPrimitive createReflectionPrimitive(Environment env, Object obj, Method method)
             throws JlllException
     {
         JlllName jlllName = method.getAnnotation(JlllName.class);
@@ -100,7 +100,7 @@ public class ReflectionPrimitive extends Primitive
      * @throws JlllException
      *             if creation fails
      */
-    public static ReflectionPrimitive createReflectionPrimitive(Enviroment env, Object obj, Method method, String name,
+    public static ReflectionPrimitive createReflectionPrimitive(Environment env, Object obj, Method method, String name,
             boolean useEvaluated) throws JlllException
     {
         ReflectionPrimitive primitive = new ReflectionPrimitive(name, env, obj, method, useEvaluated);
@@ -124,22 +124,22 @@ public class ReflectionPrimitive extends Primitive
     }
 
     @Override
-    public Object apply(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Environment env) throws JlllException
     {
         return useEvaluated ? super.apply(values, env) : invoke(values, env);
     }
 
     @Override
-    public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+    public Object applyEvaluated(Cons values, Environment env) throws JlllException
     {
         return useEvaluated ? invoke(values, env) : super.applyEvaluated(values, env);
     }
 
-    protected Object invoke(Cons values, Enviroment env) throws JlllException
+    protected Object invoke(Cons values, Environment env) throws JlllException
     {
         Class<?>[] params = method.getParameterTypes();
         Object[] vals = new Object[params.length];
-        boolean setEnvironment = params != null && params.length > 0 && Enviroment.class.isAssignableFrom(params[0]);
+        boolean setEnvironment = params != null && params.length > 0 && Environment.class.isAssignableFrom(params[0]);
         int i = 0;
         if (setEnvironment)
         {
@@ -203,7 +203,7 @@ public class ReflectionPrimitive extends Primitive
         }
     }
 
-    private Object convert(Object value, Class<?> requiredClass, Enviroment env)
+    private Object convert(Object value, Class<?> requiredClass, Environment env)
     {
         if (value instanceof Null)
             return null;

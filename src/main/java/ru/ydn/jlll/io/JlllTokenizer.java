@@ -119,12 +119,12 @@ public class JlllTokenizer extends StreamTokenizer
                     // Parse the rest as a separate token
                     String rest = sval.substring(1);
                     sval = rest;
-                    return ListUtil.list(Symbol.EXLAMATION, parseTTWord());
+                    return ListUtil.list(Symbol.EXCLAMATION, parseTTWord());
                 }
                 else if (sval.equals("!"))
                 {
                     // Just "!" by itself - read next object
-                    return ListUtil.list(Symbol.EXLAMATION, nextObject());
+                    return ListUtil.list(Symbol.EXCLAMATION, nextObject());
                 }
                 return parseTTWord();
             }

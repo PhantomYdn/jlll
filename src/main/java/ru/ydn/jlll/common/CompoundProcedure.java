@@ -3,7 +3,7 @@ package ru.ydn.jlll.common;
 import java.util.List;
 
 /**
- * CompaundProcedure is used in <tt>define</tt> statement to define new procedure.
+ * CompoundProcedure is used in <tt>define</tt> statement to define new procedure.
  *
  * <p>
  * Supports:
@@ -16,7 +16,7 @@ import java.util.List;
  * <li>Keyword arguments at call: (f :x 10)</li>
  * </ul>
  */
-public class CompaundProcedure extends Procedure
+public class CompoundProcedure extends Procedure
 {
     private static final long serialVersionUID = -7249454179972745005L;
     /** The parameter specification (symbol, list, or dotted list for rest params). */
@@ -29,14 +29,14 @@ public class CompaundProcedure extends Procedure
     protected final boolean useNewParameterBinding;
 
     /**
-     * Constructor of compaund procedure
+     * Constructor of compound procedure.
      *
      * @param variables
      *            names of arguments for this procedure
      * @param body
      *            body of the procedure
      */
-    public CompaundProcedure(Object variables, Object body)
+    public CompoundProcedure(Object variables, Object body)
     {
         this(variables, body, null, null);
     }
@@ -51,7 +51,7 @@ public class CompaundProcedure extends Procedure
      * @param env
      *            environment for evaluating !defaults
      */
-    public CompaundProcedure(Object variables, Object body, Enviroment env)
+    public CompoundProcedure(Object variables, Object body, Environment env)
     {
         this(variables, body, env, null);
     }
@@ -68,7 +68,7 @@ public class CompaundProcedure extends Procedure
      * @param precomputedParams
      *            pre-parsed parameters (or null to parse from variables)
      */
-    public CompaundProcedure(Object variables, Object body, Enviroment env, List<ParameterInfo> precomputedParams)
+    public CompoundProcedure(Object variables, Object body, Environment env, List<ParameterInfo> precomputedParams)
     {
         this.variables = variables;
         if (body != null && body instanceof Cons && ((Cons) body).cdr().equals(Null.NULL))
@@ -116,7 +116,7 @@ public class CompaundProcedure extends Procedure
      * </p>
      */
     @Override
-    public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+    public Object applyEvaluated(Cons values, Environment env) throws JlllException
     {
         ProcEnvironment pe;
         // Decide whether to use keyword-aware binding:
@@ -222,7 +222,7 @@ public class CompaundProcedure extends Procedure
         if (useNewParameterBinding && parameters != null)
         {
             StringBuilder sb = new StringBuilder();
-            sb.append("Compaund procedure.\nArguments: (");
+            sb.append("Compound procedure.\nArguments: (");
             for (int i = 0; i < parameters.size(); i++)
             {
                 if (i > 0)
@@ -232,6 +232,6 @@ public class CompaundProcedure extends Procedure
             sb.append(")\nBody: ").append(body);
             return sb.toString();
         }
-        return "Compaund procedure.\n" + "Arguments: " + variables + "\n" + "Body: " + body;
+        return "Compound procedure.\n" + "Arguments: " + variables + "\n" + "Body: " + body;
     }
 }

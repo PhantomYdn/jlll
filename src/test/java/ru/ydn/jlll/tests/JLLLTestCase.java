@@ -7,7 +7,7 @@ import java.util.Iterator;
 import org.junit.Test;
 import junit.framework.AssertionFailedError;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
@@ -21,7 +21,7 @@ import ru.ydn.jlll.util.ListUtil;
 
 public class JLLLTestCase
 {
-    private final Enviroment env;
+    private final Environment env;
 
     public static class ReflectionClass
     {
@@ -43,19 +43,19 @@ public class JLLLTestCase
         }
 
         @JlllName("testMethod2")
-        public int testMethod2(Enviroment env)
+        public int testMethod2(Environment env)
         {
             return 0;
         }
 
         @JlllName("testMethod3")
-        public String testMethod3(Enviroment env, String toEcho)
+        public String testMethod3(Environment env, String toEcho)
         {
             return toEcho;
         }
 
         @JlllName("testMethod4")
-        public int testMethod4(Enviroment env, String... strings)
+        public int testMethod4(Environment env, String... strings)
         {
             return strings.length;
         }
@@ -63,7 +63,7 @@ public class JLLLTestCase
 
     public JLLLTestCase()
     {
-        env = new Enviroment(Enviroment.top);
+        env = new Environment(Environment.top);
     }
 
     @Test
@@ -300,7 +300,7 @@ public class JLLLTestCase
     @Test
     public void testReflectPrimitives() throws Exception
     {
-        Enviroment env = Enviroment.top;
+        Environment env = Environment.top;
         assertEquals(((Procedure) env.lookup("new")).apply(env, Cons.class), new Cons());
         assertEquals(
                 ((Primitive) env.lookup("new")).applyEvaluated(env, Cons.class, Symbol.intern("a"), Symbol.intern("b")),
@@ -310,7 +310,7 @@ public class JLLLTestCase
     @Test
     public void testMath() throws Exception
     {
-        Enviroment env = Enviroment.top;
+        Environment env = Environment.top;
         assertEquals(((Procedure) env.lookup("+")).apply(env, 2, 2), 4);
         eval(true, "(< 2 3)");
         eval(false, "(< 3 2)");

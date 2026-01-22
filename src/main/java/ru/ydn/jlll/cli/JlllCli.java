@@ -13,7 +13,7 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.IVersionProvider;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 
@@ -41,7 +41,7 @@ public class JlllCli implements Callable<Integer>
     private boolean quiet;
     @Parameters(paramLabel = "FILE", description = "Script file(s) to execute")
     private List<File> files;
-    private Enviroment env;
+    private Environment env;
 
     /**
      * Executes the CLI command - evaluates expressions, runs files, and/or starts REPL.
@@ -53,7 +53,7 @@ public class JlllCli implements Callable<Integer>
     @Override
     public Integer call() throws Exception
     {
-        env = new Enviroment(Enviroment.top);
+        env = new Environment(Environment.top);
         boolean hasWork = false;
         // Evaluate -e expressions first
         if (expressions != null && !expressions.isEmpty())

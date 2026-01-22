@@ -14,7 +14,7 @@ import ru.ydn.jlll.util.ListUtil;
  * Created with {@code (defmacro name (args) body)} or {@code (macro (args) body)}.
  * </p>
  */
-public class Macros extends CompaundProcedure
+public class Macros extends CompoundProcedure
 {
     private static final long serialVersionUID = 6419680788279882844L;
 
@@ -42,7 +42,7 @@ public class Macros extends CompaundProcedure
      * @throws JlllException
      *             if expansion or evaluation fails
      */
-    public Object apply(Cons values, Enviroment env) throws JlllException
+    public Object apply(Cons values, Environment env) throws JlllException
     {
         Object eval = macroExpand(values, env);
         //        Logger.getLogger(Macros.class).debug("Macroexpand: "+eval );
@@ -72,7 +72,7 @@ public class Macros extends CompaundProcedure
      * @throws JlllException
      *             if expansion fails
      */
-    public Object macroExpand(Cons values, Enviroment env) throws JlllException
+    public Object macroExpand(Cons values, Environment env) throws JlllException
     {
         return super.apply(quoteAll(values), env);
     }

@@ -4,16 +4,16 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Symbol;
 
 /**
- * Adapts an {@link Enviroment} as a Java {@link Map} for interoperability.
+ * Adapts an {@link Environment} as a Java {@link Map} for interoperability.
  * Allows JLLL environments to be used with Java APIs expecting Map interfaces.
  */
-public class EnviromentMapAdapter implements Map<String, Object>
+public class EnvironmentMapAdapter implements Map<String, Object>
 {
-    private final Enviroment env;
+    private final Environment env;
 
     /**
      * Creates an adapter for the given environment.
@@ -21,7 +21,7 @@ public class EnviromentMapAdapter implements Map<String, Object>
      * @param env
      *            the environment to adapt
      */
-    public EnviromentMapAdapter(Enviroment env)
+    public EnvironmentMapAdapter(Environment env)
     {
         this.env = env;
     }

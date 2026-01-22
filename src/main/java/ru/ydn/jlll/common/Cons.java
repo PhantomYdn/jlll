@@ -208,7 +208,6 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
         {
             String ret = (String) obj;
             ret = ret.replace("\"", "\\\"").replace("\n", "\\n");
-            ret.replaceAll("", "");
             return "\"" + ret + "\"";
         }
         else
@@ -220,6 +219,7 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     /**
      * Returns the string representation of the cons
      */
+    @Override
     public String toString()
     {
         if (isNull())
@@ -243,7 +243,7 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
             {
                 return ",@" + objectToString(cdrCons.car);
             }
-            else if (Symbol.EXLAMATION.equals(car) && cdrCons.length() == 1)
+            else if (Symbol.EXCLAMATION.equals(car) && cdrCons.length() == 1)
             {
                 return "!" + objectToString(cdrCons.car);
             }
@@ -382,6 +382,7 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     /**
      * Check whete this Cons equals to specified object or not
      */
+    @Override
     public boolean equals(Object obj)
     {
         if (isNull())
@@ -390,6 +391,16 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
             return false;
         Cons cons = (Cons) obj;
         return equals(car, cons.car) && equals(cdr, cons.cdr);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        if (isNull())
+            return 0;
+        int result = car == null ? 0 : car.hashCode();
+        result = 31 * result + (cdr == null ? 0 : cdr.hashCode());
+        return result;
     }
 
     private boolean equals(Object obj1, Object obj2)
@@ -404,6 +415,7 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     /**
      * Clone this cons with CARs and CDRs
      */
+    @Override
     public Cons clone()
     {
         Object newCar = car instanceof Cons ? ((Cons) car).clone() : car;

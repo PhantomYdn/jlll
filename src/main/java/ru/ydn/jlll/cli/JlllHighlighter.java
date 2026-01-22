@@ -6,7 +6,7 @@ import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Macros;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
@@ -168,7 +168,7 @@ public class JlllHighlighter implements Highlighter
             return STYLE_KEYWORD;
         }
         // Look up in current environment
-        Enviroment env = repl.getEnvironment();
+        Environment env = repl.getEnvironment();
         Symbol sym = Symbol.intern(token);
         Object value = env.lookup(sym);
         if (value == null)

@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Library;
@@ -153,7 +153,7 @@ public class SQLLib implements Library
          * @throws SQLException
          *             if statement creation fails
          */
-        public PreparedStatement getPreparedStatement(Connection conn, Enviroment env) throws SQLException
+        public PreparedStatement getPreparedStatement(Connection conn, Environment env) throws SQLException
         {
             PreparedStatement pst = conn.prepareStatement(getPS());
             substitute(pst, env);
@@ -173,7 +173,7 @@ public class SQLLib implements Library
          * @throws SQLException
          *             if statement creation fails
          */
-        public PreparedStatement getPreparedStatement(Connection conn, Enviroment env, int gkFlag) throws SQLException
+        public PreparedStatement getPreparedStatement(Connection conn, Environment env, int gkFlag) throws SQLException
         {
             PreparedStatement pst = gkFlag == Statement.NO_GENERATED_KEYS
                     ? conn.prepareStatement(getPS())
@@ -210,7 +210,7 @@ public class SQLLib implements Library
          * @throws SQLException
          *             if setting parameters fails
          */
-        public void substitute(PreparedStatement ps, Enviroment env) throws SQLException
+        public void substitute(PreparedStatement ps, Environment env) throws SQLException
         {
             for (int i = 0; i < mapping.size(); i++)
             {
@@ -220,14 +220,14 @@ public class SQLLib implements Library
     }
 
     /** {@inheritDoc} */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         new Primitive("sql-execute", env, "Executes a raw SQL string. Returns result set as list of lists for SELECT, "
                 + "row count for UPDATE/DELETE, or generated keys if sql-allow-generatedkeys is true.")
         {
             private static final long serialVersionUID = -1621139488315593668L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 String sql = values.get(0).toString();
                 Connection conn = getConnection(env);
@@ -274,7 +274,7 @@ public class SQLLib implements Library
         {
             private static final long serialVersionUID = 8261547122480573498L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 String sql = values.get(0).toString();
                 Connection conn = getConnection(env);
@@ -327,7 +327,7 @@ public class SQLLib implements Library
         {
             private static final long serialVersionUID = -7111241343538667181L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 String sql = values.get(0).toString();
                 Connection conn = getConnection(env);
@@ -392,7 +392,7 @@ public class SQLLib implements Library
      * }
      */
 
-    private Connection getConnection(Enviroment env) throws JlllException
+    private Connection getConnection(Environment env) throws JlllException
     {
         Object getConnectionProcedure = env.lookup("sql-get-connection");
         if (getConnectionProcedure == null)
@@ -405,12 +405,12 @@ public class SQLLib implements Library
             throw new JlllException("sql-get-connection return not a connection, but: " + conn.getClass().getName());
     }
 
-    private int getGKFlag(Enviroment env) throws JlllException
+    private int getGKFlag(Environment env) throws JlllException
     {
         return isAllowGeneratedKeys(env) ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
     }
 
-    private boolean isAllowGeneratedKeys(Enviroment env) throws JlllException
+    private boolean isAllowGeneratedKeys(Environment env) throws JlllException
     {
         Object ret = env.lookup("sql-allow-generatedkeys");
         return (ret == null ? false : (ret instanceof Boolean ? ((Boolean) ret).booleanValue() : false));

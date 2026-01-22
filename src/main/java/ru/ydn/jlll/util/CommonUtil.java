@@ -64,7 +64,7 @@ public class CommonUtil
                         return cnst[i].newInstance(constr);
                 }
                 //Creating exception
-                String message = "Now such constructor for: ";
+                String message = "No such constructor for: ";
                 for (int i = 0; i < constr.length; i++)
                 {
                     Object obj = constr[i];
@@ -74,7 +74,7 @@ public class CommonUtil
             }
             else
             {
-                return clss.newInstance();
+                return clss.getDeclaredConstructor().newInstance();
             }
         }
         catch (InstantiationException e)
@@ -89,6 +89,10 @@ public class CommonUtil
         {
             throw new JlllException("Exception in creating object from class " + clss.getName(),
                     e.getTargetException());
+        }
+        catch (NoSuchMethodException e)
+        {
+            throw new JlllException("No default constructor for class " + clss.getName(), e);
         }
     }
 
@@ -132,7 +136,7 @@ public class CommonUtil
             throw new JlllException("Exception in invoke " + object.getClass().getName() + "." + methodS + " "
                     + e.getTargetException().getMessage(), e.getTargetException());
         }
-        throw new JlllException("Now such method: " + object.getClass().getName() + "." + methodS + "()");
+        throw new JlllException("No such method: " + object.getClass().getName() + "." + methodS + "()");
     }
 
     /**
@@ -166,9 +170,9 @@ public class CommonUtil
         }
         catch (Exception e)
         {
-            throw new JlllException("Exception in invoke " + clss.getName() + "." + methodS + "  ", e);
+            throw new JlllException("Exception in invoke " + clss.getName() + "." + methodS, e);
         }
-        throw new JlllException("Now such method: " + clss.getName() + "." + methodS + "()");
+        throw new JlllException("No such method: " + clss.getName() + "." + methodS + "()");
     }
 
     /**

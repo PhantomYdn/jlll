@@ -19,7 +19,7 @@ public class Evaluator
      * @throws JlllException
      *             thrown if some unusual situation occured
      */
-    public static Object eval(Object eval, Enviroment env) throws JlllException
+    public static Object eval(Object eval, Environment env) throws JlllException
     {
         Object ret = null;
         if (eval instanceof Cons)

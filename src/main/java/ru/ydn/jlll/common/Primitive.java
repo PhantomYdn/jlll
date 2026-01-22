@@ -11,8 +11,8 @@ import com.github.therapi.runtimejavadoc.RuntimeJavadoc;
  * Primitives are automatically bound to the environment upon construction.
  *
  * <p>
- * Subclasses must implement {@link Procedure#apply(Cons, Enviroment)} or
- * {@link Procedure#applyEvaluated(Cons, Enviroment)} to define the primitive's behavior.
+ * Subclasses must implement {@link Procedure#apply(Cons, Environment)} or
+ * {@link Procedure#applyEvaluated(Cons, Environment)} to define the primitive's behavior.
  * </p>
  *
  * <p>
@@ -46,7 +46,7 @@ public class Primitive extends Procedure
      * @param env
      *            the environment to bind this primitive in
      */
-    public Primitive(String name, Enviroment env)
+    public Primitive(String name, Environment env)
     {
         this(name, env, (String) null);
     }
@@ -62,7 +62,7 @@ public class Primitive extends Procedure
      * @param doc
      *            the documentation string, or null to attempt JavaDoc extraction
      */
-    public Primitive(String name, Enviroment env, String doc)
+    public Primitive(String name, Environment env, String doc)
     {
         Symbol sym = Symbol.intern(name);
         env.addBinding(sym, this);
@@ -97,7 +97,7 @@ public class Primitive extends Procedure
      * @param metadata
      *            map of metadata keys (Symbols) to values, may be null
      */
-    public Primitive(String name, Enviroment env, Map<Symbol, Object> metadata)
+    public Primitive(String name, Environment env, Map<Symbol, Object> metadata)
     {
         Symbol sym = Symbol.intern(name);
         env.addBinding(sym, this);

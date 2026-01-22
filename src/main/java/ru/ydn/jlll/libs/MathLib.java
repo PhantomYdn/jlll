@@ -3,7 +3,7 @@ package ru.ydn.jlll.libs;
 import java.util.Collections;
 import java.util.Iterator;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -34,7 +34,7 @@ import ru.ydn.jlll.util.ListUtil;
 public class MathLib extends ReflectionLibrary
 {
     /** {@inheritDoc} */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         super.load(env);
         new Primitive("+", env,
@@ -42,7 +42,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = -2122014676433877891L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 Iterator<?> it = values.iterator();
                 boolean isInteger = values.get(0) instanceof Integer;
@@ -77,7 +77,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = -3793672312398700280L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 Object first = values.get(0);
                 Object second = values.get(1);
@@ -99,7 +99,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = 5494871817634832943L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 Iterator<?> it = values.iterator();
                 boolean isInteger = values.get(0) instanceof Integer;
@@ -134,7 +134,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = 5672648515824387253L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 Object first = values.get(0);
                 Object second = values.get(1);
@@ -154,7 +154,7 @@ public class MathLib extends ReflectionLibrary
         /*
          * new Primitive("<", env)
          * {
-         * public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+         * public Object applyEvaluated(Cons values, Environment env) throws JlllException
          * {
          * Comparable obj1 = (Comparable) values.get(0);
          * Comparable obj2 = (Comparable) values.get(1);
@@ -166,7 +166,7 @@ public class MathLib extends ReflectionLibrary
         /*
          * new Primitive(">", env)
          * {
-         * public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+         * public Object applyEvaluated(Cons values, Environment env) throws JlllException
          * {
          * Comparable obj1 = (Comparable) values.get(0);
          * Comparable obj2 = (Comparable) values.get(1);
@@ -178,7 +178,7 @@ public class MathLib extends ReflectionLibrary
         /*
          * new Primitive("=", env)
          * {
-         * public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+         * public Object applyEvaluated(Cons values, Environment env) throws JlllException
          * {
          * Comparable obj1 = (Comparable) values.get(0);
          * Comparable obj2 = (Comparable) values.get(1);
@@ -192,7 +192,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = -6620736129309146338L;
 
-            public Object apply(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Environment env) throws JlllException
             {
                 Iterator<?> it = values.iterator();
                 Object next = null;
@@ -210,7 +210,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = -5676965755997109300L;
 
-            public Object apply(Cons values, Enviroment env) throws JlllException
+            public Object apply(Cons values, Environment env) throws JlllException
             {
                 Iterator<?> it = values.iterator();
                 Object next = null;
@@ -228,7 +228,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = -4780145838015746273L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 return Collections.max(ListUtil.consToList(values), ListUtil.GENERIC_COMPARATOR);
             }
@@ -238,7 +238,7 @@ public class MathLib extends ReflectionLibrary
         {
             private static final long serialVersionUID = -4062151075693391985L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 return Collections.min(ListUtil.consToList(values), ListUtil.GENERIC_COMPARATOR);
             }
@@ -248,7 +248,7 @@ public class MathLib extends ReflectionLibrary
          * {
          *
          * @Override
-         * public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+         * public Object applyEvaluated(Cons values, Environment env) throws JlllException
          * {
          * return !CommonUtil.getBoolean(values.get(0));
          * }

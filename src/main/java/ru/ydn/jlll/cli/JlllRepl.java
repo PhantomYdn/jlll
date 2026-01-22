@@ -23,7 +23,7 @@ import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Macros;
@@ -41,7 +41,7 @@ public class JlllRepl
     private static final String HISTORY_FILE = ".jlll_history";
     private static final String PRIMARY_PROMPT = "jlll> ";
     private static final String CONTINUATION_PROMPT = "....> ";
-    private final Enviroment env;
+    private final Environment env;
     private boolean colorEnabled = true;
     private boolean quiet = false;
     private Terminal terminal;
@@ -54,7 +54,7 @@ public class JlllRepl
      * @param env
      *            the environment for evaluating expressions
      */
-    public JlllRepl(Enviroment env)
+    public JlllRepl(Environment env)
     {
         this.env = env;
     }
@@ -65,7 +65,7 @@ public class JlllRepl
      *
      * @return the current environment
      */
-    public Enviroment getEnvironment()
+    public Environment getEnvironment()
     {
         return env;
     }

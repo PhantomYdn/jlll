@@ -27,7 +27,7 @@ public class ParameterParser
      * @throws JlllException
      *             if parameter syntax is invalid
      */
-    public static List<ParameterInfo> parse(Object vars, Enviroment env) throws JlllException
+    public static List<ParameterInfo> parse(Object vars, Environment env) throws JlllException
     {
         List<ParameterInfo> result = new ArrayList<>();
         if (vars == null || (vars instanceof Cons && ((Cons) vars).isNull()))
@@ -67,7 +67,7 @@ public class ParameterParser
     /**
      * Parse a single parameter specification.
      */
-    private static ParameterInfo parseParameter(Object param, Enviroment env) throws JlllException
+    private static ParameterInfo parseParameter(Object param, Environment env) throws JlllException
     {
         if (param instanceof Symbol)
         {
@@ -92,7 +92,7 @@ public class ParameterParser
             if (defaultExpr instanceof Cons)
             {
                 Cons defaultCons = (Cons) defaultExpr;
-                if (Symbol.EXLAMATION.equals(defaultCons.car()) && defaultCons.length() == 2)
+                if (Symbol.EXCLAMATION.equals(defaultCons.car()) && defaultCons.length() == 2)
                 {
                     // Evaluate now
                     Object evaluatedDefault = Evaluator.eval(defaultCons.cadr(), env);

@@ -17,5 +17,5 @@ public interface Convertor
      *            the current environment (for context)
      * @return the converted value
      */
-    public Object convert(Object value, Class<?> requiredClass, Enviroment env);
+    public Object convert(Object value, Class<?> requiredClass, Environment env);
 }

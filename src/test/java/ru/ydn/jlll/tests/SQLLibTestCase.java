@@ -9,18 +9,18 @@ import java.sql.SQLException;
 import org.junit.Before;
 import org.junit.Test;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Primitive;
 
 public class SQLLibTestCase
 {
-    private Enviroment env = null;
+    private Environment env = null;
 
     @Before
     public void setUp() throws Exception
     {
-        env = new Enviroment(Enviroment.top);
+        env = new Environment(Environment.top);
         Class.forName(System.getProperty("dbdriver"));
         new Primitive("sql-get-connection", env)
         {
@@ -29,7 +29,7 @@ public class SQLLibTestCase
              */
             private static final long serialVersionUID = -2592105929018393189L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 try
                 {
@@ -64,7 +64,7 @@ public class SQLLibTestCase
              */
             private static final long serialVersionUID = 3226129210267326830L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 try
                 {

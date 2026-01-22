@@ -20,5 +20,5 @@ public interface Library
      * @throws JlllException
      *             if loading fails
      */
-    public void load(Enviroment env) throws JlllException;
+    public void load(Environment env) throws JlllException;
 }

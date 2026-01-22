@@ -7,7 +7,7 @@ import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import org.jline.reader.LineReader;
 import org.jline.reader.ParsedLine;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Macros;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
@@ -19,7 +19,7 @@ import ru.ydn.jlll.common.Symbol;
  */
 public class JlllCompleter implements Completer
 {
-    private final Enviroment env;
+    private final Environment env;
     // Built-in Lisp keywords that are always available
     private static final String[] KEYWORDS =
     {"define", "defmacro", "lambda", "if", "cond", "case", "let", "let*", "letrec", "begin", "quote", "quasiquote",
@@ -33,7 +33,7 @@ public class JlllCompleter implements Completer
      * @param env
      *            the JLLL environment to provide completions from
      */
-    public JlllCompleter(Enviroment env)
+    public JlllCompleter(Environment env)
     {
         this.env = env;
     }

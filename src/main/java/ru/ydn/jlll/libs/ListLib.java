@@ -3,7 +3,7 @@ package ru.ydn.jlll.libs;
 import java.util.Collection;
 import java.util.Iterator;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Library;
@@ -29,14 +29,14 @@ import ru.ydn.jlll.util.ListUtil;
 public class ListLib implements Library
 {
     /** {@inheritDoc} */
-    public void load(Enviroment env) throws JlllException
+    public void load(Environment env) throws JlllException
     {
         new Primitive("list->vector", env,
                 "Converts a Cons list to a Java Object array. (list->vector '(a b c)) returns an Object[].")
         {
             private static final long serialVersionUID = -4084286307884490319L;
 
-            public Object apply(Cons vaCons, Enviroment env) throws JlllException
+            public Object apply(Cons vaCons, Environment env) throws JlllException
             {
                 return ListUtil.listVector((Cons) vaCons.cdr());
             }
@@ -46,7 +46,7 @@ public class ListLib implements Library
         {
             private static final long serialVersionUID = -6045559114098496174L;
 
-            public Object applyEvaluated(Cons values, Enviroment env) throws JlllException
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
                 Collection<?> col = (Collection<?>) values.get(0);
                 Cons ret = new Cons();

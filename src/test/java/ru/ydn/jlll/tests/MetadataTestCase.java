@@ -6,7 +6,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 import ru.ydn.jlll.common.Cons;
-import ru.ydn.jlll.common.Enviroment;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.Null;
 
@@ -15,12 +15,12 @@ import ru.ydn.jlll.common.Null;
  */
 public class MetadataTestCase
 {
-    private Enviroment env;
+    private Environment env;
 
     @Before
     public void setUp()
     {
-        env = new Enviroment(Enviroment.top);
+        env = new Environment(Environment.top);
     }
 
     private Object eval(String code) throws Exception

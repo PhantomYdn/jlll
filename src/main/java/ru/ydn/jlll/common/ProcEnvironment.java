@@ -22,7 +22,7 @@ import ru.ydn.jlll.util.ListUtil;
  * <li>Unknown keywords added to environment</li>
  * </ul>
  */
-public class ProcEnvironment extends Enviroment
+public class ProcEnvironment extends Environment
 {
     private static final long serialVersionUID = -8061750297696026162L;
 
@@ -37,7 +37,7 @@ public class ProcEnvironment extends Enviroment
      *            environment to evaluate in
      * @throws JlllException
      */
-    public ProcEnvironment(Object vars, Cons values, Enviroment env) throws JlllException
+    public ProcEnvironment(Object vars, Cons values, Environment env) throws JlllException
     {
         super(env);
         substLegacy(vars, values);
@@ -56,7 +56,7 @@ public class ProcEnvironment extends Enviroment
      *            environment for evaluating defaults (may be null to use env)
      * @throws JlllException
      */
-    public ProcEnvironment(List<ParameterInfo> parameters, Cons values, Enviroment env, Enviroment definitionEnv)
+    public ProcEnvironment(List<ParameterInfo> parameters, Cons values, Environment env, Environment definitionEnv)
             throws JlllException
     {
         super(env);
@@ -108,7 +108,7 @@ public class ProcEnvironment extends Enviroment
      * <li>Add unknown keywords to environment</li>
      * </ol>
      */
-    private void substWithKeywords(List<ParameterInfo> parameters, Cons values, Enviroment definitionEnv)
+    private void substWithKeywords(List<ParameterInfo> parameters, Cons values, Environment definitionEnv)
             throws JlllException
     {
         // Step 1: Separate keyword args from positional args
