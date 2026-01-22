@@ -70,7 +70,8 @@ public class JlllHighlighter implements Highlighter
     {
         AttributedStringBuilder sb = new AttributedStringBuilder();
         int i = 0;
-        int parenDepth = 0;
+        // Start with paren depth from accumulated buffer (for multi-line input)
+        int parenDepth = repl.countUnclosedBrackets(repl.getBuffer());
         while (i < buffer.length())
         {
             char c = buffer.charAt(i);

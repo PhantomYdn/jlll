@@ -47,6 +47,7 @@ public class JlllRepl
     private Terminal terminal;
     private LineReader reader;
     private PrintWriter out;
+    private StringBuilder currentBuffer;
 
     /**
      * Creates a REPL for the given environment.
@@ -68,6 +69,17 @@ public class JlllRepl
     public Environment getEnvironment()
     {
         return env;
+    }
+
+    /**
+     * Returns the current accumulated input buffer.
+     * Used by highlighter for context-aware bracket matching across lines.
+     *
+     * @return the current input buffer contents, or empty string if none
+     */
+    public String getBuffer()
+    {
+        return currentBuffer != null ? currentBuffer.toString() : "";
     }
 
     /**
@@ -167,10 +179,12 @@ public class JlllRepl
 
     private void replLoop()
     {
-        StringBuilder buffer = new StringBuilder();
+        currentBuffer = new StringBuilder();
         while (true)
         {
-            String prompt = buffer.length() == 0 ? PRIMARY_PROMPT : CONTINUATION_PROMPT;
+            String prompt = currentBuffer.length() == 0
+                    ? PRIMARY_PROMPT
+                    : CONTINUATION_PROMPT + calculateIndentation(currentBuffer.toString());
             try
             {
                 String line = reader.readLine(prompt);
@@ -179,12 +193,12 @@ public class JlllRepl
                     // EOF (Ctrl+D)
                     break;
                 }
-                buffer.append(line).append("\n");
+                currentBuffer.append(line).append("\n");
                 // Check if expression is complete (balanced parentheses)
-                if (isExpressionComplete(buffer.toString()))
+                if (isExpressionComplete(currentBuffer.toString()))
                 {
-                    String code = buffer.toString().trim();
-                    buffer.setLength(0);
+                    String code = currentBuffer.toString().trim();
+                    currentBuffer.setLength(0);
                     if (code.isEmpty())
                     {
                         continue;
@@ -201,7 +215,7 @@ public class JlllRepl
             catch (UserInterruptException e)
             {
                 // Ctrl+C - clear current input
-                buffer.setLength(0);
+                currentBuffer.setLength(0);
                 out.println();
                 out.flush();
             }
@@ -262,6 +276,73 @@ public class JlllRepl
         // Expression is complete if all parens/brackets are balanced
         // and we're not in the middle of a string
         return parenCount <= 0 && bracketCount <= 0 && !inString;
+    }
+
+    /**
+     * Calculates indentation spaces based on unclosed brackets in the buffer.
+     * Uses 2 spaces per nesting level.
+     *
+     * @param code
+     *            the accumulated code buffer
+     * @return indentation string (spaces)
+     */
+    private String calculateIndentation(String code)
+    {
+        int depth = countUnclosedBrackets(code);
+        if (depth <= 0)
+        {
+            return "";
+        }
+        return " ".repeat(depth * 2);
+    }
+
+    /**
+     * Counts the number of unclosed brackets (parentheses and square brackets) in the code.
+     * Properly handles strings and escape sequences.
+     *
+     * @param code
+     *            the code to analyze
+     * @return the number of unclosed brackets (can be negative if over-closed)
+     */
+    int countUnclosedBrackets(String code)
+    {
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (char c : code.toCharArray())
+        {
+            if (escape)
+            {
+                escape = false;
+                continue;
+            }
+            if (c == '\\')
+            {
+                escape = true;
+                continue;
+            }
+            if (c == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+            if (inString)
+            {
+                continue;
+            }
+            switch (c)
+            {
+                case '(' :
+                case '[' :
+                    depth++;
+                    break;
+                case ')' :
+                case ']' :
+                    depth--;
+                    break;
+            }
+        }
+        return depth;
     }
 
     private boolean handleReplCommand(String code)
