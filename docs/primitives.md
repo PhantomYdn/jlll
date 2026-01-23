@@ -246,6 +246,82 @@ Type checking and testing functions.
 | `symbol->keyword` | Convert symbol to keyword | `(symbol->keyword 'foo)` => `:foo` |
 | `keyword-name` | Get keyword name as string | `(keyword-name :foo)` => `"foo"` |
 
+## String Library
+
+Comprehensive string manipulation operations. JLLL does not have a character type, so functions like `string-ref` return single-character strings.
+
+### Length and Access
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string-length` | Get string length | `(string-length "hello")` => `5` |
+| `substring` | Extract substring | `(substring "hello" 1 3)` => `"el"` |
+| `string-ref` | Character at index | `(string-ref "hello" 0)` => `"h"` |
+
+### Search
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string-index` | Find substring position | `(string-index "hello" "l")` => `2` |
+| `string-contains?` | Check if contains substring | `(string-contains? "hello" "ell")` => `true` |
+
+### Transformation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string-upcase` | Convert to uppercase | `(string-upcase "hello")` => `"HELLO"` |
+| `string-downcase` | Convert to lowercase | `(string-downcase "HELLO")` => `"hello"` |
+| `string-trim` | Remove leading/trailing whitespace | `(string-trim "  hello  ")` => `"hello"` |
+| `string-trim-left` | Remove leading whitespace | `(string-trim-left "  hello")` => `"hello"` |
+| `string-trim-right` | Remove trailing whitespace | `(string-trim-right "hello  ")` => `"hello"` |
+
+### Manipulation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string-replace` | Replace all occurrences | `(string-replace "hello" "l" "L")` => `"heLLo"` |
+| `string-split` | Split by delimiter | `(string-split "a,b,c" ",")` => `("a" "b" "c")` |
+| `string-join` | Join with delimiter | `(string-join '("a" "b" "c") ",")` => `"a,b,c"` |
+
+### Conversion
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string->number` | Parse string to number | `(string->number "42")` => `42` |
+| `string->number` | Parse with radix | `(string->number "ff" 16)` => `255` |
+| `number->string` | Number to string | `(number->string 42)` => `"42"` |
+| `number->string` | Number with radix | `(number->string 255 16)` => `"ff"` |
+| `string->list` | String to char list | `(string->list "abc")` => `("a" "b" "c")` |
+| `list->string` | Char list to string | `(list->string '("a" "b" "c"))` => `"abc"` |
+
+### Comparison
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string=?` | Equality | `(string=? "a" "a")` => `true` |
+| `string<?` | Less than (lexicographic) | `(string<? "a" "b")` => `true` |
+| `string>?` | Greater than | `(string>? "b" "a")` => `true` |
+| `string<=?` | Less than or equal | `(string<=? "a" "a")` => `true` |
+| `string>=?` | Greater than or equal | `(string>=? "b" "a")` => `true` |
+
+### Case-Insensitive Comparison
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `string-ci=?` | Case-insensitive equality | `(string-ci=? "Hello" "hello")` => `true` |
+| `string-ci<?` | Case-insensitive less than | `(string-ci<? "a" "B")` => `true` |
+| `string-ci>?` | Case-insensitive greater than | `(string-ci>? "B" "a")` => `true` |
+| `string-ci<=?` | Case-insensitive less or equal | `(string-ci<=? "a" "A")` => `true` |
+| `string-ci>=?` | Case-insensitive greater or equal | `(string-ci>=? "a" "A")` => `true` |
+
+### Construction
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `make-string` | Create repeated string | `(make-string 5 "x")` => `"xxxxx"` |
+| `string-append` | Concatenate strings (alias for concat) | `(string-append "a" "b")` => `"ab"` |
+| `string-empty?` | Test for empty string | `(string-empty? "")` => `true` |
+
 ## IO Library
 
 Input/output operations.

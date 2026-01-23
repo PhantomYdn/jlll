@@ -180,24 +180,24 @@ Only `concat` exists. Everything else requires verbose Java interop.
 
 ### Checklist
 
-- [ ] `string-length` - Get string length
-- [ ] `substring` - Extract substring
-- [ ] `string-ref` - Character at index (returns single-char string)
-- [ ] `string-index` - Find substring position
-- [ ] `string-contains?` - Check if contains substring
-- [ ] `string-upcase` / `string-downcase` - Case conversion
-- [ ] `string-trim` / `string-trim-left` / `string-trim-right`
-- [ ] `string-replace` - Replace occurrences
-- [ ] `string-split` - Split by delimiter
-- [ ] `string-join` - Join with delimiter
-- [ ] `string->number` / `number->string` - Conversion with optional radix
-- [ ] `string->list` / `list->string` - Conversion
-- [ ] `string=?` / `string<?` / `string>?` - Comparison
-- [ ] `string<=?` / `string>=?` - Comparison
-- [ ] `string-ci=?` / `string-ci<?` - Case-insensitive comparison
-- [ ] `string-append` - Variadic concatenation (alias for `concat`)
-- [ ] `make-string` - Create string of repeated chars
-- [ ] `string-empty?` - Test for empty string
+- [x] `string-length` - Get string length
+- [x] `substring` - Extract substring
+- [x] `string-ref` - Character at index (returns single-char string)
+- [x] `string-index` - Find substring position
+- [x] `string-contains?` - Check if contains substring
+- [x] `string-upcase` / `string-downcase` - Case conversion
+- [x] `string-trim` / `string-trim-left` / `string-trim-right`
+- [x] `string-replace` - Replace occurrences
+- [x] `string-split` - Split by delimiter
+- [x] `string-join` - Join with delimiter
+- [x] `string->number` / `number->string` - Conversion with optional radix
+- [x] `string->list` / `list->string` - Conversion
+- [x] `string=?` / `string<?` / `string>?` - Comparison
+- [x] `string<=?` / `string>=?` - Comparison
+- [x] `string-ci=?` / `string-ci<?` - Case-insensitive comparison
+- [x] `string-append` - Variadic concatenation (alias for `concat`)
+- [x] `make-string` - Create string of repeated chars
+- [x] `string-empty?` - Test for empty string
 
 ---
 

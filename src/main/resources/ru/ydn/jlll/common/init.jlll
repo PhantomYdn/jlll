@@ -10,6 +10,8 @@
 
 (load-lib "ru.ydn.jlll.libs.PredicatesLib")
 
+(load-lib "ru.ydn.jlll.libs.StringLib")
+
 (load-lib "ru.ydn.jlll.libs.SQLLib")
 
 

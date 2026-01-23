@@ -1,0 +1,14 @@
+;; String Library - JLLL helper functions and aliases
+;; Part of the StringLib library
+
+;; ========== Aliases ==========
+
+(define string-append
+  :doc "Concatenates strings. Alias for concat. (string-append \"a\" \"b\" \"c\") => \"abc\""
+  concat)
+
+;; ========== Predicates ==========
+
+(define (string-empty? s)
+  :doc "Returns true if string is empty. (string-empty? \"\") => true"
+  (= (string-length s) 0))
