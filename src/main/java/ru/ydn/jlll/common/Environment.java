@@ -51,7 +51,8 @@ public class Environment implements Serializable
             top = new Environment(null);
         }
         //        top = new SkyNetEnvironment(null);
-        new Primitive("load-lib", top)
+        new Primitive("load-lib", top, "Loads a Java library class. (load-lib \"com.example.MyLib\") "
+                + "instantiates the class and calls its load() method to register primitives.")
         {
             private static final long serialVersionUID = -7181172149106048903L;
 
@@ -141,6 +142,34 @@ public class Environment implements Serializable
         {
             metadata.put(sym, new HashMap<>(meta));
         }
+    }
+
+    /**
+     * Clones an existing binding to a new symbol name, copying both value and metadata.
+     *
+     * @param newName
+     *            the new symbol name
+     * @param sourceName
+     *            the source symbol name to clone from
+     */
+    public void cloneBinding(String newName, String sourceName)
+    {
+        cloneBinding(Symbol.intern(newName), Symbol.intern(sourceName));
+    }
+
+    /**
+     * Clones an existing binding to a new symbol name, copying both value and metadata.
+     *
+     * @param newSym
+     *            the new symbol
+     * @param sourceSym
+     *            the source symbol to clone from
+     */
+    public void cloneBinding(Symbol newSym, Symbol sourceSym)
+    {
+        Object value = lookup(sourceSym);
+        Map<Symbol, Object> meta = getAllMeta(sourceSym);
+        addBindingWithMeta(newSym, value, meta.isEmpty() ? null : meta);
     }
 
     /**

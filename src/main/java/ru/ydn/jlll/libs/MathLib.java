@@ -1,5 +1,6 @@
 package ru.ydn.jlll.libs;
 
+import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Iterator;
 import ru.ydn.jlll.common.Cons;
@@ -333,5 +334,134 @@ public class MathLib extends ReflectionLibrary
     public boolean not(Object obj)
     {
         return !CommonUtil.getBoolean(obj);
+    }
+
+    /**
+     * Less-than-or-equal comparison. ({@code (<= a b)}) returns true if a &lt;= b.
+     *
+     * @param obj1
+     *            first value
+     * @param obj2
+     *            second value
+     * @return true if obj1 &lt;= obj2
+     */
+    @JlllName("<=")
+    public boolean lessThanOrEqual(Comparable<Comparable<?>> obj1, Comparable<?> obj2)
+    {
+        return obj1.compareTo(obj2) <= 0;
+    }
+
+    /**
+     * Greater-than-or-equal comparison. ({@code (>= a b)}) returns true if a &gt;= b.
+     *
+     * @param obj1
+     *            first value
+     * @param obj2
+     *            second value
+     * @return true if obj1 &gt;= obj2
+     */
+    @JlllName(">=")
+    public boolean greaterThanOrEqual(Comparable<Comparable<?>> obj1, Comparable<?> obj2)
+    {
+        return obj1.compareTo(obj2) >= 0;
+    }
+
+    /**
+     * Integer division (truncate toward zero). ({@code (quotient 13 4)}) returns 3.
+     * ({@code (quotient -13 4)}) returns -3.
+     *
+     * @param a
+     *            dividend
+     * @param b
+     *            divisor
+     * @return integer quotient
+     */
+    @JlllName("quotient")
+    public Integer quotient(Integer a, Integer b)
+    {
+        return a / b;
+    }
+
+    /**
+     * Remainder after integer division. Sign follows dividend (like Java {@code %}).
+     * ({@code (remainder 13 4)}) returns 1.
+     * ({@code (remainder -13 4)}) returns -1.
+     *
+     * @param a
+     *            dividend
+     * @param b
+     *            divisor
+     * @return remainder
+     */
+    @JlllName("remainder")
+    public Integer remainder(Integer a, Integer b)
+    {
+        return a % b;
+    }
+
+    /**
+     * Modulo operation. Sign follows divisor (like mathematical modulo).
+     * ({@code (modulo 13 4)}) returns 1.
+     * ({@code (modulo -13 4)}) returns 3.
+     *
+     * @param a
+     *            dividend
+     * @param b
+     *            divisor
+     * @return modulo result
+     */
+    @JlllName("modulo")
+    public Integer modulo(Integer a, Integer b)
+    {
+        return Math.floorMod(a, b);
+    }
+
+    /**
+     * Exponentiation. ({@code (expt 2 10)}) returns 1024.0.
+     *
+     * @param base
+     *            the base
+     * @param exponent
+     *            the exponent
+     * @return base raised to the power of exponent
+     */
+    @JlllName("expt")
+    public Double expt(Number base, Number exponent)
+    {
+        return Math.pow(base.doubleValue(), exponent.doubleValue());
+    }
+
+    /**
+     * Greatest common divisor. ({@code (gcd 12 18)}) returns 6.
+     *
+     * @param a
+     *            first integer
+     * @param b
+     *            second integer
+     * @return greatest common divisor
+     */
+    @JlllName("gcd")
+    public Integer gcd(Integer a, Integer b)
+    {
+        return BigInteger.valueOf(a).gcd(BigInteger.valueOf(b)).intValue();
+    }
+
+    /**
+     * Least common multiple. ({@code (lcm 4 6)}) returns 12.
+     *
+     * @param a
+     *            first integer
+     * @param b
+     *            second integer
+     * @return least common multiple
+     */
+    @JlllName("lcm")
+    public Integer lcm(Integer a, Integer b)
+    {
+        if (a == 0 || b == 0)
+        {
+            return 0;
+        }
+        return Math.abs(a / gcd(a, b) * b);
     }
 }

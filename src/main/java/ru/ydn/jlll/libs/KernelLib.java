@@ -148,7 +148,7 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        env.addBinding("set!", env.lookup("set"));
+        env.cloneBinding("set!", "set");
         new Primitive("defmacro", env,
                 "Defines a macro. (defmacro (name args...) body...). "
                         + "Macros transform code at expansion time before evaluation. "

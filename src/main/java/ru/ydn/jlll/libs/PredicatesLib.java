@@ -121,4 +121,97 @@ public class PredicatesLib extends ReflectionLibrary
     {
         return keyword.getName();
     }
+
+    /**
+     * Tests if a value is a number. {@code (number? 42)} returns true.
+     * Accepts any Java Number type (Integer, Double, Long, etc.).
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is a Number
+     */
+    @JlllName("number?")
+    public boolean isNumber(Object obj)
+    {
+        return obj instanceof Number;
+    }
+
+    /**
+     * Tests if a value is an integer. {@code (integer? 42)} returns true.
+     * {@code (integer? 3.14)} returns false.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is an Integer or Long
+     */
+    @JlllName("integer?")
+    public boolean isInteger(Object obj)
+    {
+        return obj instanceof Integer || obj instanceof Long;
+    }
+
+    /**
+     * Tests if a number is zero. {@code (zero? 0)} returns true.
+     *
+     * @param n
+     *            the number to test
+     * @return true if n equals zero
+     */
+    @JlllName("zero?")
+    public boolean isZero(Number n)
+    {
+        return n.doubleValue() == 0.0;
+    }
+
+    /**
+     * Tests if a number is positive. {@code (positive? 5)} returns true.
+     *
+     * @param n
+     *            the number to test
+     * @return true if n is greater than zero
+     */
+    @JlllName("positive?")
+    public boolean isPositive(Number n)
+    {
+        return n.doubleValue() > 0.0;
+    }
+
+    /**
+     * Tests if a number is negative. {@code (negative? -3)} returns true.
+     *
+     * @param n
+     *            the number to test
+     * @return true if n is less than zero
+     */
+    @JlllName("negative?")
+    public boolean isNegative(Number n)
+    {
+        return n.doubleValue() < 0.0;
+    }
+
+    /**
+     * Tests if an integer is even. {@code (even? 4)} returns true.
+     *
+     * @param n
+     *            the integer to test
+     * @return true if n is divisible by 2
+     */
+    @JlllName("even?")
+    public boolean isEven(Integer n)
+    {
+        return n % 2 == 0;
+    }
+
+    /**
+     * Tests if an integer is odd. {@code (odd? 3)} returns true.
+     *
+     * @param n
+     *            the integer to test
+     * @return true if n is not divisible by 2
+     */
+    @JlllName("odd?")
+    public boolean isOdd(Integer n)
+    {
+        return n % 2 != 0;
+    }
 }

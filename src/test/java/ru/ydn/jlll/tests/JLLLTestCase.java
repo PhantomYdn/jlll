@@ -356,6 +356,119 @@ public class JLLLTestCase
         eval(false, "(between 2 5 6)");
     }
 
+    @Test
+    public void testComparisonOperators() throws Exception
+    {
+        // <= tests
+        eval(true, "(<= 1 2)");
+        eval(true, "(<= 2 2)");
+        eval(false, "(<= 3 2)");
+        eval(true, "(<= 1.0 2.0)");
+        eval(true, "(<= 1.5 1.5)");
+        // >= tests
+        eval(true, "(>= 2 1)");
+        eval(true, "(>= 2 2)");
+        eval(false, "(>= 1 2)");
+        eval(true, "(>= 2.0 1.0)");
+        eval(true, "(>= 1.5 1.5)");
+    }
+
+    @Test
+    public void testIntegerDivision() throws Exception
+    {
+        // quotient - truncates toward zero
+        eval(3, "(quotient 13 4)");
+        eval(-3, "(quotient -13 4)");
+        eval(-3, "(quotient 13 -4)");
+        eval(3, "(quotient -13 -4)");
+        // remainder - sign follows dividend (like Java %)
+        eval(1, "(remainder 13 4)");
+        eval(-1, "(remainder -13 4)");
+        eval(1, "(remainder 13 -4)");
+        eval(-1, "(remainder -13 -4)");
+        // modulo - sign follows divisor (mathematical modulo)
+        eval(1, "(modulo 13 4)");
+        eval(3, "(modulo -13 4)");
+        eval(-3, "(modulo 13 -4)");
+        eval(-1, "(modulo -13 -4)");
+    }
+
+    @Test
+    public void testExpt() throws Exception
+    {
+        eval(1024.0, "(expt 2 10)");
+        eval(8.0, "(expt 2 3)");
+        eval(1.0, "(expt 5 0)");
+        eval(0.5, "(expt 2 -1)");
+        eval(27.0, "(expt 3 3)");
+    }
+
+    @Test
+    public void testGcdLcm() throws Exception
+    {
+        // gcd tests
+        eval(6, "(gcd 12 18)");
+        eval(1, "(gcd 7 13)");
+        eval(5, "(gcd 15 25)");
+        eval(6, "(gcd -12 18)");
+        eval(6, "(gcd 12 -18)");
+        // lcm tests
+        eval(12, "(lcm 4 6)");
+        eval(60, "(lcm 12 20)");
+        eval(91, "(lcm 7 13)");
+        eval(0, "(lcm 0 5)");
+        eval(0, "(lcm 5 0)");
+    }
+
+    @Test
+    public void testNumericPredicates() throws Exception
+    {
+        // zero?
+        eval(true, "(zero? 0)");
+        eval(true, "(zero? 0.0)");
+        eval(false, "(zero? 1)");
+        eval(false, "(zero? -1)");
+        // positive?
+        eval(true, "(positive? 5)");
+        eval(true, "(positive? 0.1)");
+        eval(false, "(positive? 0)");
+        eval(false, "(positive? -1)");
+        // negative?
+        eval(true, "(negative? -3)");
+        eval(true, "(negative? -0.1)");
+        eval(false, "(negative? 0)");
+        eval(false, "(negative? 1)");
+        // even?
+        eval(true, "(even? 0)");
+        eval(true, "(even? 2)");
+        eval(true, "(even? 4)");
+        eval(true, "(even? -2)");
+        eval(false, "(even? 1)");
+        eval(false, "(even? 3)");
+        eval(false, "(even? -1)");
+        // odd?
+        eval(true, "(odd? 1)");
+        eval(true, "(odd? 3)");
+        eval(true, "(odd? -1)");
+        eval(false, "(odd? 0)");
+        eval(false, "(odd? 2)");
+        eval(false, "(odd? -2)");
+    }
+
+    @Test
+    public void testTypePredicates() throws Exception
+    {
+        // number?
+        eval(true, "(number? 42)");
+        eval(true, "(number? 3.14)");
+        eval(false, "(number? \"42\")");
+        eval(false, "(number? 'symbol)");
+        // integer?
+        eval(true, "(integer? 42)");
+        eval(false, "(integer? 3.14)");
+        eval(false, "(integer? \"42\")");
+    }
+
     private void eval(Object expected, String code) throws Exception
     {
         Object ret = Jlll.eval(code, env);

@@ -16,6 +16,7 @@ See [docs/](docs/) for comprehensive JLLL language documentation:
 - [Primitives](docs/primitives.md) - Built-in functions by library
 - [Macros](docs/macros.md) - Macro definition and expansion
 - [Java Interop](docs/java-interop.md) - Calling Java from JLLL
+- [Feature Roadmap](ROADMAP.md) - Planned features and enhancements
 
 ## Build Commands
 
@@ -66,9 +67,10 @@ Before committing or ending a session:
 1. **Format check**: `mvn spotless:check` (or `mvn spotless:apply` to fix)
 2. **Run tests**: `mvn test`
 3. **Verify build**: `mvn verify` (includes coverage)
-4. **Documentation check** (for new/modified code in session):
-   - Java: Public classes and methods should have JavaDoc (extracted by `therapi-runtime-javadoc` for primitives)
-   - JLLL: Functions and macros in `.jlll` files should have `:doc` metadata
+4. **Documentation check** (REQUIRED for new/modified code):
+   - Java: Public classes and methods must have JavaDoc (extracted by `therapi-runtime-javadoc` for primitives)
+   - JLLL: Functions and macros in `.jlll` files must have `:doc` metadata
+   - Update relevant documentation in `docs/` when adding or modifying functionality
 5. **Commit all changes**: Ensure working tree is clean
 
 ## Project Structure
@@ -201,6 +203,8 @@ new Primitive("my-func", env)
     }
 };
 ```
+
+See [ROADMAP.md](ROADMAP.md) for planned features and implementation guidelines.
 
 ## CI/CD
 

@@ -1,9 +1,5 @@
-;//TODO: add this
-;pair?
-;number?
-;char?
-;vector?
-;port?
+;; Type predicates - see PredicatesLib.java for Java-implemented predicates:
+;; number?, integer?, zero?, positive?, negative?, even?, odd?
 
 (define nil?
   :doc "Returns true if the argument is null/nil."

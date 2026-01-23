@@ -123,6 +123,8 @@ Arithmetic and numeric operations.
 |-----------|-------------|---------|
 | `<` | Less than | `(< 1 2)` => `true` |
 | `>` | Greater than | `(> 2 1)` => `true` |
+| `<=` | Less than or equal | `(<= 1 2)` => `true` |
+| `>=` | Greater than or equal | `(>= 2 1)` => `true` |
 | `=` | Numeric equality | `(= 1 1)` => `true` |
 | `between` | Range check | `(between 1 10 5)` => `true` |
 
@@ -157,6 +159,22 @@ Arithmetic and numeric operations.
 |-----------|-------------|---------|
 | `max` | Maximum value | `(max 1 5 3)` => `5` |
 | `min` | Minimum value | `(min 1 5 3)` => `1` |
+
+### Integer Division
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `quotient` | Integer division (truncate toward zero) | `(quotient 13 4)` => `3` |
+| `remainder` | Remainder (sign follows dividend) | `(remainder -13 4)` => `-1` |
+| `modulo` | Modulo (sign follows divisor) | `(modulo -13 4)` => `3` |
+
+### Exponentiation and Number Theory
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `expt` | Exponentiation | `(expt 2 10)` => `1024.0` |
+| `gcd` | Greatest common divisor | `(gcd 12 18)` => `6` |
+| `lcm` | Least common multiple | `(lcm 4 6)` => `12` |
 
 ## List Library
 
@@ -198,13 +216,27 @@ List manipulation functions.
 
 Type checking and testing functions.
 
+### Type Predicates
+
 | Primitive | Description | Example |
 |-----------|-------------|---------|
 | `null?` | Test for null | `(null? '())` => `true` |
 | `nil?` | Alias for null? | `(nil? null)` => `true` |
 | `list?` | Test for list | `(list? '(1 2))` => `true` |
+| `number?` | Test for any number | `(number? 42)` => `true` |
+| `integer?` | Test for integer | `(integer? 42)` => `true` |
 | `keyword?` | Test for keyword | `(keyword? :foo)` => `true` |
 | `jlll-bound?` | Test if symbol is bound | `(jlll-bound? 'x)` |
+
+### Numeric Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `zero?` | Test for zero | `(zero? 0)` => `true` |
+| `positive?` | Test for positive number | `(positive? 5)` => `true` |
+| `negative?` | Test for negative number | `(negative? -3)` => `true` |
+| `even?` | Test for even integer | `(even? 4)` => `true` |
+| `odd?` | Test for odd integer | `(odd? 3)` => `true` |
 
 ### Keyword Conversions
 
