@@ -435,4 +435,23 @@ public class Environment implements Serializable
     {
         return !(current != null && !current.isEmpty()) && (parent == null ? true : parent.isEmpty());
     }
+
+    /**
+     * Creates a snapshot of this environment for continuation capture.
+     *
+     * <p>
+     * The snapshot preserves the current bindings but shares object references.
+     * This matches Scheme semantics: continuations see mutations to mutable
+     * objects, but don't see new bindings added after capture.
+     * </p>
+     *
+     * @return a snapshot of this environment
+     */
+    public Environment snapshot()
+    {
+        Environment snap = new Environment(parent != null ? parent.snapshot() : null);
+        snap.current = new HashMap<>(this.current);
+        snap.metadata = new HashMap<>(this.metadata);
+        return snap;
+    }
 }

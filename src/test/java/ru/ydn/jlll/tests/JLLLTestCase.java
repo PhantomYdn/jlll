@@ -469,6 +469,128 @@ public class JLLLTestCase
         eval(false, "(integer? \"42\")");
     }
 
+    @Test
+    public void testExceptionHandling() throws Exception
+    {
+        // === raise and error ===
+        assertException("(raise \"test error\")", JlllException.class);
+        assertException("(error \"test\" \" error\")", JlllException.class);
+        // === exception? predicate ===
+        eval(false, "(exception? 42)");
+        eval(false, "(exception? \"string\")");
+        eval(false, "(exception? 'symbol)");
+        // === Basic try/catch ===
+        eval("caught", "(try (raise \"error\") (catch e \"caught\"))");
+        eval("no error", "(try \"no error\" (catch e \"caught\"))");
+        eval("test error", "(try (raise \"test error\") (catch e (exception-message e)))");
+        // === try with finally ===
+        eval(1, "(define finally-ran 0) (try 1 (finally (set! finally-ran 1))) finally-ran");
+        eval(1, "(define finally-ran2 0) (try (raise \"e\") (catch e 1) (finally (set! finally-ran2 1))) finally-ran2");
+        // === try without matching catch re-raises ===
+        assertException("(try (raise \"error\") (catch \"java.io.IOException\" e \"io\"))", JlllException.class);
+        // === Multiple catch clauses ===
+        eval("jlll", "(try (raise \"error\") " + "(catch \"java.io.IOException\" e \"io\") "
+                + "(catch \"ru.ydn.jlll.common.JlllException\" e \"jlll\") " + "(catch e \"other\"))");
+        eval("catchall",
+                "(try (raise \"error\") " + "(catch \"java.io.IOException\" e \"io\") " + "(catch e \"catchall\"))");
+        // === catch with predicate ===
+        eval("matched",
+                "(try (raise \"timeout error\") "
+                        + "(catch (lambda (e) (string-contains? (exception-message e) \"timeout\")) e \"matched\") "
+                        + "(catch e \"other\"))");
+        eval("other",
+                "(try (raise \"network error\") "
+                        + "(catch (lambda (e) (string-contains? (exception-message e) \"timeout\")) e \"matched\") "
+                        + "(catch e \"other\"))");
+        // === guard basic ===
+        eval("caught", "(guard (err (else \"caught\")) (raise \"error\"))");
+        eval("no error", "(guard (err (else \"caught\")) \"no error\")");
+        // === guard with clauses ===
+        eval("string error",
+                "(guard (err " + "((string-contains? (exception-message err) \"string\") \"string error\") "
+                        + "(else \"other\")) " + "(raise \"string test\"))");
+        // === guard re-raises when no match ===
+        assertException("(guard (err ((= 1 2) \"never\")) (raise \"error\"))", JlllException.class);
+        // === Nested try/catch ===
+        eval("inner", "(try " + "(try (raise \"inner\") (catch e \"inner\")) " + "(catch e \"outer\"))");
+        eval("outer",
+                "(try " + "(try (raise \"inner\") (catch \"java.io.IOException\" e \"io\")) " + "(catch e \"outer\"))");
+        // === exception-cause returns null for simple raise ===
+        eval(Null.NULL, "(try (raise \"no cause\") (catch e (exception-cause e)))");
+        // === exception? in catch handler ===
+        eval(true, "(try (raise \"error\") (catch e (exception? e)))");
+        // === error with multiple args ===
+        eval("Error: 42", "(try (error \"Error: \" 42) (catch e (exception-message e)))");
+        // === finally runs even when exception not caught ===
+        eval(1, "(define finally-ran3 0) " + "(try " + "  (try (raise \"e\") (finally (set! finally-ran3 1))) "
+                + "  (catch e \"caught\")) " + "finally-ran3");
+    }
+
+    @Test
+    public void testCallCC() throws Exception
+    {
+        // === Basic escape ===
+        eval(4, "(+ 1 (call/cc (lambda (k) (+ 2 (k 3)))))");
+        // === No escape - normal return ===
+        eval(5, "(+ 1 (call/cc (lambda (k) (+ 2 2))))");
+        // === Direct return from call/cc ===
+        eval(10, "(call/cc (lambda (k) (k 10)))");
+        // === Nested arithmetic with escape ===
+        eval(7, "(+ 1 (call/cc (lambda (k) (* 2 (k 6)))))");
+        // === Value not used after escape ===
+        eval(3, "(call/cc (lambda (k) (k 3) (k 5)))");
+        // === Escape from nested expressions - continuation returns to call/cc point ===
+        // (k 42) returns 42 from call/cc, then (* 2 42) = 84, then (+ 1 84) = 85
+        eval(85, "(+ 1 (* 2 (call/cc (lambda (k) (+ 3 (k 42))))))");
+        // === Escape to outer continuation skips intermediate computation ===
+        eval(42, "(call/cc (lambda (escape) (+ 1 (* 2 (call/cc (lambda (k) (escape 42)))))))");
+        // === call-with-current-continuation alias ===
+        eval(4, "(+ 1 (call-with-current-continuation (lambda (k) (k 3))))");
+    }
+
+    @Test
+    public void testSavedContinuation() throws Exception
+    {
+        // === Save and call - first call inside call/cc ===
+        eval(3, "(define saved-k false) " + "(+ 1 (call/cc (lambda (k) (set! saved-k k) (k 2))))");
+        // === After first call, continuation is captured - call again ===
+        eval(11, "(define saved-k2 false) " + "(define r1 (+ 1 (call/cc (lambda (k) (set! saved-k2 k) (k 2))))) "
+                + "(saved-k2 10)");
+        // === Call saved continuation multiple times ===
+        eval(101, "(define saved-k3 false) " + "(define r1 (+ 1 (call/cc (lambda (k) (set! saved-k3 k) (k 2))))) "
+                + "(define r2 (saved-k3 10)) " + "(saved-k3 100)");
+    }
+
+    @Test
+    public void testNestedCallCC() throws Exception
+    {
+        // === Outer escape ===
+        eval(42, "(call/cc (lambda (outer) " + "  (+ 1 (call/cc (lambda (inner) " + "    (outer 42))))))");
+        // === Inner escape ===
+        eval(10, "(call/cc (lambda (outer) " + "  (+ 1 (call/cc (lambda (inner) " + "    (inner 9))))))");
+        // === Both escape and return ===
+        eval(6, "(+ (call/cc (lambda (k1) (k1 2))) " + "   (call/cc (lambda (k2) (k2 4))))");
+    }
+
+    @Test
+    public void testCallCCWithTryCatch() throws Exception
+    {
+        // === Continuation should pass through try/catch without being caught ===
+        eval(42, "(+ 1 (try " + "  (call/cc (lambda (k) (k 41))) " + "  (catch e \"should not catch continuation\")))");
+        // === Error inside call/cc body should be catchable ===
+        eval("caught", "(call/cc (lambda (k) " + "  (try " + "    (raise \"error\") " + "  (catch e \"caught\"))))");
+        // === Continuation escapes try, finally still runs ===
+        eval(1, "(define finally-ran-cc 0) " + "(+ 1 (try " + "  (call/cc (lambda (k) (k 0))) "
+                + "  (finally (set! finally-ran-cc 1)))) " + "finally-ran-cc");
+    }
+
+    @Test
+    public void testCallCCWithGuard() throws Exception
+    {
+        // === Continuation should pass through guard without being caught ===
+        eval(42, "(+ 1 (guard (err (else \"should not catch\")) " + "  (call/cc (lambda (k) (k 41)))))");
+    }
+
     private void eval(Object expected, String code) throws Exception
     {
         Object ret = Jlll.eval(code, env);

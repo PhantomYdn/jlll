@@ -104,6 +104,18 @@ See [Metadata](metadata.md) for detailed documentation.
 | `jlll-macro-expand` | Expand macro once | `(jlll-macro-expand let ...)` |
 | `jlll-extract-body` | Get procedure body | `(jlll-extract-body square)` |
 
+### Exception Handling
+
+See [Special Forms](special-forms.md) for `try` and `guard` syntax.
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `raise` | Raise an exception | `(raise "error message")` |
+| `error` | Raise with concatenated message | `(error "Not found: " item)` |
+| `exception?` | Test if value is exception | `(exception? e)` => `true` |
+| `exception-message` | Get exception message | `(exception-message e)` => `"error"` |
+| `exception-cause` | Get underlying cause | `(exception-cause e)` => `null` or cause |
+
 ## Math Library
 
 Arithmetic and numeric operations.

@@ -208,6 +208,12 @@ public class Jlll
     /**
      * Evaluates each element in a Cons list and returns a new list of results.
      *
+     * <p>
+     * Tracks argument position in the evaluation context for continuation capture.
+     * This allows continuations to know which argument was being evaluated when
+     * they were invoked.
+     * </p>
+     *
      * @param cons
      *            the list of expressions to evaluate
      * @param env
@@ -218,11 +224,20 @@ public class Jlll
      */
     public static Cons evalEvery(Cons cons, Environment env) throws JlllException
     {
+        Evaluator.EvalContext ctx = Evaluator.getEvalContext();
         Iterator<?> it = cons.iterator();
         List<Object> ret = new ArrayList<Object>();
+        int position = 0;
         while (it.hasNext())
         {
+            // Update context with current position and evaluated args so far
+            if (ctx != null)
+            {
+                ctx.argumentPosition = position;
+                ctx.evaluatedArguments = ret.toArray();
+            }
             ret.add(Evaluator.eval(it.next(), env));
+            position++;
         }
         return ListUtil.arrayToCons(ret.toArray());
     }

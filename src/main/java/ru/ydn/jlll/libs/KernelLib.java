@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import ru.ydn.jlll.common.CompoundProcedure;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Continuation;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
@@ -913,6 +914,408 @@ public class KernelLib implements Library
                 return value;
             }
         };
+        // ============== Exception Handling Primitives ==============
+        new Primitive("raise", env, "Raises an exception. (raise value) throws a JlllException. "
+                + "If value is already a Throwable, it is wrapped; otherwise value is converted to string message.")
+        {
+            private static final long serialVersionUID = 8273645091827364501L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 1)
+                {
+                    throw new JlllException("raise requires exactly one argument");
+                }
+                Object err = values.get(0);
+                if (err instanceof JlllException)
+                {
+                    throw (JlllException) err;
+                }
+                else if (err instanceof Throwable)
+                {
+                    throw new JlllException((Throwable) err);
+                }
+                else
+                {
+                    throw new JlllException(err.toString());
+                }
+            }
+        };
+        new Primitive("error", env, "Raises an error with a message. (error msg...) concatenates all arguments "
+                + "into a single error message and raises a JlllException.")
+        {
+            private static final long serialVersionUID = 8273645091827364502L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                StringBuilder sb = new StringBuilder();
+                for (Object val : values)
+                {
+                    sb.append(val);
+                }
+                throw new JlllException(sb.toString());
+            }
+        };
+        new Primitive("exception?", env,
+                "Tests if a value is an exception. (exception? x) returns true if x is a Throwable.")
+        {
+            private static final long serialVersionUID = 8273645091827364503L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 1)
+                {
+                    throw new JlllException("exception? requires exactly one argument");
+                }
+                return values.get(0) instanceof Throwable;
+            }
+        };
+        new Primitive("exception-message", env,
+                "Returns the message of an exception. (exception-message e) returns the error message string.")
+        {
+            private static final long serialVersionUID = 8273645091827364504L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 1)
+                {
+                    throw new JlllException("exception-message requires exactly one argument");
+                }
+                Object err = values.get(0);
+                if (err instanceof Throwable)
+                {
+                    return ((Throwable) err).getMessage();
+                }
+                throw new JlllException("exception-message requires a Throwable, got: " + err.getClass().getName());
+            }
+        };
+        new Primitive("exception-cause", env,
+                "Returns the underlying cause of an exception. (exception-cause e) returns the wrapped Throwable or null.")
+        {
+            private static final long serialVersionUID = 8273645091827364505L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 1)
+                {
+                    throw new JlllException("exception-cause requires exactly one argument");
+                }
+                Object err = values.get(0);
+                if (err instanceof Throwable)
+                {
+                    Throwable cause = ((Throwable) err).getCause();
+                    return cause != null ? cause : Null.NULL;
+                }
+                throw new JlllException("exception-cause requires a Throwable, got: " + err.getClass().getName());
+            }
+        };
+        // ============== try/catch/finally Special Form ==============
+        new Primitive("try", env,
+                "Exception handling. (try body... (catch [type] var handler...) (finally cleanup...)). "
+                        + "Executes body, catches exceptions matching type (string class name or predicate), "
+                        + "binds to var and runs handler. Finally always runs.")
+        {
+            private static final long serialVersionUID = 8273645091827364506L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                // Parse: separate body, catch clauses, and finally clause
+                List<Object> bodyForms = new ArrayList<>();
+                List<Cons> catchClauses = new ArrayList<>();
+                Cons finallyClause = null;
+                Symbol catchSym = Symbol.intern("catch");
+                Symbol finallySym = Symbol.intern("finally");
+                for (Object form : values)
+                {
+                    if (form instanceof Cons)
+                    {
+                        Cons c = (Cons) form;
+                        if (!c.isNull())
+                        {
+                            Object car = c.car();
+                            if (catchSym.equals(car))
+                            {
+                                catchClauses.add(c);
+                                continue;
+                            }
+                            else if (finallySym.equals(car))
+                            {
+                                if (finallyClause != null)
+                                {
+                                    throw new JlllException("try: multiple finally clauses not allowed");
+                                }
+                                finallyClause = c;
+                                continue;
+                            }
+                        }
+                    }
+                    bodyForms.add(form);
+                }
+                Object result = null;
+                JlllException caughtException = null;
+                try
+                {
+                    // Evaluate body forms
+                    for (Object form : bodyForms)
+                    {
+                        result = Evaluator.eval(form, env);
+                    }
+                }
+                catch (JlllException e)
+                {
+                    // Continuations must propagate to their call/cc - not errors
+                    if (e.getSource() instanceof Continuation)
+                    {
+                        throw e;
+                    }
+                    caughtException = e;
+                    // Try to find a matching catch clause
+                    for (Cons catchClause : catchClauses)
+                    {
+                        // Parse catch clause: (catch [type-spec] var handler...)
+                        // Formats:
+                        //   (catch var handler...)           - catch all
+                        //   (catch "ClassName" var handler...) - match by class name
+                        //   (catch predicate var handler...) - match by predicate
+                        Cons rest = (Cons) catchClause.cdr();
+                        Object first = rest.car();
+                        Object typeSpec = null;
+                        Symbol var;
+                        Cons handler;
+                        if (first instanceof Symbol)
+                        {
+                            // Catch-all: (catch var handler...)
+                            var = (Symbol) first;
+                            handler = (Cons) rest.cdr();
+                        }
+                        else
+                        {
+                            // Type-specific: (catch type-spec var handler...)
+                            typeSpec = first;
+                            Cons afterType = (Cons) rest.cdr();
+                            Object varObj = afterType.car();
+                            if (!(varObj instanceof Symbol))
+                            {
+                                throw new JlllException("catch: variable must be a symbol, got: " + varObj);
+                            }
+                            var = (Symbol) varObj;
+                            handler = (Cons) afterType.cdr();
+                        }
+                        // Check if this clause matches
+                        boolean matches = false;
+                        if (typeSpec == null)
+                        {
+                            // Catch-all always matches
+                            matches = true;
+                        }
+                        else if (typeSpec instanceof String)
+                        {
+                            // Match by class name
+                            String className = (String) typeSpec;
+                            try
+                            {
+                                Class<?> targetClass = Class.forName(className);
+                                // Check if the exception or its cause matches
+                                matches = targetClass.isAssignableFrom(e.getClass());
+                                if (!matches && e.getCause() != null)
+                                {
+                                    matches = targetClass.isAssignableFrom(e.getCause().getClass());
+                                }
+                            }
+                            catch (ClassNotFoundException cnf)
+                            {
+                                throw new JlllException("catch: unknown exception class: " + className, cnf);
+                            }
+                        }
+                        else
+                        {
+                            // Evaluate type-spec as predicate
+                            Object predValue = Evaluator.eval(typeSpec, env);
+                            if (predValue instanceof Procedure)
+                            {
+                                Object predResult = ((Procedure) predValue).applyEvaluated(env, e);
+                                matches = CommonUtil.getBoolean(predResult);
+                            }
+                            else
+                            {
+                                throw new JlllException(
+                                        "catch: type specifier must be a string or procedure, got: " + typeSpec);
+                            }
+                        }
+                        if (matches)
+                        {
+                            // Bind exception to var and evaluate handler
+                            Environment catchEnv = new Environment(env);
+                            catchEnv.addBinding(var, e);
+                            // Evaluate handler body
+                            Object handlerBody = new Cons(Symbol.BEGIN, handler);
+                            result = Evaluator.eval(handlerBody, catchEnv);
+                            caughtException = null; // Exception was handled
+                            break;
+                        }
+                    }
+                }
+                finally
+                {
+                    // Execute finally clause if present
+                    if (finallyClause != null)
+                    {
+                        Cons finallyBody = (Cons) finallyClause.cdr();
+                        Object finallyExpr = new Cons(Symbol.BEGIN, finallyBody);
+                        Evaluator.eval(finallyExpr, env);
+                    }
+                }
+                // Re-throw if not handled
+                if (caughtException != null)
+                {
+                    throw caughtException;
+                }
+                return result;
+            }
+        };
+        // ============== guard Special Form (Scheme-style) ==============
+        new Primitive("guard", env,
+                "Scheme-style exception handling. (guard (var (test handler...) ... (else default...)) body...). "
+                        + "Evaluates body, on exception binds it to var and tests clauses like cond.")
+        {
+            private static final long serialVersionUID = 8273645091827364507L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                // Parse: (guard (var clause...) body...)
+                if (values.length() < 2)
+                {
+                    throw new JlllException("guard requires at least a clause-spec and body");
+                }
+                Object clauseSpecObj = values.car();
+                if (!(clauseSpecObj instanceof Cons))
+                {
+                    throw new JlllException("guard: first argument must be (var clause...)");
+                }
+                Cons clauseSpec = (Cons) clauseSpecObj;
+                if (clauseSpec.isNull())
+                {
+                    throw new JlllException("guard: clause-spec cannot be empty");
+                }
+                Object varObj = clauseSpec.car();
+                if (!(varObj instanceof Symbol))
+                {
+                    throw new JlllException("guard: variable must be a symbol, got: " + varObj);
+                }
+                Symbol var = (Symbol) varObj;
+                Cons clauses = (Cons) clauseSpec.cdr();
+                Cons body = (Cons) values.cdr();
+                try
+                {
+                    // Evaluate body
+                    Object bodyExpr = new Cons(Symbol.BEGIN, body);
+                    return Evaluator.eval(bodyExpr, env);
+                }
+                catch (JlllException e)
+                {
+                    // Continuations must propagate to their call/cc - not errors
+                    if (e.getSource() instanceof Continuation)
+                    {
+                        throw e;
+                    }
+                    // Bind exception to var
+                    Environment guardEnv = new Environment(env);
+                    guardEnv.addBinding(var, e);
+                    // Evaluate clauses like cond
+                    for (Object clause : clauses)
+                    {
+                        if (!(clause instanceof Cons))
+                        {
+                            throw new JlllException("guard: clause must be a list");
+                        }
+                        Cons c = (Cons) clause;
+                        Object test = c.car();
+                        Cons handlerBody = (Cons) c.cdr();
+                        boolean matches;
+                        if (Symbol.intern("else").equals(test))
+                        {
+                            matches = true;
+                        }
+                        else
+                        {
+                            Object testResult = Evaluator.eval(test, guardEnv);
+                            matches = CommonUtil.getBoolean(testResult);
+                        }
+                        if (matches)
+                        {
+                            Object handlerExpr = new Cons(Symbol.BEGIN, handlerBody);
+                            return Evaluator.eval(handlerExpr, guardEnv);
+                        }
+                    }
+                    // No matching clause - re-raise
+                    throw e;
+                }
+            }
+        };
+        // ============== call/cc (call-with-current-continuation) ==============
+        new Primitive("call/cc", env,
+                "Calls procedure with the current continuation. "
+                        + "(call/cc (lambda (k) body...)) - k is a procedure that, when called, "
+                        + "returns its argument as the result of the call/cc expression. "
+                        + "The continuation can be saved and called multiple times.")
+        {
+            private static final long serialVersionUID = 8273645091827364508L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 1)
+                {
+                    throw new JlllException("call/cc requires exactly one argument (a procedure)");
+                }
+                // Evaluate the procedure argument
+                Object procObj = Evaluator.eval(values.car(), env);
+                if (!(procObj instanceof Procedure))
+                {
+                    throw new JlllException("call/cc argument must be a procedure");
+                }
+                Procedure proc = (Procedure) procObj;
+                // Create the continuation object
+                Continuation k = new Continuation(env);
+                // Capture the PARENT context (the expression containing call/cc)
+                // Current context is (call/cc ...), parent is (+ 1 (call/cc ...))
+                Evaluator.EvalContext ctx = Evaluator.getEvalContext();
+                if (ctx != null && ctx.parent != null)
+                {
+                    Evaluator.EvalContext parent = ctx.parent;
+                    k.setOuterContext(parent.expression, parent.argumentPosition, parent.evaluatedArguments);
+                }
+                try
+                {
+                    // Call (proc k)
+                    return proc.applyEvaluated(env, k);
+                }
+                catch (JlllException exc)
+                {
+                    // Check if this is OUR continuation being invoked
+                    if (exc.getSource() == k)
+                    {
+                        // Identity check: this exception is from our continuation
+                        // Mark as captured for future invocations
+                        k.markCaptured();
+                        // Return the value passed to the continuation
+                        return exc.getValue();
+                    }
+                    // Not our continuation (or not a continuation at all)
+                    // Propagate the exception
+                    throw exc;
+                }
+            }
+        };
+        // Add alias for call/cc
+        env.cloneBinding("call-with-current-continuation", "call/cc");
         Jlll.eval("(load-system-script \"kernel.jlll\")", env);
         String extLib = null;
         extLib = System.getProperty("jlll.extension");

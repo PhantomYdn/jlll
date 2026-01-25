@@ -70,11 +70,12 @@ Simpler approach that maps directly to Java:
 
 ### Checklist
 
-- [ ] `raise` - Signal an exception
-- [ ] `guard` - Scheme-style structured exception handling (Option A)
+- [x] `raise` - Signal an exception
+- [x] `guard` - Scheme-style structured exception handling (Option A)
 - [ ] `with-exception-handler` - Install exception handler for dynamic extent
-- [ ] `try`/`catch`/`finally` - Java-style exception handling (Option B)
-- [ ] `error` - Convenience for `(raise (make-error message))`
+- [x] `try`/`catch`/`finally` - Java-style exception handling (Option B)
+- [x] `error` - Convenience for `(raise (make-error message))`
+- [x] `call/cc` - Call with current continuation (enables advanced control flow)
 
 ---
 
@@ -784,7 +785,7 @@ Currently all definitions are global. For larger projects, need organization.
 
 JLLL follows Scheme naming conventions but is not strictly R5RS/R7RS compatible:
 - No character type (use single-char strings)
-- No continuations (`call/cc`) - limits some patterns
+- Continuations (`call/cc`) are available with replay capability for saved continuations
 - Mutable by default (Scheme prefers immutability)
 - Keywords (`:foo`) are JLLL-specific
 - Java interop is JLLL-specific

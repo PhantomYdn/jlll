@@ -320,3 +320,251 @@ Examples:
 (apply + '(1 2 3))           ; => 6
 (apply max '(3 1 4 1 5))     ; => 5
 ```
+
+## Exception Handling
+
+JLLL provides two styles of exception handling: Java-style `try`/`catch` and Scheme-style `guard`.
+
+### try
+
+Java-style exception handling with catch and finally clauses.
+
+```lisp
+(try
+  body...
+  (catch [type-spec] var handler...)...
+  (finally cleanup...))
+```
+
+**Components:**
+
+- `body` - Expressions to evaluate
+- `catch` - Exception handler clause (zero or more)
+  - `type-spec` - Optional: string class name or predicate function
+  - `var` - Symbol to bind the caught exception
+  - `handler` - Expressions to evaluate when caught
+- `finally` - Optional cleanup code that always runs
+
+**Examples:**
+
+```lisp
+;; Basic catch-all
+(try
+  (risky-operation)
+  (catch e
+    (println "Error: " (exception-message e))
+    default-value))
+
+;; Type-specific catch by class name
+(try
+  (invoke file "read")
+  (catch "java.io.IOException" e
+    (println "IO error: " (exception-message e))
+    null)
+  (catch e
+    (println "Other error: " e)
+    null))
+
+;; Predicate-based catch
+(try
+  (network-call)
+  (catch (lambda (e) (string-contains? (exception-message e) "timeout")) e
+    (println "Timeout, retrying...")
+    (retry))
+  (catch e
+    (fail e)))
+
+;; With finally (always runs)
+(try
+  (define conn (open-connection))
+  (use-connection conn)
+  (finally
+    (close-connection conn)))
+
+;; Multiple catch clauses are tried in order
+(try
+  (process-data)
+  (catch "java.io.FileNotFoundException" e "file not found")
+  (catch "java.io.IOException" e "io error")
+  (catch "ru.ydn.jlll.common.JlllException" e "jlll error")
+  (catch e "unknown error"))  ; catch-all must be last
+```
+
+**Type Matching:**
+
+- **Omitted** - Catches all exceptions: `(catch e handler...)`
+- **String** - Matches by Java class name: `(catch "java.io.IOException" e ...)`
+- **Predicate** - Function that takes exception, returns boolean: `(catch (lambda (e) ...) e ...)`
+
+When matching by class name, both the exception itself and its underlying cause are checked.
+
+### guard
+
+Scheme-style exception handling (SRFI-34 inspired). Uses cond-like clauses to match exceptions.
+
+```lisp
+(guard (var
+         (test1 handler1...)
+         (test2 handler2...)
+         ...
+         (else default...))
+  body...)
+```
+
+**Components:**
+
+- `var` - Symbol to bind the caught exception
+- `test` - Expression evaluated with var bound; if true, run handler
+- `else` - Optional catch-all clause (must be last)
+- `body` - Expressions to evaluate
+
+If no clause matches, the exception is re-raised.
+
+**Examples:**
+
+```lisp
+;; Basic guard with else
+(guard (err
+         (else 
+           (println "Caught: " (exception-message err))
+           "error"))
+  (risky-operation))
+
+;; Multiple conditions
+(guard (err
+         ((string-contains? (exception-message err) "not found")
+          (println "Item not found")
+          default-value)
+         ((string-contains? (exception-message err) "permission")
+          (println "Access denied")
+          (request-permission))
+         (else
+          (raise err)))  ; re-raise unknown errors
+  (load-resource name))
+
+;; Guard with type checking
+(guard (err
+         ((instanceof? err "java.io.IOException")
+          "io error")
+         ((exception? err)
+          "other exception"))
+  (process-file))
+```
+
+### Exception Accessors
+
+| Primitive | Description |
+|-----------|-------------|
+| `exception?` | Test if value is a Throwable |
+| `exception-message` | Get the error message string |
+| `exception-cause` | Get the underlying Java cause (or null) |
+
+### raise and error
+
+```lisp
+;; Raise an exception with any value
+(raise "error message")
+(raise some-exception)
+
+;; Convenience: concatenate args into error message
+(error "Item " item " not found in " collection)
+```
+
+## Continuations
+
+### call/cc (call-with-current-continuation)
+
+Captures the current continuation as a first-class procedure.
+
+```lisp
+(call/cc (lambda (k) body...))
+```
+
+The continuation `k` is a procedure that, when called with a value, immediately returns that value from the `call/cc` expression, abandoning the current computation.
+
+**Basic escape:**
+
+```lisp
+;; k escapes the computation, returning 3 from call/cc
+;; Result: (+ 1 3) = 4
+(+ 1 (call/cc (lambda (k) (+ 2 (k 3)))))  ; => 4
+
+;; If k is not called, normal return
+(+ 1 (call/cc (lambda (k) (+ 2 2))))      ; => 5
+```
+
+**Early exit from computation:**
+
+```lisp
+;; Search for an item, exit early when found
+(define (find-item lst pred)
+  (call/cc (lambda (return)
+    (for-each (lambda (x)
+                (if (pred x) (return x)))
+              lst)
+    false)))  ; not found
+```
+
+**Saved continuations:**
+
+Continuations can be saved and invoked multiple times:
+
+```lisp
+(define saved-k false)
+
+;; First evaluation: saves k, returns 3
+(+ 1 (call/cc (lambda (k) 
+                (set! saved-k k) 
+                (k 2))))              ; => 3
+
+;; Later: invoke saved continuation with 10
+(saved-k 10)                          ; => 11 (+ 1 10)
+
+;; Can be called again
+(saved-k 100)                         ; => 101
+```
+
+**Interaction with exceptions:**
+
+Continuations pass through `try`/`catch` and `guard` without being caught:
+
+```lisp
+;; Continuation escapes try block - not caught as exception
+(+ 1 (try 
+       (call/cc (lambda (k) (k 41))) 
+       (catch e "not caught")))       ; => 42
+
+;; But errors inside call/cc body are still catchable
+(call/cc (lambda (k) 
+  (try 
+    (raise "error") 
+  (catch e "caught"))))               ; => "caught"
+
+;; finally still runs when continuation escapes
+(define finally-ran 0)
+(+ 1 (try 
+       (call/cc (lambda (k) (k 0))) 
+       (finally (set! finally-ran 1))))
+finally-ran                           ; => 1
+```
+
+**Nested continuations:**
+
+```lisp
+;; Outer escape
+(call/cc (lambda (outer) 
+  (+ 1 (call/cc (lambda (inner) 
+    (outer 42))))))                   ; => 42
+
+;; Inner escape
+(call/cc (lambda (outer) 
+  (+ 1 (call/cc (lambda (inner) 
+    (inner 9))))))                    ; => 10
+```
+
+**Implementation notes:**
+
+- `call/cc` captures the "rest of the computation" at the point it is called
+- Continuations are one-shot escape continuations with replay capability
+- Each invocation of a saved continuation replays from the call/cc point
+- Alias: `call-with-current-continuation`
