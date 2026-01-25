@@ -1,7 +1,9 @@
 package ru.ydn.jlll.libs;
 
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -45,6 +47,89 @@ import ru.ydn.jlll.util.ListUtil;
  */
 public class KernelLib implements Library
 {
+    /**
+     * Gets a PrintWriter from the *stdout* binding, with fallback to System.out.
+     *
+     * @param env
+     *            the environment to look up *stdout*
+     * @return a PrintWriter for output
+     */
+    public static PrintWriter getStdout(Environment env)
+    {
+        Object outObject = env.lookup(Symbol.STDOUT);
+        if (outObject instanceof PrintWriter)
+        {
+            return (PrintWriter) outObject;
+        }
+        else if (outObject instanceof Writer)
+        {
+            return new PrintWriter((Writer) outObject);
+        }
+        else if (outObject instanceof OutputStream)
+        {
+            return new PrintWriter((OutputStream) outObject);
+        }
+        else
+        {
+            return new PrintWriter(System.out);
+        }
+    }
+
+    /**
+     * Returns a human-readable type name for a value.
+     *
+     * @param value
+     *            the value to describe
+     * @return the type name
+     */
+    public static String getTypeName(Object value)
+    {
+        if (value instanceof Primitive)
+        {
+            return "Primitive";
+        }
+        else if (value instanceof Macros)
+        {
+            return "Macro";
+        }
+        else if (value instanceof Procedure)
+        {
+            return "Procedure";
+        }
+        else if (value instanceof Cons)
+        {
+            return "List";
+        }
+        else if (value instanceof Symbol)
+        {
+            return "Symbol";
+        }
+        else if (value instanceof Keyword)
+        {
+            return "Keyword";
+        }
+        else if (value instanceof String)
+        {
+            return "String";
+        }
+        else if (value instanceof Number)
+        {
+            return "Number";
+        }
+        else if (value instanceof Boolean)
+        {
+            return "Boolean";
+        }
+        else if (value == null || value instanceof Null)
+        {
+            return "Nil";
+        }
+        else
+        {
+            return "Java: " + value.getClass().getSimpleName();
+        }
+    }
+
     /** {@inheritDoc} */
     public void load(Environment env) throws JlllException
     {
@@ -781,7 +866,7 @@ public class KernelLib implements Library
             }
         };
         // ============== Metadata Primitives ==============
-        new Primitive("doc", env, "Returns documentation for a symbol or procedure. "
+        new Primitive("doc", env, "Prints and returns documentation for a symbol or procedure. "
                 + "Documentation is stored as :doc metadata on bindings.")
         {
             private static final long serialVersionUID = 9182736450918273645L;
@@ -793,37 +878,74 @@ public class KernelLib implements Library
                     throw new JlllException("doc requires exactly one argument");
                 Object arg = values.get(0);
                 Symbol sym;
+                String symName;
                 if (arg instanceof Symbol)
                 {
                     sym = (Symbol) arg;
+                    symName = sym.getName();
                 }
                 else if (arg instanceof Procedure)
                 {
                     // For procedures passed directly, try to get their doc
                     String doc = ((Procedure) arg).getDoc();
+                    if (doc != null && !doc.isEmpty())
+                    {
+                        PrintWriter out = getStdout(env);
+                        out.println(doc);
+                        out.flush();
+                    }
                     return (doc != null && !doc.isEmpty()) ? doc : null;
                 }
                 else
                 {
                     throw new JlllException("doc requires a symbol or procedure");
                 }
+                // Get output stream
+                PrintWriter out = getStdout(env);
                 // Primary source: metadata on the binding
                 Object doc = env.getMeta(sym, Symbol.intern("doc"));
+                String docString = null;
                 if (doc != null)
                 {
-                    return doc;
+                    docString = doc.toString();
                 }
-                // Fallback: Procedure.getDoc() for backward compatibility
-                Object value = env.lookup(sym);
-                if (value instanceof Procedure)
+                else
                 {
-                    String procDoc = ((Procedure) value).getDoc();
-                    if (procDoc != null && !procDoc.isEmpty())
+                    // Fallback: Procedure.getDoc() for backward compatibility
+                    Object value = env.lookup(sym);
+                    if (value instanceof Procedure)
                     {
-                        return procDoc;
+                        String procDoc = ((Procedure) value).getDoc();
+                        if (procDoc != null && !procDoc.isEmpty())
+                        {
+                            docString = procDoc;
+                        }
                     }
                 }
-                return null;
+                // Print formatted output
+                Object value = env.lookup(sym);
+                if (value == null)
+                {
+                    out.println("Symbol '" + symName + "' is not bound.");
+                }
+                else
+                {
+                    out.println(symName);
+                    out.println("──────────────────────────────────────────────────");
+                    if (docString != null)
+                    {
+                        out.println(docString);
+                    }
+                    else
+                    {
+                        out.println("No documentation available.");
+                    }
+                    out.println();
+                    out.println("Type: " + getTypeName(value));
+                }
+                out.println();
+                out.flush();
+                return docString;
             }
         };
         new Primitive("meta", env, "Returns metadata for a symbol. "
@@ -1356,6 +1478,132 @@ public class KernelLib implements Library
                     // Re-raise the exception (SRFI-34 semantics)
                     throw e;
                 }
+            }
+        };
+        // ============== Environment Introspection ==============
+        new Primitive("env", env,
+                "Prints environment bindings. (env) prints all bindings grouped by type. "
+                        + "(env \"prefix\") filters by name prefix. "
+                        + "(env :primitives), (env :macros), (env :procedures), (env :variables) " + "filters by type.")
+        {
+            private static final long serialVersionUID = 8273645091827364520L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                PrintWriter out = getStdout(env);
+                Map<Symbol, Object> bindings = env.getAllBindings();
+                String prefixFilter = null;
+                String typeFilter = null;
+                // Parse arguments
+                if (values.length() > 0)
+                {
+                    Object arg = values.get(0);
+                    if (arg instanceof String)
+                    {
+                        prefixFilter = (String) arg;
+                    }
+                    else if (arg instanceof Keyword)
+                    {
+                        typeFilter = ((Keyword) arg).getName();
+                    }
+                    else if (arg instanceof Symbol)
+                    {
+                        // Allow (env 'primitives) as well as (env :primitives)
+                        typeFilter = ((Symbol) arg).getName();
+                    }
+                    else
+                    {
+                        throw new JlllException(
+                                "env argument must be a string prefix or type keyword (:primitives, :macros, :procedures, :variables)");
+                    }
+                }
+                // Collect bindings by type
+                List<Map.Entry<Symbol, Object>> primitives = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> macros = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> procedures = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> variables = new ArrayList<>();
+                for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
+                {
+                    String name = entry.getKey().getName();
+                    // Apply prefix filter if specified
+                    if (prefixFilter != null && !name.contains(prefixFilter))
+                    {
+                        continue;
+                    }
+                    Object value = entry.getValue();
+                    if (value instanceof Primitive)
+                    {
+                        primitives.add(entry);
+                    }
+                    else if (value instanceof Macros)
+                    {
+                        macros.add(entry);
+                    }
+                    else if (value instanceof Procedure)
+                    {
+                        procedures.add(entry);
+                    }
+                    else
+                    {
+                        variables.add(entry);
+                    }
+                }
+                // Print header
+                out.println();
+                int total = primitives.size() + macros.size() + procedures.size() + variables.size();
+                if (prefixFilter != null)
+                {
+                    out.println("Bindings matching \"" + prefixFilter + "\" (" + total + "):");
+                }
+                else if (typeFilter != null)
+                {
+                    out.println("Environment bindings (" + typeFilter + "):");
+                }
+                else
+                {
+                    out.println("Environment bindings (" + bindings.size() + " total):");
+                }
+                out.println();
+                // Print groups based on type filter
+                if (typeFilter == null || typeFilter.equals("primitives"))
+                {
+                    printGroup(out, "Primitives", primitives, typeFilter != null);
+                }
+                if (typeFilter == null || typeFilter.equals("macros"))
+                {
+                    printGroup(out, "Macros", macros, typeFilter != null);
+                }
+                if (typeFilter == null || typeFilter.equals("procedures"))
+                {
+                    printGroup(out, "Procedures", procedures, typeFilter != null);
+                }
+                if (typeFilter == null || typeFilter.equals("variables"))
+                {
+                    printGroup(out, "Variables", variables, typeFilter != null);
+                }
+                out.flush();
+                return Null.NULL;
+            }
+
+            private void printGroup(PrintWriter out, String groupName, List<Map.Entry<Symbol, Object>> entries,
+                    boolean skipHeader)
+            {
+                if (entries.isEmpty())
+                {
+                    return;
+                }
+                if (!skipHeader)
+                {
+                    out.println(groupName + " (" + entries.size() + "):");
+                }
+                // Sort alphabetically
+                entries.sort((a, b) -> a.getKey().getName().compareTo(b.getKey().getName()));
+                for (Map.Entry<Symbol, Object> entry : entries)
+                {
+                    out.println("  " + entry.getKey().getName());
+                }
+                out.println();
             }
         };
         // ============== call/cc (call-with-current-continuation) ==============

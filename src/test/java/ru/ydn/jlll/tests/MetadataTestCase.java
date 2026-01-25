@@ -220,6 +220,55 @@ public class MetadataTestCase
         assertTrue(desc.contains(":doc"));
         assertTrue(desc.contains("test"));
     }
+    // === env Primitive ===
+
+    @Test
+    public void testEnvReturnsNil() throws Exception
+    {
+        // env prints to stdout but returns nil
+        Object result = eval("(env)");
+        assertEquals(Null.NULL, result);
+    }
+
+    @Test
+    public void testEnvWithPrefixFilter() throws Exception
+    {
+        // env with prefix filter should still return nil
+        Object result = eval("(env \"def\")");
+        assertEquals(Null.NULL, result);
+    }
+
+    @Test
+    public void testEnvWithTypeFilter() throws Exception
+    {
+        // env with type filter should still return nil
+        Object result = eval("(env :primitives)");
+        assertEquals(Null.NULL, result);
+        result = eval("(env :macros)");
+        assertEquals(Null.NULL, result);
+        result = eval("(env :procedures)");
+        assertEquals(Null.NULL, result);
+        result = eval("(env :variables)");
+        assertEquals(Null.NULL, result);
+    }
+
+    @Test
+    public void testDocPrintsAndReturns() throws Exception
+    {
+        // doc should return the doc string (and print it)
+        eval("(define x :doc \"my documentation\" 42)");
+        Object result = eval("(doc 'x)");
+        assertEquals("my documentation", result);
+    }
+
+    @Test
+    public void testDocReturnsNilForUndocumented() throws Exception
+    {
+        // doc for undocumented symbol returns nil
+        eval("(define y 100)");
+        Object result = eval("(doc 'y)");
+        assertEquals(Null.NULL, result);
+    }
     // === Edge Cases ===
 
     @Test
