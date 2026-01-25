@@ -219,6 +219,34 @@ Bindings are evaluated in parallel (outer scope):
   (+ x y))          ; => 11
 ```
 
+## let*
+
+Sequential local bindings. Each binding can reference previous ones.
+
+```lisp
+(let* ((var1 val1)
+       (var2 val2))  ; val2 can reference var1
+  body ...)
+```
+
+Example:
+
+```lisp
+(let* ((x 1)
+       (y (+ x 1))    ; y = 2
+       (z (+ y 1)))   ; z = 3
+  (+ x y z))          ; => 6
+```
+
+Equivalent to nested `let`:
+
+```lisp
+(let ((x 1))
+  (let ((y (+ x 1)))
+    (let ((z (+ y 1)))
+      (+ x y z))))
+```
+
 ## letrec
 
 Recursive local bindings.
@@ -238,6 +266,106 @@ Bindings can reference each other:
                  (if (= n 0) false (even? (- n 1))))))
   (even? 10))       ; => true
 ```
+
+## when
+
+Conditional with implicit `begin`. Evaluates body forms if test is true.
+
+```lisp
+(when test body ...)
+```
+
+Returns `#f` if test is false.
+
+```lisp
+(when (> x 0)
+  (println "positive")
+  (process x))         ; returns result of (process x) if x > 0
+
+(when debug
+  (println "Debug mode enabled"))
+```
+
+Equivalent to:
+
+```lisp
+(if test (begin body ...) #f)
+```
+
+## unless
+
+Negated `when`. Evaluates body forms if test is false.
+
+```lisp
+(unless test body ...)
+```
+
+Returns `#f` if test is true.
+
+```lisp
+(unless (null? lst)
+  (process (car lst)))
+
+(unless authenticated
+  (redirect-to-login))
+```
+
+Equivalent to:
+
+```lisp
+(if test #f (begin body ...))
+```
+
+## dotimes
+
+Counted iteration macro.
+
+```lisp
+(dotimes (var count) body ...)
+```
+
+Binds `var` to 0, 1, 2, ..., count-1 and evaluates body for each value.
+
+```lisp
+(dotimes (i 5)
+  (println i))         ; prints 0, 1, 2, 3, 4
+
+;; Sum 0+1+2+3+4
+(let ((sum 0))
+  (dotimes (i 5)
+    (set! sum (+ sum i)))
+  sum)                 ; => 10
+```
+
+Returns `#f` after all iterations.
+
+## dolist
+
+List iteration macro.
+
+```lisp
+(dolist (var list) body ...)
+```
+
+Binds `var` to each element of `list` and evaluates body.
+
+```lisp
+(dolist (x '(1 2 3))
+  (println x))         ; prints 1, 2, 3
+
+;; Sum all elements
+(let ((sum 0))
+  (dolist (n '(1 2 3 4 5))
+    (set! sum (+ sum n)))
+  sum)                 ; => 15
+
+;; Process each item
+(dolist (item items)
+  (when (valid? item)
+    (process item)))
+```
+
+Returns `#f` after all iterations.
 
 ## begin
 
@@ -469,6 +597,37 @@ If no clause matches, the exception is re-raised.
 ;; Convenience: concatenate args into error message
 (error "Item " item " not found in " collection)
 ```
+
+### with-exception-handler
+
+Low-level exception handler installation (SRFI-34 style).
+
+```lisp
+(with-exception-handler handler thunk)
+```
+
+Installs `handler` as the exception handler for the dynamic extent of `thunk`. If an exception is raised, `handler` is called with the exception. After the handler returns, **the exception continues to propagate** (unless the handler escapes via continuation or raises a different exception).
+
+```lisp
+;; Log and propagate
+(with-exception-handler
+  (lambda (e) (log-error e))
+  (lambda () (risky-operation)))
+
+;; Handler is called, but exception still propagates
+(try
+  (with-exception-handler
+    (lambda (e) (println "Handler saw: " e))
+    (lambda () (raise "error")))
+  (catch e "caught"))   ; => "caught"
+```
+
+This is useful for:
+- Logging exceptions before they propagate
+- Resource cleanup (though `finally` is usually better)
+- Installing dynamic handlers in library code
+
+**Note:** Unlike `try`/`catch` or `guard`, `with-exception-handler` does not suppress the exception by default. The handler is for observation/side effects.
 
 ## Continuations
 

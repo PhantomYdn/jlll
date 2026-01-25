@@ -591,6 +591,90 @@ public class JLLLTestCase
         eval(42, "(+ 1 (guard (err (else \"should not catch\")) " + "  (call/cc (lambda (k) (k 41)))))");
     }
 
+    @Test
+    public void testLet() throws Exception
+    {
+        // Basic let binding
+        eval(3, "(let ((x 1) (y 2)) (+ x y))");
+        eval(10, "(let ((x 10)) x)");
+        // Nested let
+        eval(1, "(let ((x 1)) (let ((y 2)) x))");
+        eval(3, "(let ((x 1)) (let ((y 2)) (+ x y)))");
+        // Empty body not allowed - need at least one expression
+        assertException("(let ((x 1)))", JlllException.class);
+        // Parallel binding semantics - x not visible to y's binding
+        assertException("(let ((x 1) (y x)) y)", JlllException.class);
+        // Shadowing
+        eval(2, "(let ((x 1)) (let ((x 2)) x))");
+        // Multiple body expressions
+        eval(3, "(let ((x 1)) (set! x 2) (+ x 1))");
+    }
+
+    @Test
+    public void testLetStar() throws Exception
+    {
+        // Sequential binding - each can reference previous
+        eval(3, "(let* ((x 1) (y (+ x 1)) (z (+ y 1))) z)");
+        // a=1, b=1*2=2, c=2*3=6, sum=1+2+6=9
+        eval(9, "(let* ((a 1) (b (* a 2)) (c (* b 3))) (+ a b c))");
+        // Single binding
+        eval(5, "(let* ((x 5)) x)");
+        // Empty bindings
+        eval(42, "(let* () 42)");
+        // Nested let*
+        eval(10, "(let* ((x 1)) (let* ((y (+ x 2)) (z (+ y 3))) (+ x y z)))");
+    }
+
+    @Test
+    public void testWhenUnless() throws Exception
+    {
+        // when - evaluates body if true
+        eval("yes", "(when true \"yes\")");
+        eval(false, "(when false \"yes\")");
+        eval(3, "(when (> 5 3) (+ 1 2))");
+        // Multiple body expressions
+        eval(10, "(let ((x 0)) (when true (set! x 5) (set! x 10)) x)");
+        // unless - evaluates body if false
+        eval("no", "(unless false \"no\")");
+        eval(false, "(unless true \"no\")");
+        eval(3, "(unless (< 5 3) (+ 1 2))");
+    }
+
+    @Test
+    public void testDotimes() throws Exception
+    {
+        // Sum 0+1+2+3+4 = 10
+        eval(10, "(let ((sum 0)) (dotimes (i 5) (set! sum (+ sum i))) sum)");
+        // Zero iterations
+        eval(0, "(let ((sum 0)) (dotimes (i 0) (set! sum (+ sum 1))) sum)");
+        // Count iterations
+        eval(5, "(let ((count 0)) (dotimes (i 5) (set! count (+ count 1))) count)");
+    }
+
+    @Test
+    public void testDolist() throws Exception
+    {
+        // Sum elements
+        eval(6, "(let ((sum 0)) (dolist (x '(1 2 3)) (set! sum (+ sum x))) sum)");
+        // Empty list
+        eval(0, "(let ((sum 0)) (dolist (x '()) (set! sum (+ sum 1))) sum)");
+        // Collect strings
+        eval("abc", "(let ((result \"\")) (dolist (s '(\"a\" \"b\" \"c\")) (set! result (concat result s))) result)");
+    }
+
+    @Test
+    public void testWithExceptionHandler() throws Exception
+    {
+        // Handler is called, exception still propagates
+        eval(1, "(let ((handled 0)) " + "(try " + "  (with-exception-handler " + "    (lambda (e) (set! handled 1)) "
+                + "    (lambda () (raise \"error\"))) " + "  (catch e handled)))");
+        // Handler runs for logging before propagation
+        assertException("(with-exception-handler (lambda (e) false) (lambda () (raise \"test\")))",
+                JlllException.class);
+        // No exception - handler not called
+        eval(42, "(with-exception-handler (lambda (e) (error \"should not run\")) (lambda () 42))");
+    }
+
     private void eval(Object expected, String code) throws Exception
     {
         Object ret = Jlll.eval(code, env);

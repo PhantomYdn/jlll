@@ -106,7 +106,7 @@ See [Metadata](metadata.md) for detailed documentation.
 
 ### Exception Handling
 
-See [Special Forms](special-forms.md) for `try` and `guard` syntax.
+See [Special Forms](special-forms.md) for `try`, `guard`, and `with-exception-handler` syntax.
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
@@ -115,6 +115,7 @@ See [Special Forms](special-forms.md) for `try` and `guard` syntax.
 | `exception?` | Test if value is exception | `(exception? e)` => `true` |
 | `exception-message` | Get exception message | `(exception-message e)` => `"error"` |
 | `exception-cause` | Get underlying cause | `(exception-cause e)` => `null` or cause |
+| `with-exception-handler` | Install handler for thunk | `(with-exception-handler handler thunk)` |
 
 ## Math Library
 

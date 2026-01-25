@@ -72,7 +72,7 @@ Simpler approach that maps directly to Java:
 
 - [x] `raise` - Signal an exception
 - [x] `guard` - Scheme-style structured exception handling (Option A)
-- [ ] `with-exception-handler` - Install exception handler for dynamic extent
+- [x] `with-exception-handler` - Install exception handler for dynamic extent
 - [x] `try`/`catch`/`finally` - Java-style exception handling (Option B)
 - [x] `error` - Convenience for `(raise (make-error message))`
 - [x] `call/cc` - Call with current continuation (enables advanced control flow)
@@ -506,13 +506,13 @@ Missing convenience macros that are standard in most Lisps.
 
 ### Checklist
 
-- [ ] `when` - Conditional with implicit begin
-- [ ] `unless` - Negated conditional with implicit begin
-- [ ] `let*` - Sequential bindings
+- [x] `when` - Conditional with implicit begin
+- [x] `unless` - Negated conditional with implicit begin
+- [x] `let*` - Sequential bindings
 - [ ] `do` - General iteration (R5RS style)
 - [ ] Named `let` - Recursive loop binding
-- [ ] `dotimes` - Counted iteration
-- [ ] `dolist` - List iteration
+- [x] `dotimes` - Counted iteration
+- [x] `dolist` - List iteration
 
 ---
 

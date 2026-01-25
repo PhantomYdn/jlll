@@ -15,17 +15,11 @@ import ru.ydn.jlll.common.Symbol;
 
 /**
  * Tab completion for JLLL REPL.
- * Completes symbols, primitives, and keywords from the current environment.
+ * Completes symbols from the current environment.
  */
 public class JlllCompleter implements Completer
 {
     private final Environment env;
-    // Built-in Lisp keywords that are always available
-    private static final String[] KEYWORDS =
-    {"define", "defmacro", "lambda", "if", "cond", "case", "let", "let*", "letrec", "begin", "quote", "quasiquote",
-            "set", "set!", "and", "or", "not", "car", "cdr", "cons", "list", "append", "map", "filter", "apply", "eval",
-            "true", "false", "null", "nil", "load-lib", "load-url", "load-system-script", "help", "quit", "exit",
-            "env"};
 
     /**
      * Creates a completer for the given environment.
@@ -54,16 +48,8 @@ public class JlllCompleter implements Completer
     {
         // Use the word from the parser directly - it now correctly identifies Lisp symbols
         String prefix = line.word();
-        // Collect all possible completions
+        // Collect all possible completions from the environment
         TreeSet<String> completions = new TreeSet<>();
-        // Add keywords
-        for (String keyword : KEYWORDS)
-        {
-            if (keyword.startsWith(prefix))
-            {
-                completions.add(keyword);
-            }
-        }
         // Add symbols from current environment
         Map<Symbol, Object> bindings = env.getAllBindings();
         for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
@@ -120,7 +106,7 @@ public class JlllCompleter implements Completer
         // Fall back to type-based description
         if (value == null)
         {
-            return "keyword";
+            return "unbound";
         }
         else if (value instanceof Primitive)
         {

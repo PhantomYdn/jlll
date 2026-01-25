@@ -270,6 +270,59 @@ public class KernelLib implements Library
                 return procedure;
             }
         };
+        new Primitive("let", env,
+                "Local bindings with parallel evaluation. (let ((var1 val1) (var2 val2) ...) body...). "
+                        + "All values are evaluated in the current environment before any bindings are created.")
+        {
+            private static final long serialVersionUID = 8273645091827364509L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 2)
+                {
+                    throw new JlllException("let requires bindings and at least one body expression");
+                }
+                Object bindingsObj = values.car();
+                if (!(bindingsObj instanceof Cons))
+                {
+                    throw new JlllException("let: bindings must be a list, got: " + bindingsObj);
+                }
+                Cons bindings = (Cons) bindingsObj;
+                Cons body = (Cons) values.cdr();
+                // Evaluate all values in CURRENT environment (parallel binding semantics)
+                List<Symbol> vars = new ArrayList<>();
+                List<Object> vals = new ArrayList<>();
+                for (Object binding : bindings)
+                {
+                    if (!(binding instanceof Cons))
+                    {
+                        throw new JlllException("let: each binding must be a list, got: " + binding);
+                    }
+                    Cons b = (Cons) binding;
+                    if (b.length() != 2)
+                    {
+                        throw new JlllException("let: each binding must have exactly 2 elements (var val), got: " + b);
+                    }
+                    Object varObj = b.car();
+                    if (!(varObj instanceof Symbol))
+                    {
+                        throw new JlllException("let: variable must be a symbol, got: " + varObj);
+                    }
+                    vars.add((Symbol) varObj);
+                    vals.add(Evaluator.eval(b.cadr(), env)); // Evaluate in current env
+                }
+                // Create new environment with all bindings
+                Environment letEnv = new Environment(env);
+                for (int i = 0; i < vars.size(); i++)
+                {
+                    letEnv.addBinding(vars.get(i), vals.get(i));
+                }
+                // Evaluate body in new environment
+                Object bodyExpr = new Cons(Symbol.BEGIN, body);
+                return Evaluator.eval(bodyExpr, letEnv);
+            }
+        };
         new Primitive("cons", env, "Constructs a pair. (cons a b) creates a cons cell with car=a and cdr=b.")
         {
             private static final long serialVersionUID = -7652629513702176997L;
@@ -1255,6 +1308,52 @@ public class KernelLib implements Library
                         }
                     }
                     // No matching clause - re-raise
+                    throw e;
+                }
+            }
+        };
+        // ============== with-exception-handler (SRFI-34 style) ==============
+        new Primitive("with-exception-handler", env,
+                "Installs handler for dynamic extent of thunk. "
+                        + "(with-exception-handler handler thunk). Handler is called with exception; "
+                        + "exception propagates after handler returns unless handler escapes.")
+        {
+            private static final long serialVersionUID = 8273645091827364510L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 2)
+                {
+                    throw new JlllException("with-exception-handler requires exactly 2 arguments");
+                }
+                Object handlerObj = values.get(0);
+                Object thunkObj = values.get(1);
+                if (!(handlerObj instanceof Procedure))
+                {
+                    throw new JlllException("with-exception-handler: handler must be a procedure");
+                }
+                if (!(thunkObj instanceof Procedure))
+                {
+                    throw new JlllException("with-exception-handler: thunk must be a procedure");
+                }
+                Procedure handler = (Procedure) handlerObj;
+                Procedure thunk = (Procedure) thunkObj;
+                try
+                {
+                    // Call thunk with no arguments
+                    return thunk.applyEvaluated(new Cons(), env);
+                }
+                catch (JlllException e)
+                {
+                    // Continuations must propagate - not errors
+                    if (e.getSource() instanceof Continuation)
+                    {
+                        throw e;
+                    }
+                    // Call handler with exception
+                    handler.applyEvaluated(env, e);
+                    // Re-raise the exception (SRFI-34 semantics)
                     throw e;
                 }
             }

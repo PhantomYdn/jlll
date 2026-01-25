@@ -42,7 +42,45 @@
 
       ,@body)
 
-    ,@(map (lambda (c) #f) clauses)))
+    ,@(map (lambda (c) false) clauses)))
+
+
+;; ============== Control Flow Macros ==============
+
+(defmacro (when test . body)
+  :doc "Evaluates body forms if test is true. Returns false if test is false."
+  `(if ,test (begin ,@body) false))
+
+(defmacro (unless test . body)
+  :doc "Evaluates body forms if test is false. Returns false if test is true."
+  `(if ,test false (begin ,@body)))
+
+(defmacro (let* bindings . body)
+  :doc "Sequential local bindings. Each binding can reference previous ones."
+  (if (null? bindings)
+      `(begin ,@body)
+      `(let (,(car bindings))
+         (let* ,(cdr bindings) ,@body))))
+
+(defmacro (dotimes var-count . body)
+  :doc "Counted iteration. (dotimes (var count) body...) binds var to 0, 1, ..., count-1."
+  `(let ((%dotimes-count% ,(cadr var-count)))
+     (define (%dotimes-loop% ,(car var-count))
+       (if (< ,(car var-count) %dotimes-count%)
+           (begin ,@body (%dotimes-loop% (+ ,(car var-count) 1)))
+           false))
+     (%dotimes-loop% 0)))
+
+(defmacro (dolist var-list . body)
+  :doc "List iteration. (dolist (var list) body...) binds var to each element."
+  `(let ((%dolist-list% ,(cadr var-list)))
+     (define (%dolist-loop% %dolist-rest%)
+       (if (null? %dolist-rest%)
+           false
+           (let ((,(car var-list) (car %dolist-rest%)))
+             ,@body
+             (%dolist-loop% (cdr %dolist-rest%)))))
+     (%dolist-loop% %dolist-list%)))
 
 
 
