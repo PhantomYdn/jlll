@@ -73,9 +73,27 @@ Core language primitives.
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
+| `load` | Load JLLL from file path | `(load "path/to/script.jlll")` |
 | `load-url` | Load JLLL from URL | `(load-url "http://example.com/lib.jlll")` |
 | `load-system-script` | Load internal script | `(load-system-script "math.jlll")` |
 | `load-lib` | Load Java library class | `(load-lib "com.example.MyLib")` |
+
+### Modules
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `module` | Define a module with body | `(module mymath (export square) (define (square x) (* x x)))` |
+| `export` | Mark symbols for export | `(export fn1 fn2)` or `(export *)` for all |
+| `import` | Import module exports | `(import mymath)` or `(import mymath :prefix m/)` |
+| `require` | Load file and import | `(require "file.jlll")` or `(require "file.jlll" :as m)` |
+
+**Import Options:**
+- `:only (sym1 sym2)` - Import only specified symbols
+- `:except (sym1)` - Import all except specified symbols
+- `:prefix foo/` - Add prefix to imported names
+
+**Qualified Access:**
+- Use `module/symbol` syntax to access exported symbols without importing: `(mymath/square 5)`
 
 ### Utilities
 
@@ -555,6 +573,96 @@ Mutable hash tables (associative arrays) with O(1) access. Backed by `LinkedHash
 (define defaults (hash-map :timeout 30 :retries 3))
 (define merged (hash-merge defaults config))
 ```
+
+## Concurrency Library
+
+Parallel execution primitives for async computations and thread-safe state.
+
+### Futures
+
+Futures represent asynchronous computations that execute in parallel.
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `future` | Create async computation | `(future (expensive-fn x))` |
+| `deref` | Get value (blocks if not ready) | `(deref f)` |
+| `deref` | Get with timeout and default | `(deref f 1000 'timeout)` |
+| `realized?` | Check if completed | `(realized? f)` => `true` |
+| `future?` | Test if value is future | `(future? f)` => `true` |
+
+### Atoms
+
+Atoms provide thread-safe mutable references with atomic updates.
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `atom` | Create thread-safe reference | `(atom 0)` |
+| `deref` | Get current value | `(deref a)` => `0` |
+| `reset!` | Set to new value | `(reset! a 42)` => `42` |
+| `swap!` | Update with function | `(swap! a (lambda (x) (+ x 1)))` |
+| `compare-and-set!` | CAS operation | `(compare-and-set! a 0 1)` => `true` |
+| `jlll-atom?` | Test if value is atom | `(jlll-atom? a)` => `true` |
+
+**Note:** `jlll-atom?` tests for JLLL atoms (thread-safe references). The existing `atom?` predicate tests if a value is not a pair (i.e., any non-cons value).
+
+### Parallel Operations
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `pmap` | Parallel map over list | `(pmap expensive-fn '(1 2 3 4))` |
+| `pfor-each` | Parallel for-each (side effects) | `(pfor-each process items)` |
+| `pcalls` | Execute thunks in parallel | `(pcalls fn1 fn2 fn3)` |
+
+### Examples
+
+```lisp
+;; Future - async computation
+(define f (future (do
+  (sleep 1000)
+  (* 42 42))))
+(do-other-work)
+(println "Result: " (deref f))  ; blocks until ready
+
+;; Future with timeout
+(define result (deref f 500 'not-ready))
+
+;; Atom - thread-safe counter
+(define counter (atom 0))
+(swap! counter (lambda (x) (+ x 1)))  ; => 1
+(swap! counter (lambda (x) (+ x 1)))  ; => 2
+(deref counter)                        ; => 2
+(reset! counter 0)                     ; => 0
+
+;; CAS for lock-free algorithms
+(define state (atom 'idle))
+(when (compare-and-set! state 'idle 'running)
+  (do-work)
+  (reset! state 'idle))
+
+;; Parallel map - process list in parallel
+(define squares (pmap (lambda (x) (* x x)) '(1 2 3 4 5 6 7 8)))
+;; => (1 4 9 16 25 36 49 64)
+
+;; Parallel for-each - side effects in parallel
+(define results (atom '()))
+(pfor-each 
+  (lambda (url) 
+    (swap! results (lambda (r) (cons (fetch url) r))))
+  urls)
+
+;; Execute multiple independent computations
+(define (fetch-all)
+  (pcalls
+    (lambda () (slurp "http://api1.example.com"))
+    (lambda () (slurp "http://api2.example.com"))
+    (lambda () (slurp "http://api3.example.com"))))
+```
+
+### Thread Safety Notes
+
+- **Futures** execute in Java's `ForkJoinPool.commonPool()`. Each future receives a snapshot of the environment at creation time.
+- **Atoms** use compare-and-swap for lock-free atomic updates. The update function in `swap!` may be called multiple times if there is contention.
+- **`call/cc`** (continuations) cannot cross thread boundaries - continuations captured in one thread cannot be invoked from another.
 
 ## Reflect Library (Java Interop)
 

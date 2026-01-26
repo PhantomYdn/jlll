@@ -631,16 +631,16 @@ For CPU-bound operations that benefit from parallelism.
 
 ### Checklist
 
-- [ ] `pmap` - Parallel map
-- [ ] `pfor-each` - Parallel for-each
-- [ ] `future` - Create async computation
-- [ ] `deref` - Get value (with optional timeout)
-- [ ] `realized?` - Check if future is complete
-- [ ] `pcalls` - Execute multiple thunks in parallel
-- [ ] `atom` - Create thread-safe mutable reference
-- [ ] `swap!` - Atomically update atom with function
-- [ ] `reset!` - Atomically set atom value
-- [ ] `compare-and-set!` - CAS operation on atom
+- [x] `pmap` - Parallel map
+- [x] `pfor-each` - Parallel for-each
+- [x] `future` - Create async computation
+- [x] `deref` - Get value (with optional timeout)
+- [x] `realized?` - Check if future is complete
+- [x] `pcalls` - Execute multiple thunks in parallel
+- [x] `atom` - Create thread-safe mutable reference
+- [x] `swap!` - Atomically update atom with function
+- [x] `reset!` - Atomically set atom value
+- [x] `compare-and-set!` - CAS operation on atom
 
 ---
 
@@ -746,11 +746,13 @@ Currently all definitions are global. For larger projects, need organization.
 
 ### Checklist
 
-- [ ] `module` - Define module with exports
-- [ ] `import` - Import module symbols
-- [ ] `require` - Load file and import
-- [ ] Qualified symbol resolution (`module/symbol`)
-- [ ] Private definitions (not exported)
+- [x] `module` - Define module with exports
+- [x] `export` - Mark symbols for export (explicit or `*` for all)
+- [x] `load` - Load file from path (foundation for `require`)
+- [x] `import` - Import module symbols (with `:only`, `:except`, `:prefix` options)
+- [x] `require` - Load file and import (with `:as` option for prefix)
+- [x] Qualified symbol resolution (`module/symbol`)
+- [x] Private definitions (not exported) - symbols not in `export` are private
 
 ---
 

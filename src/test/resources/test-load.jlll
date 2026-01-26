@@ -1,0 +1,3 @@
+; Test file for load primitive
+(define test-loaded-value 42)
+(define (test-loaded-fn x) (* x 2))

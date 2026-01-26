@@ -53,6 +53,34 @@ public class Evaluator
     }
 
     /**
+     * Attempts to look up a qualified symbol (module/symbol).
+     *
+     * @param sym
+     *            the symbol to look up
+     * @return the value if found via qualified lookup, null otherwise
+     */
+    private static Object lookupQualified(Symbol sym)
+    {
+        String name = sym.getName();
+        int slashIndex = name.indexOf('/');
+        if (slashIndex > 0 && slashIndex < name.length() - 1)
+        {
+            String moduleName = name.substring(0, slashIndex);
+            String symbolName = name.substring(slashIndex + 1);
+            ModuleEnvironment module = Environment.getModule(moduleName);
+            if (module != null)
+            {
+                Symbol localSym = Symbol.intern(symbolName);
+                if (module.isExported(localSym))
+                {
+                    return module.lookup(localSym);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Main method to evaluate expressions.
      *
      * @param eval
@@ -115,10 +143,16 @@ public class Evaluator
         }
         else if (eval instanceof Symbol)
         {
-            ret = env.lookup((Symbol) eval);
+            Symbol sym = (Symbol) eval;
+            ret = env.lookup(sym);
             if (ret == null)
             {
-                throw new JlllException("Symbol is unbound: " + eval);
+                // Try qualified lookup (module/symbol)
+                ret = lookupQualified(sym);
+                if (ret == null)
+                {
+                    throw new JlllException("Symbol is unbound: " + eval);
+                }
             }
         }
         else

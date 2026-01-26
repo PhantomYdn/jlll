@@ -1,15 +1,22 @@
 package ru.ydn.jlll.libs;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import ru.ydn.jlll.common.CompoundProcedure;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Continuation;
@@ -20,6 +27,7 @@ import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Keyword;
 import ru.ydn.jlll.common.Library;
 import ru.ydn.jlll.common.Macros;
+import ru.ydn.jlll.common.ModuleEnvironment;
 import ru.ydn.jlll.common.Null;
 import ru.ydn.jlll.common.ParameterParser;
 import ru.ydn.jlll.common.Primitive;
@@ -595,6 +603,366 @@ public class KernelLib implements Library
                 catch (MalformedURLException e)
                 {
                     throw new JlllException("Can't load: " + vaCons.get(0).toString(), e);
+                }
+                return null;
+            }
+        };
+        new Primitive("load", env, "Loads and evaluates a JLLL script from a file path. (load \"path/to/script.jlll\")")
+        {
+            private static final long serialVersionUID = 7284619283746192837L;
+
+            public Object applyEvaluated(Cons vaCons, Environment env) throws JlllException
+            {
+                String pathStr = vaCons.get(0).toString();
+                Path filePath = Paths.get(pathStr);
+                if (!Files.exists(filePath))
+                {
+                    throw new JlllException("File not found: " + pathStr);
+                }
+                if (!Files.isReadable(filePath))
+                {
+                    throw new JlllException("File not readable: " + pathStr);
+                }
+                try (BufferedReader reader = Files.newBufferedReader(filePath))
+                {
+                    Jlll.eval(reader, env);
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("Cannot load file: " + pathStr, e);
+                }
+                return null;
+            }
+        };
+        new Primitive("module", env, "Defines a module with optional exports. (module name body...) "
+                + "Use (export sym1 sym2) or (export *) within the body to mark exports.")
+        {
+            private static final long serialVersionUID = 8374619283746192838L;
+
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                // (module name body...)
+                if (values.length() < 1)
+                {
+                    throw new JlllException("module requires a name");
+                }
+                Object nameObj = values.get(0);
+                if (!(nameObj instanceof Symbol))
+                {
+                    throw new JlllException("module name must be a symbol: " + nameObj);
+                }
+                String moduleName = ((Symbol) nameObj).getName();
+                // Check for re-definition (allow for partial loading / circular deps)
+                ModuleEnvironment moduleEnv = Environment.getModule(moduleName);
+                if (moduleEnv == null)
+                {
+                    // Create new module with top environment as parent
+                    // This gives access to all standard primitives
+                    moduleEnv = new ModuleEnvironment(moduleName, env.getTopEnvironment());
+                    Environment.registerModule(moduleName, moduleEnv);
+                }
+                // Evaluate body in module environment
+                Cons body = (Cons) values.cdr();
+                Object result = null;
+                for (Object form : body)
+                {
+                    result = Evaluator.eval(form, moduleEnv);
+                }
+                moduleEnv.setLoaded(true);
+                return result;
+            }
+        };
+        new Primitive("export", env, "Marks symbols for export from current module. (export sym1 sym2 ...) "
+                + "or (export *) to export all bindings.")
+        {
+            private static final long serialVersionUID = 8374619283746192839L;
+
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                // Find enclosing ModuleEnvironment
+                Environment current = env;
+                while (current != null && !(current instanceof ModuleEnvironment))
+                {
+                    current = current.getParent();
+                }
+                if (current == null)
+                {
+                    throw new JlllException("export can only be used inside a module");
+                }
+                ModuleEnvironment module = (ModuleEnvironment) current;
+                for (Object item : values)
+                {
+                    if (item instanceof Symbol)
+                    {
+                        Symbol sym = (Symbol) item;
+                        if (sym.getName().equals("*"))
+                        {
+                            module.exportAll();
+                        }
+                        else
+                        {
+                            module.export(sym);
+                        }
+                    }
+                    else
+                    {
+                        throw new JlllException("export expects symbols, got: " + item);
+                    }
+                }
+                return null;
+            }
+        };
+        new Primitive("import", env, "Imports symbols from a module. (import modname) imports all exports, "
+                + "(import modname :only (a b)) imports specific symbols, "
+                + "(import modname :prefix foo/) adds prefix, " + "(import modname :except (a)) excludes symbols.")
+        {
+            private static final long serialVersionUID = 8374619283746192840L;
+
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("import requires a module name");
+                }
+                // Get module name
+                Object nameObj = values.get(0);
+                if (!(nameObj instanceof Symbol))
+                {
+                    throw new JlllException("import: module name must be a symbol: " + nameObj);
+                }
+                String moduleName = ((Symbol) nameObj).getName();
+                ModuleEnvironment module = Environment.getModule(moduleName);
+                if (module == null)
+                {
+                    throw new JlllException("import: module not found: " + moduleName);
+                }
+                // Parse options
+                Set<Symbol> onlySymbols = null;
+                Set<Symbol> exceptSymbols = new HashSet<>();
+                String prefix = "";
+                Cons options = (Cons) values.cdr();
+                Iterator<Object> it = options.iterator();
+                while (it.hasNext())
+                {
+                    Object opt = it.next();
+                    if (opt instanceof Keyword)
+                    {
+                        String kw = ((Keyword) opt).getName();
+                        if (!it.hasNext())
+                        {
+                            throw new JlllException("import: keyword " + kw + " requires a value");
+                        }
+                        Object val = it.next();
+                        if (kw.equals("only"))
+                        {
+                            onlySymbols = parseSymbolList(val, "import :only");
+                        }
+                        else if (kw.equals("except"))
+                        {
+                            exceptSymbols = parseSymbolList(val, "import :except");
+                        }
+                        else if (kw.equals("prefix"))
+                        {
+                            if (val instanceof Symbol)
+                            {
+                                prefix = ((Symbol) val).getName();
+                            }
+                            else if (val instanceof String)
+                            {
+                                prefix = (String) val;
+                            }
+                            else
+                            {
+                                throw new JlllException("import :prefix requires a symbol or string");
+                            }
+                        }
+                        else
+                        {
+                            throw new JlllException("import: unknown option :" + kw);
+                        }
+                    }
+                    else
+                    {
+                        throw new JlllException("import: expected keyword option, got: " + opt);
+                    }
+                }
+                // Get exports and filter
+                Map<Symbol, Object> exports = module.getExports();
+                Map<Symbol, Map<Symbol, Object>> exportedMeta = module.getExportedMetadata();
+                for (Map.Entry<Symbol, Object> entry : exports.entrySet())
+                {
+                    Symbol sym = entry.getKey();
+                    // Apply :only filter
+                    if (onlySymbols != null && !onlySymbols.contains(sym))
+                    {
+                        continue;
+                    }
+                    // Apply :except filter
+                    if (exceptSymbols.contains(sym))
+                    {
+                        continue;
+                    }
+                    // Create target symbol with optional prefix
+                    Symbol targetSym = prefix.isEmpty() ? sym : Symbol.intern(prefix + sym.getName());
+                    // Copy binding with metadata
+                    env.addBinding(targetSym, entry.getValue());
+                    Map<Symbol, Object> meta = exportedMeta.get(sym);
+                    if (meta != null)
+                    {
+                        for (Map.Entry<Symbol, Object> metaEntry : meta.entrySet())
+                        {
+                            env.setMeta(targetSym, metaEntry.getKey(), metaEntry.getValue());
+                        }
+                    }
+                }
+                return null;
+            }
+
+            private Set<Symbol> parseSymbolList(Object val, String context) throws JlllException
+            {
+                Set<Symbol> result = new HashSet<>();
+                if (val instanceof Cons)
+                {
+                    for (Object item : (Cons) val)
+                    {
+                        if (item instanceof Symbol)
+                        {
+                            result.add((Symbol) item);
+                        }
+                        else
+                        {
+                            throw new JlllException(context + " requires a list of symbols");
+                        }
+                    }
+                }
+                else if (val instanceof Symbol)
+                {
+                    result.add((Symbol) val);
+                }
+                else
+                {
+                    throw new JlllException(context + " requires a list of symbols");
+                }
+                return result;
+            }
+        };
+        new Primitive("require", env, "Loads a file and imports its module. (require \"path.jlll\") loads and imports, "
+                + "(require \"path.jlll\" :as prefix) adds prefix to imports.")
+        {
+            private static final long serialVersionUID = 8374619283746192841L;
+
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("require needs a file path");
+                }
+                // Evaluate the path argument
+                String pathStr = Evaluator.eval(values.get(0), env).toString();
+                // Parse options
+                String asPrefix = null;
+                Cons options = (Cons) values.cdr();
+                Iterator<Object> it = options.iterator();
+                while (it.hasNext())
+                {
+                    Object opt = it.next();
+                    if (opt instanceof Keyword)
+                    {
+                        String kw = ((Keyword) opt).getName();
+                        if (!it.hasNext())
+                        {
+                            throw new JlllException("require: keyword " + kw + " requires a value");
+                        }
+                        Object val = it.next();
+                        if (kw.equals("as"))
+                        {
+                            if (val instanceof Symbol)
+                            {
+                                asPrefix = ((Symbol) val).getName();
+                                // Ensure prefix ends with /
+                                if (!asPrefix.endsWith("/"))
+                                {
+                                    asPrefix = asPrefix + "/";
+                                }
+                            }
+                            else
+                            {
+                                throw new JlllException("require :as requires a symbol");
+                            }
+                        }
+                        else
+                        {
+                            throw new JlllException("require: unknown option :" + kw);
+                        }
+                    }
+                }
+                // Load the file
+                Path filePath = Paths.get(pathStr);
+                if (!Files.exists(filePath))
+                {
+                    throw new JlllException("require: file not found: " + pathStr);
+                }
+                if (!Files.isReadable(filePath))
+                {
+                    throw new JlllException("require: file not readable: " + pathStr);
+                }
+                // Record existing modules before loading
+                Set<String> modulesBefore = new HashSet<>(Environment.getModuleNames());
+                // Create a temporary environment to capture any module definitions
+                Environment loadEnv = new Environment(env.getTopEnvironment());
+                try (BufferedReader reader = Files.newBufferedReader(filePath))
+                {
+                    Jlll.eval(reader, loadEnv);
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("require: cannot load file: " + pathStr, e);
+                }
+                // Find modules that were defined during the load
+                Set<String> modulesAfter = new HashSet<>(Environment.getModuleNames());
+                modulesAfter.removeAll(modulesBefore);
+                if (!modulesAfter.isEmpty())
+                {
+                    // Import from newly defined modules
+                    for (String moduleName : modulesAfter)
+                    {
+                        ModuleEnvironment module = Environment.getModule(moduleName);
+                        if (module != null)
+                        {
+                            Map<Symbol, Object> exports = module.getExports();
+                            Map<Symbol, Map<Symbol, Object>> exportedMeta = module.getExportedMetadata();
+                            for (Map.Entry<Symbol, Object> entry : exports.entrySet())
+                            {
+                                Symbol sym = entry.getKey();
+                                Symbol targetSym = asPrefix != null ? Symbol.intern(asPrefix + sym.getName()) : sym;
+                                env.addBinding(targetSym, entry.getValue());
+                                Map<Symbol, Object> meta = exportedMeta.get(sym);
+                                if (meta != null)
+                                {
+                                    for (Map.Entry<Symbol, Object> metaEntry : meta.entrySet())
+                                    {
+                                        env.setMeta(targetSym, metaEntry.getKey(), metaEntry.getValue());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // No module found - just copy all top-level definitions from loadEnv
+                    // This handles files that don't use (module ...)
+                    for (Map.Entry<Symbol, Object> entry : loadEnv.getAllBindings().entrySet())
+                    {
+                        // Skip built-in primitives (they're in top env)
+                        if (env.getTopEnvironment().lookup(entry.getKey()) != null)
+                        {
+                            continue;
+                        }
+                        Symbol sym = entry.getKey();
+                        Symbol targetSym = asPrefix != null ? Symbol.intern(asPrefix + sym.getName()) : sym;
+                        env.addBinding(targetSym, entry.getValue());
+                    }
                 }
                 return null;
             }

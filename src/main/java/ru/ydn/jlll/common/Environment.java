@@ -6,6 +6,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Environment is a data structure to store variables of the calculation environment.
@@ -20,6 +23,72 @@ public class Environment implements Serializable
      * top Environment
      */
     public static Environment top = null;
+    /**
+     * Module registry - maps module names to their environments.
+     * Thread-safe for concurrent module loading.
+     */
+    private static final ConcurrentMap<String, ModuleEnvironment> modules = new ConcurrentHashMap<>();
+
+    /**
+     * Registers a module in the global registry.
+     *
+     * @param name
+     *            the module name
+     * @param module
+     *            the module environment
+     */
+    public static void registerModule(String name, ModuleEnvironment module)
+    {
+        modules.put(name, module);
+    }
+
+    /**
+     * Looks up a module by name.
+     *
+     * @param name
+     *            the module name
+     * @return the module environment, or null if not found
+     */
+    public static ModuleEnvironment getModule(String name)
+    {
+        return modules.get(name);
+    }
+
+    /**
+     * Checks if a module is registered.
+     *
+     * @param name
+     *            the module name
+     * @return true if the module exists
+     */
+    public static boolean hasModule(String name)
+    {
+        return modules.containsKey(name);
+    }
+
+    /**
+     * Returns all registered module names.
+     *
+     * @return set of module names
+     */
+    public static Set<String> getModuleNames()
+    {
+        return modules.keySet();
+    }
+
+    /**
+     * Removes a module from the registry.
+     * Primarily for testing purposes.
+     *
+     * @param name
+     *            the module name to remove
+     * @return the removed module, or null if not found
+     */
+    public static ModuleEnvironment removeModule(String name)
+    {
+        return modules.remove(name);
+    }
+
     static
     {
         String topClass = null;
