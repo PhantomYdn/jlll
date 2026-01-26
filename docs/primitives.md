@@ -189,6 +189,21 @@ Arithmetic and numeric operations.
 | `gcd` | Greatest common divisor | `(gcd 12 18)` => `6` |
 | `lcm` | Least common multiple | `(lcm 4 6)` => `12` |
 
+### Rounding
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `round` | Round to nearest integer | `(round 3.5)` => `4` |
+| `truncate` | Truncate toward zero | `(truncate -3.7)` => `-3` |
+| `sign` | Sign of number (-1, 0, or 1) | `(sign -5)` => `-1` |
+
+### Constants
+
+| Variable | Description | Value |
+|----------|-------------|-------|
+| `pi` | Mathematical constant π | `3.14159...` |
+| `e` | Mathematical constant e (Euler's number) | `2.71828...` |
+
 ## List Library
 
 List manipulation functions.
@@ -236,6 +251,8 @@ Type checking and testing functions.
 | `null?` | Test for null | `(null? '())` => `true` |
 | `nil?` | Alias for null? | `(nil? null)` => `true` |
 | `list?` | Test for list | `(list? '(1 2))` => `true` |
+| `pair?` | Test for non-empty cons cell | `(pair? '(a . b))` => `true` |
+| `atom?` | Test for non-pair (includes empty list) | `(atom? 'x)` => `true` |
 | `number?` | Test for any number | `(number? 42)` => `true` |
 | `integer?` | Test for integer | `(integer? 42)` => `true` |
 | `keyword?` | Test for keyword | `(keyword? :foo)` => `true` |
@@ -258,6 +275,14 @@ Type checking and testing functions.
 | `keyword->symbol` | Convert keyword to symbol | `(keyword->symbol :foo)` => `foo` |
 | `symbol->keyword` | Convert symbol to keyword | `(symbol->keyword 'foo)` => `:foo` |
 | `keyword-name` | Get keyword name as string | `(keyword-name :foo)` => `"foo"` |
+
+### Symbol Utilities
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `gensym` | Generate unique symbol | `(gensym)` => `G__1` |
+| `gensym` | Generate with prefix | `(gensym "temp")` => `temp__2` |
+| `symbol=?` | Test symbol equality | `(symbol=? 'foo 'foo)` => `true` |
 
 ## String Library
 

@@ -279,8 +279,8 @@ Complete the predicate library. Some are marked as TODO in `predicates.jlll`.
 - [x] `number?` - Test for any number
 - [x] `integer?` - Test for integer
 - [ ] `real?` - Test for real number (non-complex)
-- [ ] `pair?` - Test for cons pair (note: `'()` is NOT a pair)
-- [ ] `atom?` - Test for non-pair (convenience)
+- [x] `pair?` - Test for cons pair (note: `'()` is NOT a pair)
+- [x] `atom?` - Test for non-pair (convenience)
 - [ ] `char?` - Test for character (if char type added)
 - [ ] `vector?` - Test for Java array/vector
 - [ ] `port?` - Test for input/output port
@@ -540,8 +540,8 @@ Features for metaprogramming and writing hygienic macros.
 
 ### Checklist
 
-- [ ] `gensym` - Generate unique symbol
-- [ ] `symbol=?` - Symbol equality (currently use `equal?`)
+- [x] `gensym` - Generate unique symbol
+- [x] `symbol=?` - Symbol equality (currently use `equal?`)
 
 ---
 
@@ -578,13 +578,13 @@ e                                     ; => 2.71828...
 ### Checklist
 
 - [x] `asin` - Arc sine (was documented but missing from math.jlll)
-- [ ] `round` - Round to nearest integer (ties to even)
-- [ ] `truncate` - Truncate toward zero
+- [x] `round` - Round to nearest integer (ties to even)
+- [x] `truncate` - Truncate toward zero
 - [ ] `random` - Random number generation
 - [ ] `random-seed` - Set random seed
-- [ ] `pi` - Mathematical constant 3.14159...
-- [ ] `e` - Mathematical constant 2.71828...
-- [ ] `sign` / `signum` - Sign of number (-1, 0, 1)
+- [x] `pi` - Mathematical constant 3.14159...
+- [x] `e` - Mathematical constant 2.71828...
+- [x] `sign` / `signum` - Sign of number (-1, 0, 1)
 
 ---
 

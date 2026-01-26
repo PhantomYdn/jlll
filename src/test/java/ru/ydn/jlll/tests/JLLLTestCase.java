@@ -467,6 +467,90 @@ public class JLLLTestCase
         eval(true, "(integer? 42)");
         eval(false, "(integer? 3.14)");
         eval(false, "(integer? \"42\")");
+        // pair? - true for non-empty cons cells
+        eval(true, "(pair? '(a . b))");
+        eval(true, "(pair? '(a b c))");
+        eval(true, "(pair? '(1))");
+        eval(true, "(pair? (cons 1 2))");
+        eval(false, "(pair? '())");
+        eval(false, "(pair? null)");
+        eval(false, "(pair? 42)");
+        eval(false, "(pair? \"string\")");
+        eval(false, "(pair? 'symbol)");
+        // atom? - true for non-pairs (including empty list)
+        eval(true, "(atom? 'symbol)");
+        eval(true, "(atom? 42)");
+        eval(true, "(atom? 3.14)");
+        eval(true, "(atom? \"string\")");
+        eval(true, "(atom? '())");
+        eval(true, "(atom? null)");
+        eval(false, "(atom? '(a b))");
+        eval(false, "(atom? '(a . b))");
+        eval(false, "(atom? (cons 1 2))");
+    }
+
+    @Test
+    public void testSymbolUtilities() throws Exception
+    {
+        // gensym - generates unique symbols
+        Object sym1 = Jlll.eval("(gensym)", env);
+        assertTrue(sym1 instanceof Symbol);
+        assertTrue(((Symbol) sym1).getName().startsWith("G__"));
+        Object sym2 = Jlll.eval("(gensym)", env);
+        assertFalse(sym1.equals(sym2)); // Each gensym is unique
+        // gensym with prefix
+        Object sym3 = Jlll.eval("(gensym \"temp\")", env);
+        assertTrue(sym3 instanceof Symbol);
+        assertTrue(((Symbol) sym3).getName().startsWith("temp__"));
+        // symbol=?
+        eval(true, "(symbol=? 'foo 'foo)");
+        eval(false, "(symbol=? 'foo 'bar)");
+        eval(false, "(symbol=? (gensym \"x\") (gensym \"x\"))"); // Different symbols, each gensym is unique
+    }
+
+    @Test
+    public void testMathConstants() throws Exception
+    {
+        // pi
+        Object pi = Jlll.eval("pi", env);
+        assertTrue(pi instanceof Double);
+        assertEquals(Math.PI, ((Double) pi).doubleValue(), 0.0001);
+        // e
+        Object e = Jlll.eval("e", env);
+        assertTrue(e instanceof Double);
+        assertEquals(Math.E, ((Double) e).doubleValue(), 0.0001);
+        // Use in expressions
+        eval(true, "(> pi 3.14)");
+        eval(true, "(< pi 3.15)");
+        eval(true, "(> e 2.71)");
+        eval(true, "(< e 2.72)");
+    }
+
+    @Test
+    public void testRoundTruncateSign() throws Exception
+    {
+        // round - Java Math.round uses "round half up" (toward positive infinity)
+        eval(4L, "(round 3.5)");
+        eval(4L, "(round 3.6)");
+        eval(3L, "(round 3.4)");
+        eval(-3L, "(round -3.5)"); // -3.5 rounds to -3 (toward positive infinity)
+        eval(-3L, "(round -3.4)");
+        eval(0L, "(round 0)");
+        // truncate - toward zero
+        eval(3L, "(truncate 3.7)");
+        eval(3L, "(truncate 3.2)");
+        eval(-3L, "(truncate -3.7)");
+        eval(-3L, "(truncate -3.2)");
+        eval(0L, "(truncate 0)");
+        eval(0L, "(truncate 0.9)");
+        eval(0L, "(truncate -0.9)");
+        // sign
+        eval(1, "(sign 5)");
+        eval(1, "(sign 0.1)");
+        eval(0, "(sign 0)");
+        eval(0, "(sign 0.0)");
+        eval(-1, "(sign -5)");
+        eval(-1, "(sign -0.1)");
     }
 
     @Test

@@ -1,5 +1,7 @@
 package ru.ydn.jlll.libs;
 
+import java.util.concurrent.atomic.AtomicLong;
+import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
@@ -19,6 +21,10 @@ import ru.ydn.jlll.common.annotation.JlllName;
  * <ul>
  * <li><b>null?:</b> tests if value is null/nil</li>
  * <li><b>jlll-bound?:</b> tests if a symbol is bound in the environment</li>
+ * <li><b>pair?:</b> tests if value is a non-empty cons cell</li>
+ * <li><b>atom?:</b> tests if value is not a pair (includes empty list)</li>
+ * <li><b>gensym:</b> generates a unique symbol for macro hygiene</li>
+ * <li><b>symbol=?:</b> tests if two symbols are equal</li>
  * </ul>
  *
  * <p>
@@ -28,6 +34,9 @@ import ru.ydn.jlll.common.annotation.JlllName;
  */
 public class PredicatesLib extends ReflectionLibrary
 {
+    /** Counter for generating unique symbols */
+    private static final AtomicLong GENSYM_COUNTER = new AtomicLong(0);
+
     /** {@inheritDoc} */
     public void load(Environment env) throws JlllException
     {
@@ -213,5 +222,71 @@ public class PredicatesLib extends ReflectionLibrary
     public boolean isOdd(Integer n)
     {
         return n % 2 != 0;
+    }
+
+    /**
+     * Tests if a value is a pair (non-empty cons cell).
+     * {@code (pair? '(a . b))} returns true.
+     * {@code (pair? '())} returns false (empty list is not a pair).
+     * {@code (pair? 'symbol)} returns false.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is a non-empty Cons cell
+     */
+    @JlllName("pair?")
+    public boolean isPair(Object obj)
+    {
+        return obj instanceof Cons && !((Cons) obj).isNull();
+    }
+
+    /**
+     * Tests if a value is an atom (not a pair).
+     * {@code (atom? 'symbol)} returns true.
+     * {@code (atom? 42)} returns true.
+     * {@code (atom? '())} returns true (empty list is an atom).
+     * {@code (atom? '(a b))} returns false.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is not a non-empty Cons cell
+     */
+    @JlllName("atom?")
+    public boolean isAtom(Object obj)
+    {
+        return !isPair(obj);
+    }
+
+    /**
+     * Generates a unique symbol for macro hygiene.
+     * {@code (gensym)} returns a symbol like {@code G__1234}.
+     * {@code (gensym "temp")} returns a symbol like {@code temp__1234}.
+     *
+     * @param prefix
+     *            optional prefix for the symbol name (default "G")
+     * @return a unique symbol
+     */
+    @JlllName("gensym")
+    public Symbol gensym(String... prefix)
+    {
+        String base = (prefix.length > 0 && prefix[0] != null) ? prefix[0] : "G";
+        return Symbol.intern(base + "__" + GENSYM_COUNTER.incrementAndGet());
+    }
+
+    /**
+     * Tests if two symbols are equal.
+     * {@code (symbol=? 'foo 'foo)} returns true.
+     * {@code (symbol=? 'foo 'bar)} returns false.
+     *
+     * @param sym1
+     *            first symbol
+     * @param sym2
+     *            second symbol
+     * @return true if the symbols are equal
+     */
+    @JlllName("symbol=?")
+    public boolean symbolEquals(Symbol sym1, Symbol sym2)
+    {
+        return sym1.equals(sym2);
     }
 }

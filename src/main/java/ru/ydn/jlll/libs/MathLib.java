@@ -25,6 +25,9 @@ import ru.ydn.jlll.util.ListUtil;
  * <li><b>Comparison:</b> &lt;, &gt;, =, between</li>
  * <li><b>Aggregation:</b> max, min</li>
  * <li><b>Logic:</b> and, or, not</li>
+ * <li><b>Constants:</b> pi, e</li>
+ * <li><b>Rounding:</b> round, truncate</li>
+ * <li><b>Sign:</b> sign</li>
  * </ul>
  *
  * <p>
@@ -38,6 +41,9 @@ public class MathLib extends ReflectionLibrary
     public void load(Environment env) throws JlllException
     {
         super.load(env);
+        // Mathematical constants
+        env.addBinding("pi", Math.PI);
+        env.addBinding("e", Math.E);
         new Primitive("+", env,
                 "Addition. (+ a b ...) returns the sum of all arguments. Preserves integer type if all operands are integers.")
         {
@@ -463,5 +469,53 @@ public class MathLib extends ReflectionLibrary
             return 0;
         }
         return Math.abs(a / gcd(a, b) * b);
+    }
+
+    /**
+     * Rounds a number to the nearest integer. ({@code (round 3.5)}) returns 4.
+     * Uses standard rounding (ties round to nearest even, as per Java's Math.round).
+     *
+     * @param n
+     *            the number to round
+     * @return the nearest integer as a long
+     */
+    @JlllName("round")
+    public Long round(Number n)
+    {
+        return Math.round(n.doubleValue());
+    }
+
+    /**
+     * Truncates a number toward zero. ({@code (truncate 3.7)}) returns 3.
+     * ({@code (truncate -3.7)}) returns -3.
+     *
+     * @param n
+     *            the number to truncate
+     * @return the integer part (toward zero) as a long
+     */
+    @JlllName("truncate")
+    public Long truncate(Number n)
+    {
+        double d = n.doubleValue();
+        return (long) (d >= 0 ? Math.floor(d) : Math.ceil(d));
+    }
+
+    /**
+     * Returns the sign of a number. ({@code (sign -5)}) returns -1.
+     * ({@code (sign 0)}) returns 0. ({@code (sign 5)}) returns 1.
+     *
+     * @param n
+     *            the number to check
+     * @return -1, 0, or 1 depending on the sign
+     */
+    @JlllName("sign")
+    public Integer sign(Number n)
+    {
+        double d = n.doubleValue();
+        if (d > 0)
+            return 1;
+        if (d < 0)
+            return -1;
+        return 0;
     }
 }
