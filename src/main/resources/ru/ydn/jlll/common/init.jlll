@@ -18,6 +18,8 @@
 
 (load-lib "ru.ydn.jlll.libs.ConcurrencyLib")
 
+(load-lib "ru.ydn.jlll.libs.LazyLib")
+
 (load-lib "ru.ydn.jlll.libs.SQLLib")
 
 

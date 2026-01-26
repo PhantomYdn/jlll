@@ -9,8 +9,10 @@ import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.JlllAtom;
+import ru.ydn.jlll.common.JlllDelay;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.JlllFuture;
+import ru.ydn.jlll.common.LazyThunk;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
 import ru.ydn.jlll.common.ReflectionLibrary;
@@ -385,15 +387,17 @@ public class ConcurrencyLib extends ReflectionLibrary
     }
 
     /**
-     * Tests if a future or atom has completed/is ready.
-     * ({@code (realized? f)}) returns true if the future has completed.
+     * Tests if a future, atom, delay, or lazy thunk has completed/is ready.
+     * ({@code (realized? f)}) returns true if the value has been computed.
      * For atoms, always returns true since they always have a value.
+     * For delays and thunks, returns true if they have been forced.
+     * For cons cells with lazy cdr, returns true if the cdr has been realized.
      *
      * @param obj
-     *            the future or atom to test
+     *            the future, atom, delay, thunk, or cons to test
      * @return true if the computation has completed
      * @throws JlllException
-     *             if obj is neither a future nor an atom
+     *             if obj is not a recognized lazy/async type
      */
     @JlllName("realized?")
     public Boolean isRealized(Object obj) throws JlllException
@@ -406,6 +410,19 @@ public class ConcurrencyLib extends ReflectionLibrary
         {
             return true; // Atoms always have a value
         }
-        throw new JlllException("realized?: expected future or atom, got " + obj);
+        else if (obj instanceof JlllDelay)
+        {
+            return ((JlllDelay) obj).isRealized();
+        }
+        else if (obj instanceof LazyThunk)
+        {
+            return ((LazyThunk) obj).isRealized();
+        }
+        else if (obj instanceof Cons)
+        {
+            // For cons cells, check if the cdr is an unrealized lazy thunk
+            return !((Cons) obj).hasLazyCdr();
+        }
+        throw new JlllException("realized?: expected future, atom, delay, thunk, or cons, got " + obj);
     }
 }

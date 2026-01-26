@@ -1220,11 +1220,13 @@ Hash-based set data structure for efficient membership testing and set operation
 
 ---
 
-## 21. Lazy Sequences (Nice to Have)
+## 21. Lazy Sequences (Implemented)
 
 Lazy evaluation for working with potentially infinite sequences and deferred computation.
 
-### Proposed Implementation
+See [docs/lazy-sequences.md](docs/lazy-sequences.md) for comprehensive documentation.
+
+### Usage Examples
 
 ```lisp
 ;; Delay evaluation (create a "promise")
@@ -1236,71 +1238,74 @@ Lazy evaluation for working with potentially infinite sequences and deferred com
 (realized? p)                             ; => true after first force
 
 ;; Lazy cons - cdr is delayed
-(define ones (lazy-cons 1 ones))          ; infinite list of 1s
-(car ones)                                ; => 1
-(car (cdr ones))                          ; => 1
+(lazy-cons 1 (lazy-cons 2 '()))           ; lazy list (1 ...)
 
 ;; Lazy range (possibly infinite)
 (define naturals (lazy-range 0))          ; 0, 1, 2, 3, ...
-(define evens (lazy-range 0 :step 2))     ; 0, 2, 4, 6, ...
+(define evens (lazy-range 0 100 2))       ; 0, 2, 4, ..., 98
 (define finite (lazy-range 0 10))         ; 0, 1, ..., 9
 
 ;; Take from lazy sequence (forces evaluation)
-(take 5 naturals)                         ; => (0 1 2 3 4)
-(take 10 (lazy-range 0 :step 2))          ; => (0 2 4 6 8 10 12 14 16 18)
+;; Note: JLLL take signature is (take list n)
+(take naturals 5)                         ; => (0 1 2 3 4)
+(take (lazy-range 0 100 2) 5)             ; => (0 2 4 6 8)
 
 ;; Lazy transformations (return lazy sequences)
 (define squares (lazy-map (lambda (x) (* x x)) naturals))
-(take 5 squares)                          ; => (0 1 4 9 16)
+(take squares 5)                          ; => (0 1 4 9 16)
 
 (define evens (lazy-filter even? naturals))
-(take 5 evens)                            ; => (0 2 4 6 8)
+(take evens 5)                            ; => (0 2 4 6 8)
 
 ;; Lazy drop
-(take 5 (lazy-drop 10 naturals))          ; => (10 11 12 13 14)
+(take (lazy-drop 10 naturals) 5)          ; => (10 11 12 13 14)
 
 ;; Take while
-(lazy-take-while (lambda (x) (< x 100)) naturals)
+(realize (lazy-take-while (lambda (x) (< x 5)) naturals))  ; => (0 1 2 3 4)
 
 ;; Realize entire lazy sequence (careful with infinite!)
 (realize (lazy-range 0 10))               ; => (0 1 2 3 4 5 6 7 8 9)
 
-;; Check if lazy
-(lazy-seq? naturals)                      ; => true
+;; Check if lazy (has unrealized cdr)
+(lazy-seq? (lazy-range 0))                ; => true
 (lazy-seq? '(1 2 3))                      ; => false
 
 ;; Iterate - generate from function
 (define powers-of-2 (iterate (lambda (x) (* x 2)) 1))
-(take 10 powers-of-2)                     ; => (1 2 4 8 16 32 64 128 256 512)
+(take powers-of-2 8)                      ; => (1 2 4 8 16 32 64 128)
 
 ;; Cycle - infinite repetition
 (define abc (cycle '(a b c)))
-(take 7 abc)                              ; => (a b c a b c a)
+(take abc 7)                              ; => (a b c a b c a)
 
 ;; Repeat - infinite copies
-(take 5 (repeat 'x))                      ; => (x x x x x)
+(take (repeat 'x) 5)                      ; => (x x x x x)
 ```
 
 **Implementation notes:**
-- `delay`/`force` use a simple wrapper class with memoization
-- Lazy sequences can be implemented as thunks returning `(value . thunk)`
-- Be careful with stack depth on long sequences (use trampolining if needed)
-- `take` on infinite sequence must force elements one at a time
-- Consider implementing as proper stream type for better integration
+- Lazy sequences are implemented by allowing `Cons.cdr()` to contain a `LazyThunk`
+- When `cdr()` is called, the thunk is automatically forced and cached
+- `JlllDelay` provides the `delay`/`force` mechanism with memoization
+- `LazyThunk` is used internally by lazy generators and transformations
+- Unrealized lazy tails display as `...` in the REPL (e.g., `(0 ...)`)
+- Thread-safe forcing with double-checked locking
+- Existing `take`, `car`, `cdr` work transparently with lazy sequences
 
 ### Checklist
 
-- [ ] `delay` / `force` - Basic lazy evaluation primitives
-- [ ] `lazy-cons` - Cons with lazy cdr
-- [ ] `lazy-seq?` - Test for lazy sequence
-- [ ] `lazy-range` - Lazy numeric range (finite or infinite)
-- [ ] `lazy-map` / `lazy-filter` - Lazy transformations
-- [ ] `lazy-take` / `lazy-drop` - Lazy slicing
-- [ ] `lazy-take-while` / `lazy-drop-while` - Predicate-based slicing
-- [ ] `realize` - Force entire lazy sequence to list
-- [ ] `iterate` - Generate from repeated function application
-- [ ] `cycle` - Infinite repetition of sequence
-- [ ] `repeat` - Infinite copies of value
+- [x] `delay` / `force` - Basic lazy evaluation primitives
+- [x] `lazy-cons` - Cons with lazy cdr
+- [x] `lazy-seq?` - Test for lazy sequence (unrealized cdr)
+- [x] `lazy-range` - Lazy numeric range (finite or infinite)
+- [x] `lazy-map` / `lazy-filter` - Lazy transformations (return lazy output)
+- [x] `realize` - Force entire lazy sequence to list
+- [x] `iterate` - Generate from repeated function application
+- [x] `cycle` - Infinite repetition of sequence
+- [x] `repeat` - Infinite copies of value
+- [x] Additional predicates: `delay?`, `thunk?`, `has-lazy?`
+- [x] Extended `realized?` to support delays and lazy sequences
+- [x] Helper functions in `lazy.jlll`: `lazy-naturals`, `lazy-concat`, `lazy-zip`, etc.
+- [x] Transparent integration: existing `take`, `drop`, `take-while`, `drop-while`, `any`, `every`, `find`, `reduce`, `list-ref` work with lazy sequences
 
 ---
 

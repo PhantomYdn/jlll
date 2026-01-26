@@ -1,0 +1,103 @@
+;; Lazy sequence utilities for JLLL
+;; This file is loaded by LazyLib.java
+
+;; ============== Lazy Sequence Generators ==============
+
+(define (lazy-naturals)
+  :doc "Returns an infinite lazy sequence of natural numbers starting from 0."
+  (lazy-range 0))
+
+(define (lazy-integers)
+  :doc "Returns an infinite lazy sequence of integers: 0, 1, -1, 2, -2, ..."
+  (define (make-integers n)
+    (if (= n 0)
+        (lazy-cons 0 (make-integers 1))
+        (lazy-cons n (lazy-cons (- n) (make-integers (+ n 1))))))
+  (make-integers 0))
+
+;; ============== Lazy Sequence Utilities ==============
+
+(define (lazy-concat seq1 seq2)
+  :doc "Lazily concatenates two sequences. seq2 is not evaluated until seq1 is exhausted."
+  (if (null? seq1)
+      seq2
+      (lazy-cons (car seq1) (lazy-concat (cdr seq1) seq2))))
+
+(define (lazy-append . seqs)
+  :doc "Lazily appends multiple sequences together."
+  (if (null? seqs)
+      '()
+      (lazy-concat (car seqs) (apply lazy-append (cdr seqs)))))
+
+(define (lazy-flatten seq)
+  :doc "Lazily flattens a sequence of sequences into a single sequence."
+  (cond ((null? seq) '())
+        ((not (list? (car seq))) (lazy-cons (car seq) (lazy-flatten (cdr seq))))
+        (else (lazy-concat (car seq) (lazy-flatten (cdr seq))))))
+
+(define (lazy-zip seq1 seq2)
+  :doc "Lazily zips two sequences into a sequence of pairs."
+  (if (or (null? seq1) (null? seq2))
+      '()
+      (lazy-cons (list (car seq1) (car seq2))
+                 (lazy-zip (cdr seq1) (cdr seq2)))))
+
+(define (lazy-interleave seq1 seq2)
+  :doc "Lazily interleaves elements from two sequences."
+  (cond ((null? seq1) seq2)
+        ((null? seq2) seq1)
+        (else (lazy-cons (car seq1)
+                         (lazy-interleave seq2 (cdr seq1))))))
+
+;; ============== Lazy Predicates ==============
+;; Note: The standard any, every, find functions work transparently with lazy sequences
+;; due to automatic thunk forcing in Cons.cdr(). No lazy- variants needed.
+
+;; ============== Conversion Utilities ==============
+
+(define (list->lazy li)
+  :doc "Converts a regular list to a lazy sequence."
+  (if (null? li)
+      '()
+      (lazy-cons (car li) (list->lazy (cdr li)))))
+
+(define lazy->list
+  :doc "Alias for realize - converts lazy sequence to regular list."
+  realize)
+
+;; ============== Reduction and Indexed Operations ==============
+;; Note: The standard reduce, fold-left, length, and list-ref functions work
+;; transparently with lazy sequences. No lazy- variants needed.
+
+(define (lazy-indexed seq)
+  :doc "Returns a lazy sequence of (index value) pairs."
+  (lazy-zip (lazy-range 0) seq))
+
+;; ============== Splitting ==============
+
+(define (lazy-split-at n seq)
+  :doc "Splits a lazy sequence at position n. Returns (taken-list . rest-lazy-seq)."
+  (cons (take seq n) (drop seq n)))
+
+(define (lazy-partition pred seq)
+  :doc "Lazily partitions a sequence into (matching . non-matching).
+        Note: Both results must be realized independently."
+  (cons (lazy-filter pred seq)
+        (lazy-filter (lambda (x) (not (pred x))) seq)))
+
+;; ============== Grouping ==============
+
+(define (lazy-partition-by f seq)
+  :doc "Lazily partitions a sequence into groups where f returns the same value.
+        Returns a lazy sequence of lists."
+  (if (null? seq)
+      '()
+      (let ((fst (car seq))
+            (fv (f (car seq))))
+        (define (take-group seq fv acc)
+          (cond ((null? seq) (cons (reverse acc) '()))
+                ((equal? fv (f (car seq)))
+                 (take-group (cdr seq) fv (cons (car seq) acc)))
+                (else (cons (reverse acc) seq))))
+        (let ((result (take-group seq fv '())))
+          (lazy-cons (car result) (lazy-partition-by f (cdr result)))))))

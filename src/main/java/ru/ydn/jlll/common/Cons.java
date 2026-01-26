@@ -180,15 +180,32 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     }
 
     /**
-     * Returns second element of the Cons
+     * Returns second element of the Cons.
      *
-     * @return second element of the Cons
+     * <p>
+     * If the cdr is a {@link LazyThunk}, it is automatically forced and the result is cached.
+     * This enables transparent lazy sequences where thunks in the cdr position are evaluated
+     * on demand.
+     * </p>
+     *
+     * @return second element of the Cons (forcing any lazy thunk)
      */
     public Object cdr()
     {
-        //return cdr;
+        // Force lazy thunk if present
+        if (cdr instanceof LazyThunk)
+        {
+            try
+            {
+                cdr = ((LazyThunk) cdr).force();
+            }
+            catch (JlllException e)
+            {
+                // Wrap in RuntimeException since cdr() doesn't declare checked exceptions
+                throw new RuntimeException("Lazy evaluation failed in cdr()", e);
+            }
+        }
         return cdr == null ? Null.NULL : cdr;
-        //return cdr==null? new Cons():cdr;
     }
 
     /**
@@ -200,6 +217,30 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     public void cdr(Object cdr)
     {
         this.cdr = cdr;
+    }
+
+    /**
+     * Returns the raw cdr without forcing any lazy thunk.
+     *
+     * <p>
+     * This is useful for checking if the cdr is lazy without triggering evaluation.
+     * </p>
+     *
+     * @return the raw cdr value (may be a LazyThunk)
+     */
+    public Object cdrRaw()
+    {
+        return cdr == null ? Null.NULL : cdr;
+    }
+
+    /**
+     * Checks if the cdr is a lazy thunk that has not been forced yet.
+     *
+     * @return true if the cdr is an unrealized lazy thunk
+     */
+    public boolean hasLazyCdr()
+    {
+        return cdr instanceof LazyThunk && !((LazyThunk) cdr).isRealized();
     }
 
     private String objectToString(Object obj)
@@ -217,13 +258,22 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     }
 
     /**
-     * Returns the string representation of the cons
+     * Returns the string representation of the cons.
+     *
+     * <p>
+     * Lazy (unrealized) thunks in the cdr are shown as "..." to avoid forcing evaluation.
+     * </p>
      */
     @Override
     public String toString()
     {
         if (isNull())
             return "()";
+        // Handle lazy cdr - show as "..." without forcing
+        else if (cdr instanceof LazyThunk && !((LazyThunk) cdr).isRealized())
+        {
+            return "(" + objectToString(car) + " ...)";
+        }
         else if (cdr instanceof Cons && !((Cons) cdr).isNull())
         {
             Cons cdrCons = (Cons) cdr;
@@ -270,6 +320,11 @@ public class Cons implements Serializable, Cloneable, Iterable<Object>
     {
         if (isNull())
             return "()";
+        // Handle lazy cdr - show as "..." without forcing
+        else if (cdr instanceof LazyThunk && !((LazyThunk) cdr).isRealized())
+        {
+            return objectToString(car) + " ...";
+        }
         else if (cdr instanceof Cons && !((Cons) cdr).isNull())
         {
             return objectToString(car) + " " + ((Cons) cdr).toStringList();
