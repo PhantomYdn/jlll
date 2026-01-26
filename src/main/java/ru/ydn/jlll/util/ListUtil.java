@@ -190,4 +190,16 @@ public class ListUtil
     {
         return new Cons(obj1, new Cons(obj2));
     }
+
+    /**
+     * Converts a Java List to a Cons list.
+     *
+     * @param list
+     *            the Java List to convert
+     * @return a new Cons list containing the elements
+     */
+    public static Cons listToCons(List<?> list)
+    {
+        return arrayToCons(list.toArray());
+    }
 }

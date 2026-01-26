@@ -355,9 +355,8 @@ public class KernelLib implements Library
                 return procedure;
             }
         };
-        new Primitive("let", env,
-                "Local bindings with parallel evaluation. (let ((var1 val1) (var2 val2) ...) body...). "
-                        + "All values are evaluated in the current environment before any bindings are created.")
+        new Primitive("let", env, "Local bindings with parallel evaluation. (let ((var1 val1) ...) body...). "
+                + "Also supports named let: (let name ((var1 init1) ...) body...) for recursive loops.")
         {
             private static final long serialVersionUID = 8273645091827364509L;
 
@@ -368,7 +367,67 @@ public class KernelLib implements Library
                 {
                     throw new JlllException("let requires bindings and at least one body expression");
                 }
-                Object bindingsObj = values.car();
+                Object first = values.car();
+                // Check for named let: (let name ((var init) ...) body...)
+                if (first instanceof Symbol)
+                {
+                    Symbol loopName = (Symbol) first;
+                    if (values.length() < 3)
+                    {
+                        throw new JlllException("named let requires name, bindings, and at least one body expression");
+                    }
+                    Object bindingsObj = values.cadr();
+                    if (!(bindingsObj instanceof Cons))
+                    {
+                        throw new JlllException("let: bindings must be a list, got: " + bindingsObj);
+                    }
+                    Cons bindings = (Cons) bindingsObj;
+                    Cons body = (Cons) values.tail(2);
+                    // Extract variables, initial values
+                    List<Symbol> vars = new ArrayList<>();
+                    List<Object> initVals = new ArrayList<>();
+                    for (Object binding : bindings)
+                    {
+                        if (!(binding instanceof Cons))
+                        {
+                            throw new JlllException("let: each binding must be a list, got: " + binding);
+                        }
+                        Cons b = (Cons) binding;
+                        if (b.length() != 2)
+                        {
+                            throw new JlllException(
+                                    "let: each binding must have exactly 2 elements (var val), got: " + b);
+                        }
+                        Object varObj = b.car();
+                        if (!(varObj instanceof Symbol))
+                        {
+                            throw new JlllException("let: variable must be a symbol, got: " + varObj);
+                        }
+                        vars.add((Symbol) varObj);
+                        initVals.add(Evaluator.eval(b.cadr(), env));
+                    }
+                    // Create environment and bind the loop procedure
+                    Environment letEnv = new Environment(env);
+                    // Build lambda parameters list
+                    Cons params = new Cons();
+                    for (int i = vars.size() - 1; i >= 0; i--)
+                    {
+                        params = new Cons(vars.get(i), params);
+                    }
+                    // Create the loop procedure
+                    CompoundProcedure loopProc = new CompoundProcedure(params, body, letEnv);
+                    letEnv.addBinding(loopName, loopProc);
+                    // Bind initial values
+                    for (int i = 0; i < vars.size(); i++)
+                    {
+                        letEnv.addBinding(vars.get(i), initVals.get(i));
+                    }
+                    // Evaluate body
+                    Object bodyExpr = new Cons(Symbol.BEGIN, body);
+                    return Evaluator.eval(bodyExpr, letEnv);
+                }
+                // Regular let
+                Object bindingsObj = first;
                 if (!(bindingsObj instanceof Cons))
                 {
                     throw new JlllException("let: bindings must be a list, got: " + bindingsObj);

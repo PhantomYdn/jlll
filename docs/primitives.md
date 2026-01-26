@@ -401,6 +401,83 @@ Use `eof-object?` to test for it:
 | `stdin` | Standard input stream (BufferedReader) | `stdin` |
 | `stdout` | Standard output stream (PrintWriter) | `stdout` |
 
+## File Library
+
+File system operations for reading, writing, and manipulating files and paths.
+
+### File Reading and Writing
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `slurp` | Read entire resource to string | `(slurp "file.txt")` |
+| `slurp` | Read from URL | `(slurp "https://example.com/data")` |
+| `slurp` | Read from classpath | `(slurp "classpath:config.jlll")` |
+| `spit` | Write string to file | `(spit "file.txt" "content")` |
+| `spit` | Append to file | `(spit "file.txt" "more" :append true)` |
+
+### Port-Based I/O
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `open-input-file` | Open file for reading | `(open-input-file "file.txt")` |
+| `open-output-file` | Open file for writing | `(open-output-file "out.txt")` |
+| `close-input-port` | Close input port | `(close-input-port port)` |
+| `close-output-port` | Close output port | `(close-output-port port)` |
+| `call-with-input-file` | Read with auto-close | `(call-with-input-file "f.txt" (lambda (p) (read-line p)))` |
+| `call-with-output-file` | Write with auto-close | `(call-with-output-file "f.txt" (lambda (p) (display "hi" p)))` |
+
+### File System Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `file-exists?` | Test if file exists | `(file-exists? "file.txt")` => `true` |
+| `directory?` | Test if path is directory | `(directory? "mydir")` => `true` |
+| `file-readable?` | Test if file is readable | `(file-readable? "file.txt")` => `true` |
+| `file-writable?` | Test if file is writable | `(file-writable? "file.txt")` => `true` |
+
+### File Operations
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `delete-file` | Delete a file | `(delete-file "file.txt")` |
+| `rename-file` | Rename/move a file | `(rename-file "old.txt" "new.txt")` |
+| `copy-file` | Copy a file | `(copy-file "src.txt" "dst.txt")` |
+| `make-directory` | Create directory (with parents) | `(make-directory "a/b/c")` |
+| `file-size` | Get file size in bytes | `(file-size "file.txt")` => `1024` |
+| `directory-list` | List directory contents | `(directory-list "mydir")` => `("a.txt" "b.txt")` |
+| `current-directory` | Get current working directory | `(current-directory)` => `"/home/user"` |
+
+### Path Utilities
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `path-join` | Join path components | `(path-join "a" "b" "c.txt")` => `"a/b/c.txt"` |
+| `path-directory` | Get parent directory | `(path-directory "/a/b/c.txt")` => `"/a/b"` |
+| `path-filename` | Get filename | `(path-filename "/a/b/c.txt")` => `"c.txt"` |
+| `path-extension` | Get file extension | `(path-extension "/a/b/c.txt")` => `"txt"` |
+
+### Examples
+
+```lisp
+;; Read a file
+(define content (slurp "config.txt"))
+
+;; Write to file
+(spit "output.txt" "Hello, World!")
+
+;; Append to file
+(spit "log.txt" "New entry\n" :append true)
+
+;; Safe file reading with cleanup
+(call-with-input-file "data.txt"
+  (lambda (port)
+    (read-line port)))
+
+;; List files and filter
+(filter (lambda (f) (string-contains? f ".txt"))
+        (directory-list "."))
+```
+
 ## Reflect Library (Java Interop)
 
 See [Java Interop](java-interop.md) for detailed documentation.

@@ -78,3 +78,200 @@
       '()
       (append (reverse (cdr li))
               (list (car li)))))
+
+;; ============== List Access ==============
+
+(define (list-ref li n)
+  :doc "Returns the element at index n (0-based). (list-ref '(a b c) 1) => b"
+  (if (= n 0)
+      (car li)
+      (list-ref (cdr li) (- n 1))))
+
+(define (list-tail li n)
+  :doc "Returns the sublist starting at index n. (list-tail '(a b c d) 2) => (c d)"
+  (if (= n 0)
+      li
+      (list-tail (cdr li) (- n 1))))
+
+;; ============== List Search ==============
+
+(define (member obj li)
+  :doc "Returns the sublist starting at obj, or false if not found. Uses equal?."
+  (cond ((null? li) false)
+        ((equal? obj (car li)) li)
+        (else (member obj (cdr li)))))
+
+(define (memq obj li)
+  :doc "Like member, but uses eq? (identity comparison)."
+  (cond ((null? li) false)
+        ((eq? obj (car li)) li)
+        (else (memq obj (cdr li)))))
+
+(define (memv obj li)
+  :doc "Like member, but uses eqv? (value comparison)."
+  (cond ((null? li) false)
+        ((eqv? obj (car li)) li)
+        (else (memv obj (cdr li)))))
+
+;; ============== Association Lists ==============
+
+(define (assoc key alist)
+  :doc "Finds the first pair with car equal to key. Uses equal?. Returns pair or false."
+  (cond ((null? alist) false)
+        ((equal? key (caar alist)) (car alist))
+        (else (assoc key (cdr alist)))))
+
+(define (assq key alist)
+  :doc "Like assoc, but uses eq? (identity comparison)."
+  (cond ((null? alist) false)
+        ((eq? key (caar alist)) (car alist))
+        (else (assq key (cdr alist)))))
+
+(define (assv key alist)
+  :doc "Like assoc, but uses eqv? (value comparison)."
+  (cond ((null? alist) false)
+        ((eqv? key (caar alist)) (car alist))
+        (else (assv key (cdr alist)))))
+
+;; ============== Higher-Order Functions ==============
+
+(define (for-each proc li)
+  :doc "Applies proc to each element for side effects. Returns unspecified value."
+  (if (null? li)
+      false
+      (begin (proc (car li))
+             (for-each proc (cdr li)))))
+
+(define (fold-left proc init li)
+  :doc "Left fold. (fold-left + 0 '(1 2 3)) => 6. Processes left to right."
+  (if (null? li)
+      init
+      (fold-left proc (proc init (car li)) (cdr li))))
+
+(define (fold-right proc init li)
+  :doc "Right fold. (fold-right cons '() '(1 2 3)) => (1 2 3). Processes right to left."
+  (if (null? li)
+      init
+      (proc (car li) (fold-right proc init (cdr li)))))
+
+(define (reduce proc li)
+  :doc "Like fold-left but uses first element as initial value. List must be non-empty."
+  (fold-left proc (car li) (cdr li)))
+
+;; ============== List Predicates ==============
+
+(define (any pred li)
+  :doc "Returns true if pred is true for at least one element."
+  (cond ((null? li) false)
+        ((pred (car li)) true)
+        (else (any pred (cdr li)))))
+
+(define (every pred li)
+  :doc "Returns true if pred is true for all elements."
+  (cond ((null? li) true)
+        ((not (pred (car li))) false)
+        (else (every pred (cdr li)))))
+
+(define (find pred li)
+  :doc "Returns the first element where pred is true, or false if none found."
+  (cond ((null? li) false)
+        ((pred (car li)) (car li))
+        (else (find pred (cdr li)))))
+
+;; ============== List Construction ==============
+
+(define (range . args)
+  :doc "Generates a list of numbers. (range n), (range start end), or (range start end step)."
+  (let ((start (if (null? (cdr args)) 0 (car args)))
+        (end (if (null? (cdr args)) (car args) (cadr args)))
+        (step (if (or (null? (cdr args)) (null? (cddr args))) 1 (caddr args))))
+    (define (range-helper current)
+      (if (>= current end)
+          '()
+          (cons current (range-helper (+ current step)))))
+    (range-helper start)))
+
+(define iota
+  :doc "Alias for range. (iota 5) => (0 1 2 3 4)"
+  range)
+
+(define (make-list n fill)
+  :doc "Creates a list of n elements, each initialized to fill."
+  (if (<= n 0)
+      '()
+      (cons fill (make-list (- n 1) fill))))
+
+;; ============== List Transformation ==============
+
+(define (take li n)
+  :doc "Returns the first n elements. (take '(a b c d e) 3) => (a b c)"
+  (if (or (<= n 0) (null? li))
+      '()
+      (cons (car li) (take (cdr li) (- n 1)))))
+
+(define (drop li n)
+  :doc "Returns all but the first n elements. (drop '(a b c d e) 3) => (d e)"
+  (if (or (<= n 0) (null? li))
+      li
+      (drop (cdr li) (- n 1))))
+
+(define (take-while pred li)
+  :doc "Returns leading elements while pred is true."
+  (cond ((null? li) '())
+        ((pred (car li)) (cons (car li) (take-while pred (cdr li))))
+        (else '())))
+
+(define (drop-while pred li)
+  :doc "Drops leading elements while pred is true, returns the rest."
+  (cond ((null? li) '())
+        ((pred (car li)) (drop-while pred (cdr li)))
+        (else li)))
+
+(define (flatten li)
+  :doc "Flattens nested lists. (flatten '((1 2) (3 (4 5)))) => (1 2 3 4 5)"
+  (cond ((null? li) '())
+        ((not (list? li)) (list li))
+        (else (append (flatten (car li)) (flatten (cdr li))))))
+
+(define (zip li1 li2)
+  :doc "Combines two lists pairwise. (zip '(1 2 3) '(a b c)) => ((1 a) (2 b) (3 c))"
+  (if (or (null? li1) (null? li2))
+      '()
+      (cons (list (car li1) (car li2))
+            (zip (cdr li1) (cdr li2)))))
+
+(define (unzip li)
+  :doc "Splits a list of pairs. (unzip '((1 a) (2 b))) => ((1 2) (a b))"
+  (if (null? li)
+      '(() ())
+      (let ((rest (unzip (cdr li))))
+        (list (cons (caar li) (car rest))
+              (cons (cadar li) (cadr rest))))))
+
+;; ============== List Removal ==============
+
+(define (remove obj li)
+  :doc "Removes all occurrences of obj from list. Uses equal?."
+  (cond ((null? li) '())
+        ((equal? obj (car li)) (remove obj (cdr li)))
+        (else (cons (car li) (remove obj (cdr li))))))
+
+(define (delete obj li)
+  :doc "Removes first occurrence of obj from list. Uses equal?."
+  (cond ((null? li) '())
+        ((equal? obj (car li)) (cdr li))
+        (else (cons (car li) (delete obj (cdr li))))))
+
+(define (remove-duplicates li)
+  :doc "Removes duplicate elements, keeping first occurrence."
+  (define (helper seen rest)
+    (cond ((null? rest) '())
+          ((member (car rest) seen) (helper seen (cdr rest)))
+          (else (cons (car rest) (helper (cons (car rest) seen) (cdr rest))))))
+  (helper '() li))
+
+;; ============== Variadic Append ==============
+
+(define (append* . lists)
+  :doc "Variadic append. (append* '(1) '(2) '(3)) => (1 2 3)"
+  (fold-right append '() lists))

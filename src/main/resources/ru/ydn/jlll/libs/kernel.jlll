@@ -82,6 +82,23 @@
              (%dolist-loop% (cdr %dolist-rest%)))))
      (%dolist-loop% %dolist-list%)))
 
+;; do - R5RS general iteration
+;; (do ((var init step) ...) (test result) body ...)
+(defmacro (do bindings test-result . body)
+  :doc "R5RS general iteration. (do ((i 0 (+ i 1))) ((>= i 10) i) (println i))"
+  (let ((vars (map car bindings))
+        (inits (map cadr bindings))
+        (steps (map (lambda (b) (if (null? (cddr b)) (car b) (caddr b))) bindings))
+        (test (car test-result))
+        (result (if (null? (cdr test-result)) false (cadr test-result)))
+        (loop-name (gensym "do-loop")))
+    `(let ,loop-name ,(map list vars inits)
+       (if ,test
+           ,result
+           (begin
+             ,@body
+             (,loop-name ,@steps))))))
+
 
 
 ;(define (apply . args) (print args) (eval args))

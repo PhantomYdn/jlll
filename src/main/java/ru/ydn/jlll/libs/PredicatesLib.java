@@ -1,5 +1,7 @@
 package ru.ydn.jlll.libs;
 
+import java.io.Reader;
+import java.io.Writer;
 import java.util.concurrent.atomic.AtomicLong;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
@@ -314,5 +316,77 @@ public class PredicatesLib extends ReflectionLibrary
     public boolean isEof(Object obj)
     {
         return obj == Eof.EOF || obj instanceof Eof;
+    }
+
+    /**
+     * Tests if a value is a real (non-complex) number.
+     * {@code (real? 42)} returns true.
+     * {@code (real? 3.14)} returns true.
+     * In JLLL, all numbers are real since complex numbers are not supported.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is a Number
+     */
+    @JlllName("real?")
+    public boolean isReal(Object obj)
+    {
+        return obj instanceof Number;
+    }
+
+    /**
+     * Tests if a value is a vector (Java array or Collection).
+     * {@code (vector? (list->vector '(1 2 3)))} returns true.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is an array or Collection
+     */
+    @JlllName("vector?")
+    public boolean isVector(Object obj)
+    {
+        return obj != null && (obj.getClass().isArray() || obj instanceof java.util.Collection);
+    }
+
+    /**
+     * Tests if a value is an input/output port.
+     * {@code (port? *stdin*)} returns true.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is a Reader or Writer
+     */
+    @JlllName("port?")
+    public boolean isPort(Object obj)
+    {
+        return obj instanceof Reader || obj instanceof Writer;
+    }
+
+    /**
+     * Tests if a value is an input port.
+     * {@code (input-port? *stdin*)} returns true.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is a Reader
+     */
+    @JlllName("input-port?")
+    public boolean isInputPort(Object obj)
+    {
+        return obj instanceof Reader;
+    }
+
+    /**
+     * Tests if a value is an output port.
+     * {@code (output-port? *stdout*)} returns true.
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is a Writer
+     */
+    @JlllName("output-port?")
+    public boolean isOutputPort(Object obj)
+    {
+        return obj instanceof Writer;
     }
 }

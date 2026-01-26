@@ -3,6 +3,7 @@ package ru.ydn.jlll.libs;
 import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Random;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
@@ -37,6 +38,9 @@ import ru.ydn.jlll.util.ListUtil;
  */
 public class MathLib extends ReflectionLibrary
 {
+    /** Random number generator for random functions */
+    private static Random random = new Random();
+
     /** {@inheritDoc} */
     public void load(Environment env) throws JlllException
     {
@@ -517,5 +521,50 @@ public class MathLib extends ReflectionLibrary
         if (d < 0)
             return -1;
         return 0;
+    }
+
+    /**
+     * Generates a random number. ({@code (random 100)}) returns an integer 0-99.
+     * ({@code (random 1.0)}) returns a float 0.0-1.0 (exclusive).
+     * ({@code (random)}) returns a float 0.0-1.0 (exclusive).
+     *
+     * @param bound
+     *            optional upper bound (exclusive). If integer, returns integer.
+     * @return a random number
+     */
+    @JlllName("random")
+    public Number randomNum(Number... bound)
+    {
+        if (bound.length == 0)
+        {
+            return random.nextDouble();
+        }
+        Number n = bound[0];
+        if (n instanceof Integer)
+        {
+            return random.nextInt(n.intValue());
+        }
+        else if (n instanceof Long)
+        {
+            return random.nextLong(n.longValue());
+        }
+        else
+        {
+            return random.nextDouble() * n.doubleValue();
+        }
+    }
+
+    /**
+     * Sets the random seed for reproducibility. ({@code (random-seed 42)}).
+     *
+     * @param seed
+     *            the seed value
+     * @return the seed value
+     */
+    @JlllName("random-seed")
+    public Long randomSeed(Long seed)
+    {
+        random = new Random(seed);
+        return seed;
     }
 }

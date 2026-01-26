@@ -869,6 +869,59 @@ public class JLLLTestCase
     }
 
     @Test
+    public void testFileIO() throws Exception
+    {
+        // Test file-exists? and directory? with known paths
+        eval(true, "(file-exists? \"pom.xml\")");
+        eval(false, "(file-exists? \"nonexistent-file-xyz.txt\")");
+        eval(true, "(directory? \"src\")");
+        eval(false, "(directory? \"pom.xml\")");
+        // Test current-directory
+        Object cwd = Jlll.eval("(current-directory)", env);
+        assertTrue(cwd instanceof String);
+        assertTrue(((String) cwd).length() > 0);
+        // Test path utilities
+        eval("a/b/c.txt", "(path-join \"a\" \"b\" \"c.txt\")");
+        eval("c.txt", "(path-filename \"/a/b/c.txt\")");
+        eval("txt", "(path-extension \"/a/b/c.txt\")");
+        eval("", "(path-extension \"/a/b/noext\")");
+        // Test directory-list returns a list
+        Object files = Jlll.eval("(directory-list \"src\")", env);
+        assertTrue(files instanceof Cons);
+        // Test slurp/spit with temp file
+        String testFile = "target/jlll-test-" + System.currentTimeMillis() + ".txt";
+        Jlll.eval("(spit \"" + testFile + "\" \"hello world\")", env);
+        eval(true, "(file-exists? \"" + testFile + "\")");
+        eval("hello world", "(slurp \"" + testFile + "\")");
+        // Test spit with append
+        Jlll.eval("(spit \"" + testFile + "\" \"!\" :append true)", env);
+        eval("hello world!", "(slurp \"" + testFile + "\")");
+        // Test file-size
+        Object size = Jlll.eval("(file-size \"" + testFile + "\")", env);
+        assertTrue(size instanceof Long);
+        assertTrue(((Long) size) > 0);
+        // Cleanup
+        Jlll.eval("(delete-file \"" + testFile + "\")", env);
+        eval(false, "(file-exists? \"" + testFile + "\")");
+    }
+
+    @Test
+    public void testFilePortIO() throws Exception
+    {
+        // Test open-input-file, read-line, close-input-port
+        String testFile = "target/jlll-port-test-" + System.currentTimeMillis() + ".txt";
+        Jlll.eval("(spit \"" + testFile + "\" \"line1\\nline2\\nline3\")", env);
+        Jlll.eval("(define port (open-input-file \"" + testFile + "\"))", env);
+        eval("line1", "(read-line port)");
+        eval("line2", "(read-line port)");
+        Jlll.eval("(close-input-port port)", env);
+        // Test call-with-input-file
+        eval("line1", "(call-with-input-file \"" + testFile + "\" (lambda (p) (read-line p)))");
+        // Cleanup
+        Jlll.eval("(delete-file \"" + testFile + "\")", env);
+    }
+
+    @Test
     public void testInputWithPort() throws Exception
     {
         // Test read-line with explicit port argument

@@ -8,6 +8,8 @@
 
 (load-lib "ru.ydn.jlll.libs.IOLib")
 
+(load-lib "ru.ydn.jlll.libs.FileLib")
+
 (load-lib "ru.ydn.jlll.libs.PredicatesLib")
 
 (load-lib "ru.ydn.jlll.libs.StringLib")

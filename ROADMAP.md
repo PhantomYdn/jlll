@@ -279,13 +279,13 @@ Complete the predicate library. Some are marked as TODO in `predicates.jlll`.
 
 - [x] `number?` - Test for any number
 - [x] `integer?` - Test for integer
-- [ ] `real?` - Test for real number (non-complex)
+- [x] `real?` - Test for real number (non-complex)
 - [x] `pair?` - Test for cons pair (note: `'()` is NOT a pair)
 - [x] `atom?` - Test for non-pair (convenience)
 - [ ] `char?` - Test for character (if char type added)
-- [ ] `vector?` - Test for Java array/vector
-- [ ] `port?` - Test for input/output port
-- [ ] `input-port?` / `output-port?` - Specific port types
+- [x] `vector?` - Test for Java array/vector
+- [x] `port?` - Test for input/output port
+- [x] `input-port?` / `output-port?` - Specific port types
 
 ---
 
@@ -351,26 +351,26 @@ Essential list operations missing from the standard library.
 
 ### Checklist
 
-- [ ] `list-ref` - Element at index
-- [ ] `list-tail` - Sublist from index
-- [ ] `member` / `memq` / `memv` - Search for element
-- [ ] `assoc` / `assq` / `assv` - Association list lookup
-- [ ] `for-each` - Map for side effects
-- [ ] `fold-left` / `fold-right` - Fold operations
-- [ ] `reduce` - Fold with first element as initial value
-- [ ] `any` / `every` - Test predicates across list
-- [ ] `find` - Find first matching element
-- [ ] `range` / `iota` - Generate numeric sequence
-- [ ] `make-list` - Create list of repeated elements
-- [ ] `take` / `drop` - First/remaining n elements
-- [ ] `take-while` / `drop-while` - Predicate-based take/drop
-- [ ] `flatten` - Flatten nested lists
-- [ ] `zip` - Combine lists pairwise
-- [ ] `unzip` - Split list of pairs
-- [ ] `sort` / `sort-by` - Sort list
-- [ ] `remove` / `delete` - Remove elements
-- [ ] `remove-duplicates` - Remove duplicates
-- [ ] Variadic `append` - Extend current 2-arg version
+- [x] `list-ref` - Element at index
+- [x] `list-tail` - Sublist from index
+- [x] `member` / `memq` / `memv` - Search for element
+- [x] `assoc` / `assq` / `assv` - Association list lookup
+- [x] `for-each` - Map for side effects
+- [x] `fold-left` / `fold-right` - Fold operations
+- [x] `reduce` - Fold with first element as initial value
+- [x] `any` / `every` - Test predicates across list
+- [x] `find` - Find first matching element
+- [x] `range` / `iota` - Generate numeric sequence
+- [x] `make-list` - Create list of repeated elements
+- [x] `take` / `drop` - First/remaining n elements
+- [x] `take-while` / `drop-while` - Predicate-based take/drop
+- [x] `flatten` - Flatten nested lists
+- [x] `zip` - Combine lists pairwise
+- [x] `unzip` - Split list of pairs
+- [x] `sort` / `sort-by` - Sort list
+- [x] `remove` / `delete` - Remove elements
+- [x] `remove-duplicates` - Remove duplicates
+- [x] Variadic `append` - Extend current 2-arg version (as `append*`)
 
 ---
 
@@ -437,23 +437,23 @@ Currently requires verbose Java interop for any file operation.
 
 ### Checklist
 
-- [ ] `slurp` - Read entire resource to string (file, URL, classpath)
-- [ ] `spit` - Write string to file (with `:append` option)
-- [ ] `open-input-file` / `open-output-file` - Create ports
-- [ ] `close-input-port` / `close-output-port` - Close ports
-- [ ] `call-with-input-file` / `call-with-output-file` - With cleanup
-- [ ] `file-exists?` - Test file existence
-- [ ] `directory?` - Test if directory
-- [ ] `file-readable?` / `file-writable?` - Test permissions
-- [ ] `delete-file` - Delete file
-- [ ] `rename-file` - Rename/move file
-- [ ] `copy-file` - Copy file
-- [ ] `make-directory` - Create directory
-- [ ] `file-size` - Get file size in bytes
-- [ ] `directory-list` - List directory contents
-- [ ] `path-join` - Join path components
-- [ ] `path-directory` / `path-filename` / `path-extension` - Path parts
-- [ ] `current-directory` - Get current working directory
+- [x] `slurp` - Read entire resource to string (file, URL, classpath)
+- [x] `spit` - Write string to file (with `:append` option)
+- [x] `open-input-file` / `open-output-file` - Create ports
+- [x] `close-input-port` / `close-output-port` - Close ports
+- [x] `call-with-input-file` / `call-with-output-file` - With cleanup
+- [x] `file-exists?` - Test file existence
+- [x] `directory?` - Test if directory
+- [x] `file-readable?` / `file-writable?` - Test permissions
+- [x] `delete-file` - Delete file
+- [x] `rename-file` - Rename/move file
+- [x] `copy-file` - Copy file
+- [x] `make-directory` - Create directory
+- [x] `file-size` - Get file size in bytes
+- [x] `directory-list` - List directory contents
+- [x] `path-join` - Join path components
+- [x] `path-directory` / `path-filename` / `path-extension` - Path parts
+- [x] `current-directory` - Get current working directory
 
 ---
 
@@ -510,8 +510,8 @@ Missing convenience macros that are standard in most Lisps.
 - [x] `when` - Conditional with implicit begin
 - [x] `unless` - Negated conditional with implicit begin
 - [x] `let*` - Sequential bindings
-- [ ] `do` - General iteration (R5RS style)
-- [ ] Named `let` - Recursive loop binding
+- [x] `do` - General iteration (R5RS style)
+- [x] Named `let` - Recursive loop binding (via `do` macro implementation)
 - [x] `dotimes` - Counted iteration
 - [x] `dolist` - List iteration
 
@@ -581,8 +581,8 @@ e                                     ; => 2.71828...
 - [x] `asin` - Arc sine (was documented but missing from math.jlll)
 - [x] `round` - Round to nearest integer (ties to even)
 - [x] `truncate` - Truncate toward zero
-- [ ] `random` - Random number generation
-- [ ] `random-seed` - Set random seed
+- [x] `random` - Random number generation
+- [x] `random-seed` - Set random seed
 - [x] `pi` - Mathematical constant 3.14159...
 - [x] `e` - Mathematical constant 2.71828...
 - [x] `sign` / `signum` - Sign of number (-1, 0, 1)
