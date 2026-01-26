@@ -1,6 +1,8 @@
 package ru.ydn.jlll.tests;
 
 import static org.junit.Assert.*;
+import java.io.BufferedReader;
+import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -8,6 +10,7 @@ import org.junit.Test;
 import junit.framework.AssertionFailedError;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
+import ru.ydn.jlll.common.Eof;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
@@ -757,6 +760,137 @@ public class JLLLTestCase
                 JlllException.class);
         // No exception - handler not called
         eval(42, "(with-exception-handler (lambda (e) (error \"should not run\")) (lambda () 42))");
+    }
+
+    @Test
+    public void testReadLine() throws Exception
+    {
+        // Setup: bind stdin to a StringReader with test input
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("hello\nworld\n")));
+        // Read first line
+        eval("hello", "(read-line)");
+        // Read second line
+        eval("world", "(read-line)");
+        // Read at EOF returns EOF object
+        Object result = Jlll.eval("(read-line)", env);
+        assertEquals(Eof.EOF, result);
+        // eof-object? predicate
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("")));
+        eval(true, "(eof-object? (read-line))");
+        eval(false, "(eof-object? \"hello\")");
+        eval(false, "(eof-object? 42)");
+    }
+
+    @Test
+    public void testRead() throws Exception
+    {
+        // Setup: bind stdin to a StringReader with JLLL expressions
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("(+ 1 2) 42 'symbol")));
+        // Read first expression: (+ 1 2)
+        Object expr1 = Jlll.eval("(read)", env);
+        assertTrue(expr1 instanceof Cons);
+        assertEquals(Jlll.prepare("(+ 1 2)"), expr1);
+        // Read second expression: 42
+        Object expr2 = Jlll.eval("(read)", env);
+        assertEquals(42, expr2);
+        // Read third expression: 'symbol
+        Object expr3 = Jlll.eval("(read)", env);
+        assertEquals(Jlll.prepare("'symbol"), expr3);
+        // Read at EOF returns EOF object
+        Object eof = Jlll.eval("(read)", env);
+        assertEquals(Eof.EOF, eof);
+        // Test eval of read expression
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("(+ 1 2)")));
+        eval(3, "(eval (read))");
+    }
+
+    @Test
+    public void testReadChar() throws Exception
+    {
+        // Setup: bind stdin to a StringReader
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("abc")));
+        // Read characters one at a time
+        eval("a", "(read-char)");
+        eval("b", "(read-char)");
+        eval("c", "(read-char)");
+        // Read at EOF returns EOF object
+        Object eof = Jlll.eval("(read-char)", env);
+        assertEquals(Eof.EOF, eof);
+        // Test with special characters
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("\n\t ")));
+        eval("\n", "(read-char)");
+        eval("\t", "(read-char)");
+        eval(" ", "(read-char)");
+    }
+
+    @Test
+    public void testPeekChar() throws Exception
+    {
+        // Setup: bind stdin to a StringReader
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("ab")));
+        // Peek doesn't consume the character
+        eval("a", "(peek-char)");
+        eval("a", "(peek-char)");
+        eval("a", "(peek-char)");
+        // read-char consumes it
+        eval("a", "(read-char)");
+        // Now peek shows next char
+        eval("b", "(peek-char)");
+        eval("b", "(read-char)");
+        // Peek at EOF returns EOF object
+        Object eof = Jlll.eval("(peek-char)", env);
+        assertEquals(Eof.EOF, eof);
+    }
+
+    @Test
+    public void testCharReady() throws Exception
+    {
+        // StringReader always has characters ready (if not empty)
+        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("abc")));
+        eval(true, "(char-ready?)");
+        // Read all characters
+        Jlll.eval("(read-char)", env);
+        Jlll.eval("(read-char)", env);
+        // Still one char left
+        eval(true, "(char-ready?)");
+        Jlll.eval("(read-char)", env);
+        // After exhausting input, ready status may vary by implementation
+        // BufferedReader.ready() can return true even at EOF (per Java docs: ready if next read won't block)
+        // So we just verify char-ready? returns a boolean
+        Object result = Jlll.eval("(char-ready?)", env);
+        assertTrue(result instanceof Boolean);
+    }
+
+    @Test
+    public void testNewline() throws Exception
+    {
+        // newline just prints a newline - verify it doesn't throw
+        Jlll.eval("(newline)", env);
+    }
+
+    @Test
+    public void testInputWithPort() throws Exception
+    {
+        // Test read-line with explicit port argument
+        BufferedReader port = new BufferedReader(new StringReader("line1\nline2"));
+        env.addBinding(Symbol.intern("my-port"), port);
+        eval("line1", "(read-line my-port)");
+        eval("line2", "(read-line my-port)");
+        // Test read-char with explicit port argument
+        port = new BufferedReader(new StringReader("xy"));
+        env.addBinding(Symbol.intern("my-port"), port);
+        eval("x", "(read-char my-port)");
+        eval("y", "(read-char my-port)");
+        // Test peek-char with explicit port argument
+        port = new BufferedReader(new StringReader("z"));
+        env.addBinding(Symbol.intern("my-port"), port);
+        eval("z", "(peek-char my-port)");
+        eval("z", "(peek-char my-port)");
+        eval("z", "(read-char my-port)");
+        // Test char-ready? with explicit port argument
+        port = new BufferedReader(new StringReader("data"));
+        env.addBinding(Symbol.intern("my-port"), port);
+        eval(true, "(char-ready? my-port)");
     }
 
     private void eval(Object expected, String code) throws Exception

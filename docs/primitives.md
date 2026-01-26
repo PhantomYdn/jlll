@@ -376,15 +376,30 @@ Input/output operations.
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
-| `read` | Read JLLL expression | `(read)` |
-| `read-line` | Read line as string | `(read-line)` |
+| `read` | Read and parse JLLL expression | `(read)` or `(read port)` |
+| `read-line` | Read line as string | `(read-line)` or `(read-line port)` |
+| `read-char` | Read single character as string | `(read-char)` or `(read-char port)` |
+| `peek-char` | Peek next character without consuming | `(peek-char)` or `(peek-char port)` |
+| `char-ready?` | Check if input available | `(char-ready?)` or `(char-ready? port)` |
+| `eof-object?` | Test for end-of-file object | `(eof-object? x)` => `true` if x is EOF |
+
+All input functions return the EOF object (printed as `#<eof>`) when end of input is reached.
+Use `eof-object?` to test for it:
+
+```lisp
+(let loop ()
+  (define line (read-line))
+  (unless (eof-object? line)
+    (println "Got: " line)
+    (loop)))
+```
 
 ### Streams
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
-| `stdin` | Standard input stream | `stdin` |
-| `stdout` | Standard output stream | `stdout` |
+| `stdin` | Standard input stream (BufferedReader) | `stdin` |
+| `stdout` | Standard output stream (PrintWriter) | `stdout` |
 
 ## Reflect Library (Java Interop)
 

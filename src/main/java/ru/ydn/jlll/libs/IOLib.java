@@ -1,5 +1,6 @@
 package ru.ydn.jlll.libs;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -15,12 +16,14 @@ import java.util.Iterator;
 import java.util.List;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
+import ru.ydn.jlll.common.Eof;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Library;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Symbol;
+import ru.ydn.jlll.io.JlllTokenizer;
 import ru.ydn.jlll.io.Marshaller;
 import ru.ydn.jlll.io.MultiPartFormOutputStream;
 
@@ -32,6 +35,11 @@ import ru.ydn.jlll.io.MultiPartFormOutputStream;
  * </p>
  * <ul>
  * <li><b>print:</b> outputs values to stdout or specified writer</li>
+ * <li><b>read:</b> reads and parses a JLLL expression from input</li>
+ * <li><b>read-line:</b> reads a line as a string</li>
+ * <li><b>read-char:</b> reads a single character as a string</li>
+ * <li><b>peek-char:</b> peeks at the next character without consuming it</li>
+ * <li><b>char-ready?:</b> checks if input is available</li>
  * <li><b>remote-eval:</b> evaluates code on a remote JLLL server</li>
  * <li><b>remote-login:</b> authenticates with a remote JLLL server</li>
  * </ul>
@@ -178,11 +186,168 @@ public class IOLib implements Library
         return sw.toString();
     }
 
+    /**
+     * Gets a BufferedReader from the given object.
+     * Supports BufferedReader, Reader, or uses *stdin* from environment.
+     *
+     * @param portObj
+     *            the port object (BufferedReader, Reader, or null for stdin)
+     * @param env
+     *            the environment to get stdin from if portObj is null
+     * @return a BufferedReader for input
+     * @throws JlllException
+     *             if portObj is not a valid input source
+     */
+    private static BufferedReader getInputReader(Object portObj, Environment env) throws JlllException
+    {
+        if (portObj == null)
+        {
+            portObj = env.lookup(Symbol.STDIN);
+        }
+        if (portObj instanceof BufferedReader)
+        {
+            return (BufferedReader) portObj;
+        }
+        else if (portObj instanceof Reader)
+        {
+            return new BufferedReader((Reader) portObj);
+        }
+        else
+        {
+            throw new JlllException("Expected a reader/port, got: " + portObj);
+        }
+    }
+
     /** {@inheritDoc} */
     public void load(Environment env) throws JlllException
     {
-        env.addBinding(Symbol.STDIN, new InputStreamReader(System.in));
+        env.addBinding(Symbol.STDIN, new BufferedReader(new InputStreamReader(System.in)));
         env.addBinding(Symbol.STDOUT, new PrintWriter(System.out));
+        // read - Read and parse JLLL expression
+        new Primitive("read", env,
+                "Reads and parses a JLLL expression from input. "
+                        + "(read) reads from stdin, (read port) reads from specified port. "
+                        + "Returns the parsed expression, or EOF object at end of input.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                try
+                {
+                    Object portObj = values.length() > 0 ? values.get(0) : null;
+                    BufferedReader reader = getInputReader(portObj, env);
+                    JlllTokenizer tokenizer = new JlllTokenizer(reader);
+                    Object result = tokenizer.nextObject();
+                    return result == null ? Eof.EOF : result;
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("read: I/O error", e);
+                }
+            }
+        };
+        // read-line - Read a line as string
+        new Primitive("read-line", env,
+                "Reads a line of text as a string. "
+                        + "(read-line) reads from stdin, (read-line port) reads from specified port. "
+                        + "Returns the line without the newline, or EOF object at end of input.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                try
+                {
+                    Object portObj = values.length() > 0 ? values.get(0) : null;
+                    BufferedReader reader = getInputReader(portObj, env);
+                    String line = reader.readLine();
+                    return line == null ? Eof.EOF : line;
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("read-line: I/O error", e);
+                }
+            }
+        };
+        // read-char - Read single character
+        new Primitive("read-char", env,
+                "Reads a single character from input. "
+                        + "(read-char) reads from stdin, (read-char port) reads from specified port. "
+                        + "Returns the character as a single-character string, or EOF object at end of input.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                try
+                {
+                    Object portObj = values.length() > 0 ? values.get(0) : null;
+                    BufferedReader reader = getInputReader(portObj, env);
+                    int ch = reader.read();
+                    return ch == -1 ? Eof.EOF : String.valueOf((char) ch);
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("read-char: I/O error", e);
+                }
+            }
+        };
+        // peek-char - Peek at next character without consuming
+        new Primitive("peek-char", env,
+                "Peeks at the next character without consuming it. "
+                        + "(peek-char) peeks at stdin, (peek-char port) peeks at specified port. "
+                        + "Returns the character as a single-character string, or EOF object at end of input.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                try
+                {
+                    Object portObj = values.length() > 0 ? values.get(0) : null;
+                    BufferedReader reader = getInputReader(portObj, env);
+                    reader.mark(1);
+                    int ch = reader.read();
+                    if (ch != -1)
+                    {
+                        reader.reset();
+                    }
+                    return ch == -1 ? Eof.EOF : String.valueOf((char) ch);
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("peek-char: I/O error", e);
+                }
+            }
+        };
+        // char-ready? - Check if input is available
+        new Primitive("char-ready?", env,
+                "Checks if input is available without blocking. "
+                        + "(char-ready?) checks stdin, (char-ready? port) checks specified port. "
+                        + "Returns true if at least one character is available.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                try
+                {
+                    Object portObj = values.length() > 0 ? values.get(0) : null;
+                    BufferedReader reader = getInputReader(portObj, env);
+                    return reader.ready();
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("char-ready?: I/O error", e);
+                }
+            }
+        };
         new Primitive("remote-eval", env,
                 "Evaluates code on a remote JLLL server. (remote-eval code) or (remote-eval code url). "
                         + "Uses 'remote-host binding if URL not specified.")

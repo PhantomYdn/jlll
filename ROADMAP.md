@@ -81,7 +81,8 @@ Simpler approach that maps directly to Java:
 
 ## 2. Input Operations (Critical)
 
-Documented in primitives.md but **not implemented**. Essential for interactive programs.
+Essential for interactive programs. All input functions accept an optional port argument
+and return the EOF object (`#<eof>`) at end of input.
 
 ### Proposed Implementation
 
@@ -108,19 +109,19 @@ Documented in primitives.md but **not implemented**. Essential for interactive p
 ```
 
 **Implementation notes:**
-- `read` requires exposing Tokenizer/Marshaller as primitive
-- Use Java's `BufferedReader.readLine()` for `read-line`
-- Already have `*stdin*` bound to `InputStreamReader`
+- `read` uses JlllTokenizer to parse expressions
+- `*stdin*` is bound to BufferedReader (supports mark/reset for peek-char)
+- Characters are returned as single-character strings (JLLL has no char type)
 
 ### Checklist
 
-- [ ] `read` - Read and parse JLLL expression
-- [ ] `read-line` - Read line as string
-- [ ] `read-char` - Read single character
-- [ ] `peek-char` - Peek next character
-- [ ] `newline` - Output newline (trivial: print empty line)
-- [ ] `char-ready?` - Check if input available
-- [ ] `eof-object?` - Test for end-of-file
+- [x] `read` - Read and parse JLLL expression
+- [x] `read-line` - Read line as string
+- [x] `read-char` - Read single character
+- [x] `peek-char` - Peek next character
+- [x] `newline` - Output newline (trivial: print empty line)
+- [x] `char-ready?` - Check if input available
+- [x] `eof-object?` - Test for end-of-file
 
 ---
 

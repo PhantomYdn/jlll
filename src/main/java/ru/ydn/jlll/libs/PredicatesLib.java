@@ -3,6 +3,7 @@ package ru.ydn.jlll.libs;
 import java.util.concurrent.atomic.AtomicLong;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
+import ru.ydn.jlll.common.Eof;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -288,5 +289,30 @@ public class PredicatesLib extends ReflectionLibrary
     public boolean symbolEquals(Symbol sym1, Symbol sym2)
     {
         return sym1.equals(sym2);
+    }
+
+    /**
+     * Tests if a value is the end-of-file object.
+     * {@code (eof-object? x)} returns true if x is EOF.
+     *
+     * <p>
+     * Example:
+     * </p>
+     *
+     * <pre>
+     * (define line (read-line))
+     * (if (eof-object? line)
+     *     (println "End of input")
+     *     (println "Read: " line))
+     * </pre>
+     *
+     * @param obj
+     *            the value to test
+     * @return true if obj is the EOF object
+     */
+    @JlllName("eof-object?")
+    public boolean isEof(Object obj)
+    {
+        return obj == Eof.EOF || obj instanceof Eof;
     }
 }
