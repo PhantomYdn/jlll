@@ -478,6 +478,84 @@ File system operations for reading, writing, and manipulating files and paths.
         (directory-list "."))
 ```
 
+## Hash Library
+
+Mutable hash tables (associative arrays) with O(1) access. Backed by `LinkedHashMap` to preserve insertion order.
+
+### Creation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `make-hash` | Create empty hash map | `(make-hash)` |
+| `hash-map` | Create with key-value pairs | `(hash-map :a 1 :b 2)` |
+| `alist->hash` | Create from association list | `(alist->hash '((:a . 1) (:b . 2)))` |
+
+### Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `hash?` | Test if value is hash map | `(hash? h)` => `true` |
+| `hash-has-key?` | Test if key exists | `(hash-has-key? h :a)` => `true` |
+
+### Access
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `hash-ref` | Get value for key | `(hash-ref h :a)` => `1` |
+| `hash-ref` | Get with default | `(hash-ref h :missing 0)` => `0` |
+| `hash-keys` | Get all keys as list | `(hash-keys h)` => `(:a :b)` |
+| `hash-values` | Get all values as list | `(hash-values h)` => `(1 2)` |
+| `hash-count` | Number of entries | `(hash-count h)` => `2` |
+
+### Mutation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `hash-set!` | Add/update entry | `(hash-set! h :c 3)` => `3` |
+| `hash-remove!` | Remove entry | `(hash-remove! h :a)` => `1` (removed value) |
+| `hash-update!` | Update with function | `(hash-update! h :count (lambda (x) (+ x 1)))` |
+| `hash-clear!` | Remove all entries | `(hash-clear! h)` => empty map |
+
+### Conversion
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `hash->alist` | Convert to association list | `(hash->alist h)` => `((:a . 1) (:b . 2))` |
+| `alist->hash` | Create from association list | `(alist->hash '((:a . 1)))` |
+| `hash-merge` | Merge two maps | `(hash-merge h1 h2)` => new merged map |
+
+### Examples
+
+```lisp
+;; Create and populate a hash map
+(define config (make-hash))
+(hash-set! config :host "localhost")
+(hash-set! config :port 8080)
+
+;; Or create with initial values
+(define config (hash-map :host "localhost" :port 8080))
+
+;; Access values
+(hash-ref config :host)           ; => "localhost"
+(hash-ref config :timeout 30)     ; => 30 (default)
+
+;; Check for keys
+(hash-has-key? config :host)      ; => true
+
+;; Update value with function
+(hash-update! config :port (lambda (p) (+ p 1)))
+
+;; Convert to list for iteration
+(for-each
+  (lambda (pair)
+    (println (car pair) ": " (cdr pair)))
+  (hash->alist config))
+
+;; Merge configurations
+(define defaults (hash-map :timeout 30 :retries 3))
+(define merged (hash-merge defaults config))
+```
+
 ## Reflect Library (Java Interop)
 
 See [Java Interop](java-interop.md) for detailed documentation.

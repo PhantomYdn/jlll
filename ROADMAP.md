@@ -686,17 +686,18 @@ Association lists work but are O(n). Need efficient key-value storage.
 
 ### Checklist
 
-- [ ] `hash-map` / `make-hash-map` - Create hash map
-- [ ] `hash-ref` - Lookup value (with optional default)
-- [ ] `hash-set!` - Add/update entry
-- [ ] `hash-remove!` - Remove entry
-- [ ] `hash-has-key?` - Check key existence
-- [ ] `hash-update!` - Update with function
-- [ ] `hash-keys` / `hash-values` - Get keys/values as lists
-- [ ] `hash->alist` / `alist->hash` - Conversion
-- [ ] `hash-count` - Number of entries
-- [ ] `hash-merge` - Merge maps
-- [ ] `hash-clear!` - Remove all entries
+- [x] `hash-map` / `make-hash` - Create hash map
+- [x] `hash-ref` - Lookup value (with optional default)
+- [x] `hash-set!` - Add/update entry
+- [x] `hash-remove!` - Remove entry
+- [x] `hash-has-key?` - Check key existence
+- [x] `hash-update!` - Update with function
+- [x] `hash-keys` / `hash-values` - Get keys/values as lists
+- [x] `hash->alist` / `alist->hash` - Conversion
+- [x] `hash-count` - Number of entries
+- [x] `hash-merge` - Merge maps
+- [x] `hash-clear!` - Remove all entries
+- [x] `hash?` - Test if value is hash map
 
 ---
 

@@ -14,6 +14,8 @@
 
 (load-lib "ru.ydn.jlll.libs.StringLib")
 
+(load-lib "ru.ydn.jlll.libs.HashLib")
+
 (load-lib "ru.ydn.jlll.libs.SQLLib")
 
 
