@@ -756,34 +756,917 @@ Currently all definitions are global. For larger projects, need organization.
 
 ---
 
+## 14. Regular Expressions (Important)
+
+Pattern matching and text manipulation using Java's regex engine.
+
+### Proposed Implementation
+
+```lisp
+;; Match first occurrence
+(regex-match "\\d+" "abc123def")          ; => "123"
+(regex-match "xyz" "abc123def")           ; => false
+
+;; Match all occurrences
+(regex-match-all "\\d+" "a1b2c3")         ; => ("1" "2" "3")
+
+;; Match with groups (returns list: full match + groups)
+(regex-match "(\\w+)@(\\w+)" "user@host")
+;; => ("user@host" "user" "host")
+
+;; Replace all matches
+(regex-replace "\\d" "a1b2c3" "X")        ; => "aXbXcX"
+
+;; Replace first match only
+(regex-replace-first "\\d" "a1b2c3" "X")  ; => "aXb2c3"
+
+;; Replace with function (receives match, returns replacement)
+(regex-replace "\\d+" "a12b34c"
+  (lambda (m) (number->string (* 2 (string->number m)))))
+;; => "a24b68c"
+
+;; Split by pattern
+(regex-split "\\s+" "a  b   c")           ; => ("a" "b" "c")
+(regex-split "," "a,b,,c")                ; => ("a" "b" "" "c")
+
+;; Test if matches
+(regex-matches? "^\\d+$" "123")           ; => true
+(regex-matches? "^\\d+$" "12a")           ; => false
+
+;; Find position of first match
+(regex-find "\\d+" "abc123def")           ; => 3 (index)
+(regex-find "xyz" "abc123def")            ; => false
+```
+
+**Implementation notes:**
+- Wrap Java's `java.util.regex.Pattern` and `Matcher`
+- Cache compiled patterns for performance
+- Use Java regex syntax (documented in `java.util.regex.Pattern`)
+- `regex-replace` with function is more powerful but requires evaluating JLLL lambda
+
+### Checklist
+
+- [ ] `regex-match` - First match or false
+- [ ] `regex-match-all` - All matches as list
+- [ ] `regex-replace` - Replace all occurrences
+- [ ] `regex-replace-first` - Replace first occurrence
+- [ ] `regex-split` - Split string by pattern
+- [ ] `regex-matches?` - Test if entire string matches
+- [ ] `regex-find` - Index of first match
+
+---
+
+## 15. JSON Support (Important)
+
+Parse and generate JSON for data interchange. Essential for web APIs and configuration files.
+
+### Proposed Implementation
+
+```lisp
+;; Parse JSON string to JLLL data
+(json-parse "{\"name\": \"Alice\", \"age\": 30}")
+;; => hash-map with :name "Alice", :age 30
+
+(json-parse "[1, 2, 3]")                  ; => (1 2 3)
+(json-parse "\"hello\"")                  ; => "hello"
+(json-parse "42")                         ; => 42
+(json-parse "true")                       ; => true
+(json-parse "null")                       ; => null
+
+;; Parse with options
+(json-parse "{\"name\": \"Alice\"}" :keys-as-symbols true)
+;; => hash-map with symbol keys: name -> "Alice"
+
+;; Convert JLLL data to JSON string
+(json-stringify (hash-map :name "Alice" :age 30))
+;; => "{\"name\":\"Alice\",\"age\":30}"
+
+(json-stringify '(1 2 3))                 ; => "[1,2,3]"
+(json-stringify "hello")                  ; => "\"hello\""
+
+;; Pretty print
+(json-stringify data :pretty true)
+;; => formatted with indentation
+
+;; File operations
+(json-read-file "config.json")            ; => parsed data
+(json-write-file "output.json" data)      ; write to file
+(json-write-file "output.json" data :pretty true)
+```
+
+**Implementation notes:**
+- Use a lightweight JSON library (e.g., minimal-json, or built-in Nashorn if available)
+- Or implement simple recursive descent parser in Java
+- JSON objects become hash-maps (keys as keywords by default)
+- JSON arrays become lists
+- JSON null becomes JLLL null
+
+### Checklist
+
+- [ ] `json-parse` / `json-read` - Parse JSON string to JLLL data
+- [ ] `json-stringify` / `json-write` - Convert JLLL data to JSON string
+- [ ] `json-read-file` - Parse JSON from file
+- [ ] `json-write-file` - Write JLLL data as JSON to file
+- [ ] `:pretty` option for formatted output
+- [ ] `:keys-as-symbols` option for symbol keys instead of keywords
+
+---
+
+## 16. Date/Time Operations (Important)
+
+Working with timestamps, formatting, and date arithmetic.
+
+### Proposed Implementation
+
+```lisp
+;; Current time
+(now)                                     ; => milliseconds since epoch
+(current-time)                            ; => hash-map with components
+;; {:year 2024 :month 3 :day 15 :hour 14 :minute 30 :second 45 :millis 123}
+
+;; Format timestamp
+(date-format (now) "yyyy-MM-dd")          ; => "2024-03-15"
+(date-format (now) "HH:mm:ss")            ; => "14:30:45"
+(date-format (now) "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+;; => "2024-03-15T14:30:45.123-0500"
+
+;; Parse string to timestamp
+(date-parse "2024-03-15" "yyyy-MM-dd")    ; => timestamp (millis)
+(date-parse "14:30:00" "HH:mm:ss")        ; => timestamp
+
+;; Date arithmetic
+(date-add (now) :days 7)                  ; => 7 days from now
+(date-add (now) :hours -2)                ; => 2 hours ago
+(date-add (now) :months 1)                ; => 1 month from now
+;; Supported units: :years :months :weeks :days :hours :minutes :seconds :millis
+
+;; Difference between timestamps
+(date-diff t1 t2 :days)                   ; => number of days between
+(date-diff t1 t2 :hours)                  ; => number of hours
+
+;; Extract components
+(date-year (now))                         ; => 2024
+(date-month (now))                        ; => 3
+(date-day (now))                          ; => 15
+(date-hour (now))                         ; => 14
+(date-minute (now))                       ; => 30
+(date-second (now))                       ; => 45
+(date-day-of-week (now))                  ; => 5 (1=Sunday, 7=Saturday)
+
+;; Decompose to list
+(date->list (now))                        ; => (2024 3 15 14 30 45 123)
+
+;; Create timestamp from components
+(make-date 2024 3 15)                     ; => timestamp for midnight
+(make-date 2024 3 15 14 30 0)             ; => timestamp for 14:30:00
+
+;; Comparisons
+(date<? t1 t2)                            ; => true if t1 before t2
+(date>? t1 t2)
+(date=? t1 t2)
+```
+
+**Implementation notes:**
+- Use Java 8+ `java.time` API (Instant, LocalDateTime, DateTimeFormatter)
+- Timestamps are `Long` milliseconds since Unix epoch
+- Format patterns follow Java's DateTimeFormatter
+- Time zone handling: use system default, or add optional `:timezone` parameter
+
+### Checklist
+
+- [ ] `now` - Current timestamp in milliseconds
+- [ ] `current-time` - Current time as hash-map
+- [ ] `date-format` - Format timestamp to string
+- [ ] `date-parse` - Parse string to timestamp
+- [ ] `date-add` - Add time units to timestamp
+- [ ] `date-diff` - Difference between timestamps
+- [ ] `date-year` / `date-month` / `date-day` etc. - Extract components
+- [ ] `date->list` - Decompose to list
+- [ ] `make-date` - Create timestamp from components
+- [ ] `date<?` / `date>?` / `date=?` - Comparisons
+
+---
+
+## 17. Debugging and Development Tools (Nice to Have)
+
+Utilities for debugging, testing, and development workflows.
+
+### Proposed Implementation
+
+```lisp
+;; Trace function calls
+(trace square)                            ; enable tracing
+(square 5)
+;; prints: TRACE: (square 5)
+;; prints: TRACE: square => 25
+;; => 25
+(untrace square)                          ; disable tracing
+
+;; Trace all functions in module
+(trace-module mymath)
+(untrace-module mymath)
+
+;; Assertions
+(assert (> x 0))                          ; raises if false
+(assert (> x 0) "x must be positive")     ; with message
+(assert (integer? x) "expected integer, got: " x)
+
+;; Type inspection
+(type-of 42)                              ; => "Integer" or "Long"
+(type-of "hello")                         ; => "String"
+(type-of '(1 2 3))                        ; => "Cons"
+(type-of (hash-map))                      ; => "LinkedHashMap"
+(type-of square)                          ; => "Procedure" or "Lambda"
+
+;; Identity function (useful for debugging/testing)
+(identity x)                              ; => x
+
+;; Constantly - returns function that always returns given value
+(define always-42 (constantly 42))
+(always-42)                               ; => 42
+(always-42 'ignored 'args)                ; => 42
+
+;; Complement - negate predicate
+(define not-empty? (complement empty?))
+(not-empty? '(1 2 3))                     ; => true
+
+;; Tap - debug inspection without breaking flow
+(tap x)                                   ; prints x, returns x
+(tap x "label")                           ; prints "label: x", returns x
+(->> data
+     (filter valid?)
+     (tap "after filter")
+     (map transform)
+     (tap "after map"))
+
+;; Time with label
+(time-it "fib(30)" (fib 30))
+;; prints: fib(30): 245ms
+;; => result
+
+;; Inspect object in detail
+(inspect obj)                             ; prints type, fields, methods
+```
+
+**Implementation notes:**
+- `trace` modifies the binding to wrap the function
+- `assert` raises `JlllException` on failure
+- `type-of` returns Java class simple name
+- `tap` is invaluable for debugging pipelines
+
+### Checklist
+
+- [ ] `trace` / `untrace` - Trace function calls
+- [ ] `assert` - Assertion with optional message
+- [ ] `type-of` - Get type name as string
+- [ ] `identity` - Return argument unchanged
+- [ ] `constantly` - Function that always returns given value
+- [ ] `complement` - Negate a predicate
+- [ ] `tap` - Debug inspection in pipelines
+- [ ] `inspect` - Detailed object inspection
+
+---
+
+## 18. Environment and System (Nice to Have)
+
+Access to environment variables, system properties, and system information.
+
+### Proposed Implementation
+
+```lisp
+;; Environment variables
+(getenv "HOME")                           ; => "/home/user"
+(getenv "MISSING")                        ; => null
+(getenv "MISSING" "default")              ; => "default"
+(getenv-all)                              ; => hash-map of all env vars
+
+;; Java system properties
+(get-property "java.version")             ; => "17.0.1"
+(get-property "os.name")                  ; => "Mac OS X"
+(get-property "user.dir")                 ; => current directory
+(set-property! "my.prop" "value")         ; set property
+
+;; System information
+(hostname)                                ; => "mycomputer.local"
+(user-name)                               ; => "alice"
+(user-home)                               ; => "/home/alice"
+(os-name)                                 ; => "Mac OS X"
+(os-arch)                                 ; => "aarch64"
+(java-version)                            ; => "17.0.1"
+
+;; Command execution (careful - security implications)
+(shell "ls -la")                          ; => output as string
+(shell "ls" "-la" "/tmp")                 ; => with args
+(shell-lines "ls")                        ; => output as list of lines
+(shell-status "test -f file.txt")         ; => exit code (0 = success)
+
+;; Process memory
+(gc)                                      ; trigger garbage collection
+(memory-used)                             ; => bytes used
+(memory-free)                             ; => bytes free
+(memory-total)                            ; => total heap size
+```
+
+**Implementation notes:**
+- Environment access via `System.getenv()`
+- Properties via `System.getProperty()` / `setProperty()`
+- Shell execution needs careful security consideration (maybe opt-in)
+- Memory via `Runtime.getRuntime()`
+
+### Checklist
+
+- [ ] `getenv` - Get environment variable
+- [ ] `getenv-all` - All environment variables as hash-map
+- [ ] `get-property` - Get Java system property
+- [ ] `set-property!` - Set Java system property
+- [ ] `hostname` - Machine hostname
+- [ ] `user-name` / `user-home` - User info
+- [ ] `os-name` / `os-arch` - OS info
+- [ ] `java-version` - Java version string
+- [ ] `gc` - Trigger garbage collection
+- [ ] `memory-used` / `memory-free` / `memory-total` - Memory info
+
+---
+
+## 19. Formatted Output (Nice to Have)
+
+Printf-style formatting and Scheme-standard output procedures.
+
+### Proposed Implementation
+
+```lisp
+;; Printf-style format (Common Lisp / Scheme SRFI-28 style)
+(format "Hello, ~a!" "World")             ; => "Hello, World!"
+(format "~a + ~a = ~a" 1 2 3)             ; => "1 + 2 = 3"
+
+;; Format directives:
+;; ~a - aesthetic (human readable, no quotes on strings)
+;; ~s - standard (machine readable, quotes on strings)
+;; ~d - decimal integer
+;; ~f - floating point
+;; ~% - newline
+;; ~~ - literal tilde
+
+(format "Name: ~a, Age: ~d" "Alice" 30)   ; => "Name: Alice, Age: 30"
+(format "Pi is ~f" 3.14159)               ; => "Pi is 3.14159"
+(format "~s" "hello")                     ; => "\"hello\""
+(format "Line1~%Line2")                   ; => "Line1\nLine2"
+
+;; Width and padding
+(format "~10a" "hi")                      ; => "hi        " (right-pad)
+(format "~10@a" "hi")                     ; => "        hi" (left-pad)
+(format "~5d" 42)                         ; => "   42"
+(format "~5,'0d" 42)                      ; => "00042" (zero-pad)
+
+;; Scheme R5RS style output
+(display "hello")                         ; prints: hello (no quotes)
+(display '(1 2 3))                        ; prints: (1 2 3)
+(write "hello")                           ; prints: "hello" (with quotes)
+(write '(1 2 3))                          ; prints: (1 2 3)
+
+;; With port
+(display "hello" out-port)
+(write data out-port)
+
+;; Printf to port
+(fprintf port "~a: ~d~%" name value)
+
+;; Printf to stdout
+(printf "Result: ~a~%" result)
+```
+
+**Implementation notes:**
+- Format directive syntax follows Common Lisp / SRFI-28
+- Can implement subset first, expand later
+- `display` vs `write`: display is for humans, write is for `read` to parse back
+- Consider using Java's `String.format` for numeric formatting
+
+### Checklist
+
+- [ ] `format` - Format string with directives
+- [ ] `printf` - Format and print to stdout
+- [ ] `fprintf` - Format and print to port
+- [ ] `display` - Write object for humans (no string quotes)
+- [ ] `write` - Write object for machine (readable representation)
+- [ ] Basic directives: `~a`, `~s`, `~d`, `~f`, `~%`, `~~`
+- [ ] Width/padding support
+
+---
+
+## 20. Sets (Nice to Have)
+
+Hash-based set data structure for efficient membership testing and set operations.
+
+### Proposed Implementation
+
+```lisp
+;; Create sets
+(make-set)                                ; => empty mutable set
+(set 1 2 3)                               ; => set with elements
+(list->set '(1 2 2 3 3 3))                ; => set with 1, 2, 3
+
+;; Predicates
+(set? s)                                  ; => true
+(set-empty? s)                            ; => true/false
+(set-contains? s 2)                       ; => true
+
+;; Size
+(set-count s)                             ; => number of elements
+
+;; Mutation
+(set-add! s 4)                            ; add element, returns set
+(set-remove! s 2)                         ; remove element, returns set
+(set-clear! s)                            ; remove all elements
+
+;; Conversion
+(set->list s)                             ; => (1 2 3) (order may vary)
+
+;; Set operations (return new sets)
+(set-union s1 s2)                         ; elements in either
+(set-intersection s1 s2)                  ; elements in both
+(set-difference s1 s2)                    ; elements in s1 but not s2
+(set-symmetric-difference s1 s2)          ; elements in exactly one
+
+;; Set predicates
+(set-subset? s1 s2)                       ; is s1 subset of s2?
+(set-superset? s1 s2)                     ; is s1 superset of s2?
+(set-disjoint? s1 s2)                     ; no common elements?
+(set-equal? s1 s2)                        ; same elements?
+
+;; Iteration
+(set-for-each println s)                  ; iterate over elements
+(set-map (lambda (x) (* x 2)) s)          ; => new set with transformed elements
+(set-filter positive? s)                  ; => new set with matching elements
+```
+
+**Implementation notes:**
+- Wrap Java's `LinkedHashSet` (preserves insertion order)
+- Or `HashSet` for pure performance
+- Mutable by default (like hash-maps)
+- Set operations return new sets (non-destructive)
+
+### Checklist
+
+- [ ] `make-set` / `set` - Create sets
+- [ ] `list->set` / `set->list` - Conversions
+- [ ] `set?` - Test if value is set
+- [ ] `set-empty?` - Test for empty set
+- [ ] `set-contains?` - Membership test
+- [ ] `set-count` - Number of elements
+- [ ] `set-add!` / `set-remove!` / `set-clear!` - Mutation
+- [ ] `set-union` / `set-intersection` / `set-difference` - Set operations
+- [ ] `set-subset?` / `set-superset?` / `set-equal?` - Set predicates
+- [ ] `set-for-each` / `set-map` / `set-filter` - Iteration
+
+---
+
+## 21. Lazy Sequences (Nice to Have)
+
+Lazy evaluation for working with potentially infinite sequences and deferred computation.
+
+### Proposed Implementation
+
+```lisp
+;; Delay evaluation (create a "promise")
+(define p (delay (begin (println "computing...") 42)))
+(force p)                                 ; prints "computing...", => 42
+(force p)                                 ; => 42 (cached, no recomputation)
+
+;; Test if realized
+(realized? p)                             ; => true after first force
+
+;; Lazy cons - cdr is delayed
+(define ones (lazy-cons 1 ones))          ; infinite list of 1s
+(car ones)                                ; => 1
+(car (cdr ones))                          ; => 1
+
+;; Lazy range (possibly infinite)
+(define naturals (lazy-range 0))          ; 0, 1, 2, 3, ...
+(define evens (lazy-range 0 :step 2))     ; 0, 2, 4, 6, ...
+(define finite (lazy-range 0 10))         ; 0, 1, ..., 9
+
+;; Take from lazy sequence (forces evaluation)
+(take 5 naturals)                         ; => (0 1 2 3 4)
+(take 10 (lazy-range 0 :step 2))          ; => (0 2 4 6 8 10 12 14 16 18)
+
+;; Lazy transformations (return lazy sequences)
+(define squares (lazy-map (lambda (x) (* x x)) naturals))
+(take 5 squares)                          ; => (0 1 4 9 16)
+
+(define evens (lazy-filter even? naturals))
+(take 5 evens)                            ; => (0 2 4 6 8)
+
+;; Lazy drop
+(take 5 (lazy-drop 10 naturals))          ; => (10 11 12 13 14)
+
+;; Take while
+(lazy-take-while (lambda (x) (< x 100)) naturals)
+
+;; Realize entire lazy sequence (careful with infinite!)
+(realize (lazy-range 0 10))               ; => (0 1 2 3 4 5 6 7 8 9)
+
+;; Check if lazy
+(lazy-seq? naturals)                      ; => true
+(lazy-seq? '(1 2 3))                      ; => false
+
+;; Iterate - generate from function
+(define powers-of-2 (iterate (lambda (x) (* x 2)) 1))
+(take 10 powers-of-2)                     ; => (1 2 4 8 16 32 64 128 256 512)
+
+;; Cycle - infinite repetition
+(define abc (cycle '(a b c)))
+(take 7 abc)                              ; => (a b c a b c a)
+
+;; Repeat - infinite copies
+(take 5 (repeat 'x))                      ; => (x x x x x)
+```
+
+**Implementation notes:**
+- `delay`/`force` use a simple wrapper class with memoization
+- Lazy sequences can be implemented as thunks returning `(value . thunk)`
+- Be careful with stack depth on long sequences (use trampolining if needed)
+- `take` on infinite sequence must force elements one at a time
+- Consider implementing as proper stream type for better integration
+
+### Checklist
+
+- [ ] `delay` / `force` - Basic lazy evaluation primitives
+- [ ] `lazy-cons` - Cons with lazy cdr
+- [ ] `lazy-seq?` - Test for lazy sequence
+- [ ] `lazy-range` - Lazy numeric range (finite or infinite)
+- [ ] `lazy-map` / `lazy-filter` - Lazy transformations
+- [ ] `lazy-take` / `lazy-drop` - Lazy slicing
+- [ ] `lazy-take-while` / `lazy-drop-while` - Predicate-based slicing
+- [ ] `realize` - Force entire lazy sequence to list
+- [ ] `iterate` - Generate from repeated function application
+- [ ] `cycle` - Infinite repetition of sequence
+- [ ] `repeat` - Infinite copies of value
+
+---
+
+## 22. AI Integration with LangChain4j (Important)
+
+Integrate LLM capabilities into JLLL using [langchain4j](https://github.com/langchain4j/langchain4j).
+Provides a session-centric model where all AI interactions go through sessions with conversation
+memory, dynamic tool management, and lazy streaming responses.
+
+**Dependencies on other sections:**
+- Section 21 (Lazy Sequences) - All AI responses are lazy sequences
+- Section 15 (JSON Support) - Tool argument parsing, structured responses
+- Section 12 (Hash Maps) - Configuration and structured data
+- Section 11 (Parallel Execution) - Async AI calls via `future`/`pmap`
+- Section 7 (File I/O) - Document loading for RAG
+
+### Configuration
+
+API keys are read from environment variables (auto-detected):
+
+| Environment Variable | Provider |
+|---------------------|----------|
+| `OPENAI_API_KEY` | OpenAI (GPT-4, GPT-4o, etc.) |
+| `ANTHROPIC_API_KEY` | Anthropic (Claude) |
+| `GOOGLE_AI_API_KEY` | Google AI (Gemini) |
+| `OLLAMA_BASE_URL` | Ollama (local models) |
+
+Keys can also be set programmatically to override environment variables.
+
+### Proposed Implementation
+
+```lisp
+;; ============================================================
+;; SESSION MANAGEMENT
+;; ============================================================
+
+;; Create session explicitly (returns session object)
+(define coder (ai-session-create 
+  :name "coding-helper"              ; optional, otherwise auto-generated ID
+  :system "You are a coding tutor"   ; system message
+  :model "gpt-4o"                    ; optional model override
+  :tools (list custom-tool)))        ; additional tools (eval is default)
+
+;; Make session active for current environment
+(ai-session-activate coder)
+
+;; Get currently active session (nil if none)
+(ai-session-current)
+
+;; List all sessions
+(ai-sessions)                        ; => (session1 session2 ...)
+
+;; Deactivate current session
+(ai-session-deactivate)
+
+;; Get session identity
+(ai-session-name coder)              ; => "coding-helper" or auto-generated
+(ai-session-id coder)                ; => unique ID like "sess-12345"
+
+;; ============================================================
+;; CORE AI - Returns lazy sequence
+;; ============================================================
+
+;; (ai ...) uses active session, or creates implicit default session
+;; Always returns a lazy sequence of text chunks
+
+(define response (ai "Explain closures"))
+
+;; Stream to output (prints as chunks arrive)
+(for-each print response)
+
+;; Collect full response as string
+(string-join (realize response) "")
+
+;; With options
+(ai "Be creative" :temperature 0.9)
+(ai "Use this model" :model "claude-3-sonnet")
+
+;; Override session for single call (doesn't change active session)
+(ai "Question" :session other-session)
+
+;; Conversation continues in active session
+(ai-session-activate coder)
+(ai "Hello, I'm learning Lisp")
+(ai "What's a cons cell?")           ; has context from previous
+(ai "Show me an example")            ; continues same conversation
+
+;; ============================================================
+;; HISTORY MANAGEMENT
+;; ============================================================
+
+;; Get conversation history
+(ai-history)                         ; active session
+(ai-history coder)                   ; specific session
+
+;; Clear history (keeps session config)
+(ai-clear)                           ; clear active session
+(ai-clear coder)                     ; clear specific session
+
+;; ============================================================
+;; TOOL MANAGEMENT (Dynamic)
+;; ============================================================
+
+;; Define a custom tool
+(define weather-tool
+  (ai-tool "get-weather"
+    :description "Gets current weather for a city"
+    :parameters ((:city :type "string" :description "City name"))
+    :fn (lambda (city) (fetch-weather city))))
+
+;; Add tool to session dynamically
+(ai-tool-add coder weather-tool)
+
+;; Remove tool from session
+(ai-tool-remove coder "get-weather")
+
+;; List tools in session
+(ai-tools coder)                     ; => list of tool specs
+
+;; ============================================================
+;; DEFAULT EVAL TOOL
+;; ============================================================
+
+;; The "eval" tool is enabled by default in all sessions
+;; Allows LLM to execute arbitrary JLLL code
+;; Security is user's responsibility!
+
+(ai "Calculate the 20th fibonacci number")
+;; LLM writes JLLL code, calls eval tool, returns result
+
+(ai "Write code to list files in current directory and count them")
+;; LLM uses eval tool to run (length (directory-list "."))
+
+;; Errors are returned as messages, allowing LLM to retry
+(ai "Divide 10 by 0")
+;; eval returns: "Error: Division by zero"
+;; LLM can acknowledge or try different approach
+
+;; Disable eval tool if needed (for security)
+(ai-tool-remove coder "eval")
+
+;; ============================================================
+;; LAZY RESPONSE PATTERNS
+;; ============================================================
+
+;; Since (ai ...) returns lazy sequence, many patterns are possible:
+
+;; Take only first few chunks (cancel early)
+(take 5 (ai "Tell me a very long story..."))
+
+;; Transform stream lazily
+(lazy-map string-upcase (ai "Hello"))
+
+;; Process with immediate side effects
+(for-each 
+  (lambda (chunk) 
+    (print chunk))
+  (ai "Streaming response"))
+
+;; Tool calls happen transparently during realization
+;; User only sees final text output
+
+;; ============================================================
+;; ASYNC AI (using JLLL concurrency - Section 11)
+;; ============================================================
+
+;; Run AI call in background
+(define f (future (string-join (realize (ai "Summarize...")) "")))
+(do-other-work)
+(deref f)                            ; get result when ready
+
+;; Parallel AI calls
+(pmap (lambda (q) (string-join (realize (ai q)) ""))
+      '("Question 1" "Question 2" "Question 3"))
+
+;; ============================================================
+;; CONFIGURATION
+;; ============================================================
+
+;; Override environment variables programmatically
+(ai-configure :openai-api-key "sk-...")
+(ai-configure :anthropic-api-key "sk-ant-...")
+(ai-configure :default-model "gpt-4o")
+
+;; Get current config as hash-map
+(ai-config)                          ; => {:default-model "gpt-4o" ...}
+```
+
+**Implementation notes:**
+- Uses [langchain4j](https://github.com/langchain4j/langchain4j) as the underlying library
+- Provider-agnostic: automatically detects available providers from environment variables
+- All AI responses are **lazy sequences** - no separate streaming API needed
+- Tool execution is synchronous (LLM calls tool → execute → result sent back → continue)
+- For async operations, use JLLL's `future`, `pmap`, `pcalls` from Section 11
+- The `eval` tool is **enabled by default** - allows LLM to run JLLL code
+- Eval tool errors return error messages to LLM (allows retry), not exceptions
+- **Security note:** eval tool allows arbitrary code execution - security is user's responsibility
+
+### Future Enhancements
+
+These features may be added in future versions:
+
+**Session Persistence:**
+```lisp
+;; Save session to file (history, config, tools)
+(ai-session-save coder "coder-session.jlll")
+
+;; Load session from file
+(define restored (ai-session-load "coder-session.jlll"))
+```
+
+**Embeddings:**
+```lisp
+(ai-embed "Hello world")             ; => list of floats (vector)
+(ai-similarity "cat" "dog")          ; => 0.85 (cosine similarity)
+```
+
+**RAG (Retrieval-Augmented Generation):**
+```lisp
+;; Load and split documents
+(define docs (ai-load-documents "docs/*.md"))
+(define chunks (ai-split-text docs :chunk-size 1000))
+
+;; Create vector store and add embeddings
+(define store (ai-vector-store :type "chroma"))
+(ai-store-add store chunks)
+
+;; Query with context
+(ai-rag "How does the module system work?" :store store)
+```
+
+**Structured Outputs:**
+```lisp
+;; Force LLM to return specific structure
+(ai-structured "Extract person info from: John is 30 years old"
+  :schema {:name :string :age :integer})
+;; => {:name "John" :age 30}
+```
+
+**Image Generation:**
+```lisp
+(ai-image "A sunset over mountains" :model "dall-e-3")
+;; => URL or binary data
+```
+
+**Vision / Multimodal:**
+```lisp
+(ai-vision "What's in this image?" :image "photo.jpg")
+(ai-vision "Describe this" :image-url "https://...")
+```
+
+### Checklist
+
+**Session Management:**
+- [ ] `ai-session-create` - Create session (`:name`, `:system`, `:model`, `:tools`)
+- [ ] `ai-session-activate` - Make session active for current environment
+- [ ] `ai-session-deactivate` - Deactivate current session
+- [ ] `ai-session-current` - Get active session or nil
+- [ ] `ai-sessions` - List all sessions
+- [ ] `ai-session-name` / `ai-session-id` - Get session identity
+
+**Core Operations:**
+- [ ] `ai` - Chat using active session, returns lazy sequence (depends: Section 21)
+- [ ] `ai-history` - Get conversation history
+- [ ] `ai-clear` - Clear session history
+
+**Tool Management:**
+- [ ] `ai-tool` - Define custom tool
+- [ ] `ai-tool-add` - Add tool to session dynamically
+- [ ] `ai-tool-remove` - Remove tool from session
+- [ ] `ai-tools` - List tools in session
+- [ ] Built-in `eval` tool (default, errors returned as messages)
+
+**Configuration:**
+- [ ] `ai-configure` - Set API keys and defaults
+- [ ] `ai-config` - Get configuration as hash-map
+
+---
+
 ## Implementation Notes
 
 ### Priority Order for Implementation
 
-1. **Exception handling** - Everything else depends on being able to handle errors
-2. **Input operations** - Needed for any interactive program
-3. **String operations** - Fundamental for text processing
-4. **Comparison operators & predicates** - Very frequently needed
-5. **List utilities** - Core functional programming tools
-6. **File I/O** - Essential for real applications
-7. **Control flow macros** - Developer convenience
-8. The rest can follow based on actual usage needs
+**Phase 1 - Core Language (Completed):**
+1. ~~Exception handling~~ - Everything else depends on being able to handle errors
+2. ~~Input operations~~ - Needed for any interactive program
+3. ~~String operations~~ - Fundamental for text processing
+4. ~~Comparison operators & predicates~~ - Very frequently needed
+5. ~~List utilities~~ - Core functional programming tools
+6. ~~File I/O~~ - Essential for real applications
+7. ~~Control flow macros~~ - Developer convenience
+8. ~~Symbol/macro utilities~~ - For metaprogramming
+9. ~~Math completion~~ - Fill gaps in numeric operations
+10. ~~Parallel execution~~ - Modern concurrency support
+11. ~~Hash maps~~ - Efficient key-value storage
+12. ~~Modules/namespaces~~ - Code organization
+
+**Phase 2 - Enhanced Functionality (New):**
+13. **Regular expressions** - Essential for text processing
+14. **JSON support** - Critical for modern applications and APIs
+15. **Date/time operations** - Common requirement for most applications
+16. **Debugging tools** - Developer productivity
+17. **Environment/system access** - Integration with host system
+18. **Formatted output** - Better output control
+19. **Sets** - Complete collection types
+20. **Lazy sequences** - Advanced functional programming
+21. **AI integration** - LLM capabilities via langchain4j (depends on 11, 12, 15, 21)
 
 ### Implementation Strategies
 
 **Java Primitives vs JLLL Implementations:**
 - Simple operations (`when`, `unless`, `<=`, `zero?`) - JLLL macros/functions in `.jlll` files
 - Performance-critical or Java-dependent features - Java primitives in `*Lib.java`
-- String/file operations - wrap Java methods directly
+- String/file/regex operations - wrap Java methods directly
+- JSON - use lightweight library or implement recursive descent parser
+- Date/time - wrap `java.time` API
+
+**New Library Classes to Create:**
+- `RegexLib.java` - Regular expression operations
+- `JsonLib.java` - JSON parsing and generation
+- `DateLib.java` - Date/time operations
+- `SystemLib.java` - Environment and system access
+- `SetLib.java` - Set data structure
+- `LazyLib.java` - Lazy sequences and streams
+- `AILib.java` - AI/LLM integration (requires langchain4j dependency)
 
 **Testing:**
 - Add tests in `JLLLTestCase.java` for Java primitives
 - Add `:doc` metadata to JLLL-implemented functions
-- Test edge cases: empty lists, null, boundary values
+- Test edge cases: empty lists, null, boundary values, malformed input
 
 **Documentation:**
 - Update `docs/primitives.md` with new functions
 - Include examples in `:doc` strings
+- Add new sections for each library
+
+### Section Dependencies
+
+Some sections depend on features from other sections. Implement dependencies first,
+or implement sections in the order listed.
+
+| Section | Depends On | Used For |
+|---------|------------|----------|
+| 14. Regular Expressions | 3. String Operations | Text pattern matching |
+| 15. JSON Support | 6. List Utilities | JSON arrays → lists |
+| 15. JSON Support | 12. Hash Maps | JSON objects → hash-maps |
+| 16. Date/Time | 12. Hash Maps | `current-time` structured data |
+| 17. Debugging Tools | 9. Symbol/Macro Utilities | `trace` function wrapping |
+| 19. Formatted Output | 3. String Operations | Text formatting |
+| 21. Lazy Sequences | 8. Control Flow | `delay`/`force` evaluation |
+| 22. AI Integration | 11. Parallel Execution | Async AI calls (`future`, `pmap`) |
+| 22. AI Integration | 12. Hash Maps | Configuration, structured responses |
+| 22. AI Integration | 15. JSON Support | Tool arguments, LLM responses |
+| 22. AI Integration | 21. Lazy Sequences | Streaming responses |
+| 22. AI Integration | 7. File I/O | Document loading (RAG) |
+
+**Dependency-free sections:** 14, 17, 18, 19, 20 can be implemented independently.
+
+**Recommended implementation order for Phase 2:**
+1. Regular expressions (14) - no dependencies
+2. JSON support (15) - needs hash maps (done), lists (done)
+3. Date/time (16) - needs hash maps (done)
+4. Sets (20) - no dependencies
+5. Lazy sequences (21) - needs control flow (done)
+6. AI integration (22) - needs JSON, lazy sequences, concurrency (all done or above)
+7. Debugging tools (17), Environment (18), Formatted output (19) - anytime
 
 ### Scheme Compatibility Notes
 
@@ -793,6 +1676,7 @@ JLLL follows Scheme naming conventions but is not strictly R5RS/R7RS compatible:
 - Mutable by default (Scheme prefers immutability)
 - Keywords (`:foo`) are JLLL-specific
 - Java interop is JLLL-specific
+- `format` uses Common Lisp / SRFI-28 directives (`~a`, `~s`, etc.)
 
 ---
 
