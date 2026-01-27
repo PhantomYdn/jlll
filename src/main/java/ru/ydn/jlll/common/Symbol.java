@@ -44,10 +44,8 @@ public class Symbol implements Serializable
     public static final Symbol EXCLAMATION = Symbol.intern("exclamation");
     /** Sharp/hash reader macro */
     public static final Symbol SHARP = Symbol.intern("sharp");
-    /** Standard input stream symbol */
-    public static final Symbol STDIN = Symbol.intern("stdin");
-    /** Standard output stream symbol */
-    public static final Symbol STDOUT = Symbol.intern("stdout");
+    /** Console binding for I/O operations */
+    public static final Symbol CONSOLE = Symbol.intern("*console*");
     private final String name;
 
     private Symbol(String name)

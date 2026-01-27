@@ -3,7 +3,6 @@ package ru.ydn.jlll.libs;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Reader;
@@ -15,12 +14,14 @@ import java.net.URLEncoder;
 import java.util.Iterator;
 import java.util.List;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Eof;
 import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Library;
+import ru.ydn.jlll.common.PlainConsole;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Symbol;
 import ru.ydn.jlll.io.JlllTokenizer;
@@ -202,7 +203,14 @@ public class IOLib implements Library
     {
         if (portObj == null)
         {
-            portObj = env.lookup(Symbol.STDIN);
+            // Get reader from console
+            Console console = KernelLib.getConsole(env);
+            BufferedReader reader = console.getReader();
+            if (reader != null)
+            {
+                return reader;
+            }
+            throw new JlllException("No input available");
         }
         if (portObj instanceof BufferedReader)
         {
@@ -221,8 +229,12 @@ public class IOLib implements Library
     /** {@inheritDoc} */
     public void load(Environment env) throws JlllException
     {
-        env.addBinding(Symbol.STDIN, new BufferedReader(new InputStreamReader(System.in)));
-        env.addBinding(Symbol.STDOUT, new PrintWriter(System.out));
+        // Bind console if not already bound (provides stdin/stdout via Console interface)
+        if (env.lookup(Symbol.CONSOLE) == null)
+        {
+            env.addBinding(Symbol.CONSOLE, new PlainConsole(new PrintWriter(System.out, true),
+                    new BufferedReader(new InputStreamReader(System.in))));
+        }
         // read - Read and parse JLLL expression
         new Primitive("read", env,
                 "Reads and parses a JLLL expression from input. "
@@ -410,37 +422,18 @@ public class IOLib implements Library
                 }
             }
         };
-        new Primitive("print", env,
-                "Outputs values to stdout (or *stdout* binding). (print a b c) prints without newline.")
+        new Primitive("print", env, "Outputs values to the console. (print a b c) prints without newline.")
         {
             private static final long serialVersionUID = -92971491929006863L;
 
             public Object apply(Cons vaCons, Environment env) throws JlllException
             {
                 Iterator<?> it = vaCons.iterator();
-                Object outObject = env.lookup(Symbol.STDOUT);
-                PrintWriter out = null;
-                if (outObject instanceof PrintWriter)
-                {
-                    out = (PrintWriter) outObject;
-                }
-                else if (outObject instanceof Writer)
-                {
-                    out = new PrintWriter((Writer) outObject);
-                }
-                else if (outObject instanceof OutputStream)
-                {
-                    out = new PrintWriter((OutputStream) outObject);
-                }
-                else
-                {
-                    out = new PrintWriter(System.out);
-                }
+                Console console = KernelLib.getConsole(env);
                 while (it.hasNext())
                 {
-                    out.print(Evaluator.eval(it.next(), env));
+                    console.print(String.valueOf(Evaluator.eval(it.next(), env)));
                 }
-                //                System.out.println();
                 return vaCons;
             }
         };

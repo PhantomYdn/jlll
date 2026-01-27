@@ -16,12 +16,13 @@ import org.jline.reader.Widget;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
-import org.jline.utils.AttributedString;
-import org.jline.utils.AttributedStyle;
+import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
+import ru.ydn.jlll.common.Symbol;
+import ru.ydn.jlll.libs.KernelLib;
 
 /**
  * Interactive REPL (Read-Eval-Print Loop) for JLLL using JLine 3.
@@ -144,9 +145,8 @@ public class JlllRepl
         };
         reader.getWidgets().put("close-paren", closeParenWidget);
         reader.getKeyMaps().get(LineReader.MAIN).bind(new Reference("close-paren"), ")");
-        // Set up REPL-specific bindings and load ReplLib
-        env.addBinding("*terminal*", terminal);
-        env.addBinding("*color-enabled*", colorEnabled);
+        // Bind JLineConsole for styled I/O
+        env.addBinding(Symbol.CONSOLE, new JLineConsole(terminal, reader, colorEnabled));
         try
         {
             new ReplLib().load(env);
@@ -163,20 +163,13 @@ public class JlllRepl
         {
             return;
         }
-        if (colorEnabled)
-        {
-            out.println(new AttributedString("JLLL - Java Lisp Like Language",
-                    AttributedStyle.BOLD.foreground(AttributedStyle.CYAN)).toAnsi(terminal));
-            out.println(new AttributedString("Type (help) for commands, Ctrl+D to exit",
-                    AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT)).toAnsi(terminal));
-        }
-        else
-        {
-            out.println("JLLL - Java Lisp Like Language");
-            out.println("Type (help) for commands, Ctrl+D to exit");
-        }
-        out.println();
-        out.flush();
+        Console console = KernelLib.getConsole(env);
+        console.printColored("JLLL - Java Lisp Like Language", Console.Color.CYAN);
+        console.println();
+        console.printHint("Type (help) for commands, Ctrl+D to exit");
+        console.println();
+        console.println();
+        console.flush();
     }
 
     private void replLoop()
@@ -380,67 +373,40 @@ public class JlllRepl
 
     private void printResult(Object result)
     {
+        Console console = KernelLib.getConsole(env);
         if (result == null || result instanceof Null)
         {
-            if (colorEnabled)
-            {
-                out.println(new AttributedString("nil", AttributedStyle.DEFAULT.foreground(AttributedStyle.BRIGHT))
-                        .toAnsi(terminal));
-            }
-            else
-            {
-                out.println("nil");
-            }
+            console.printHint("nil");
+            console.println();
         }
         else
         {
-            if (colorEnabled)
-            {
-                out.println(new AttributedString(result.toString(),
-                        AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN)).toAnsi(terminal));
-            }
-            else
-            {
-                out.println(result);
-            }
+            console.printSuccess(result.toString());
+            console.println();
         }
-        out.flush();
+        console.flush();
     }
 
     private void printError(Exception e)
     {
+        Console console = KernelLib.getConsole(env);
         String message = e.getMessage();
         if (message == null)
         {
             message = e.getClass().getSimpleName();
         }
-        if (colorEnabled)
-        {
-            out.println(
-                    new AttributedString("Error: " + message, AttributedStyle.DEFAULT.foreground(AttributedStyle.RED))
-                            .toAnsi(terminal));
-        }
-        else
-        {
-            out.println("Error: " + message);
-        }
+        console.printError("Error: " + message);
+        console.println();
         if (e.getCause() != null)
         {
             String causeMsg = e.getCause().getMessage();
             if (causeMsg != null)
             {
-                if (colorEnabled)
-                {
-                    out.println(new AttributedString("  Caused by: " + causeMsg,
-                            AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW)).toAnsi(terminal));
-                }
-                else
-                {
-                    out.println("  Caused by: " + causeMsg);
-                }
+                console.printWarning("  Caused by: " + causeMsg);
+                console.println();
             }
         }
-        out.flush();
+        console.flush();
     }
 
     private void cleanup()

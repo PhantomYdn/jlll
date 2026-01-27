@@ -457,7 +457,144 @@ Currently requires verbose Java interop for any file operation.
 
 ---
 
-## 8. Control Flow Macros (Important)
+## 8. Dynamic Classpath and Dependencies (Important)
+
+Add external Maven dependencies at runtime with environment-scoped classloaders. Dependencies are 
+associated with child environments, providing isolation without polluting the parent environment.
+
+### Core Concepts
+
+- **Environment-scoped:** Dependencies are tied to child environments, not global
+- **Classloader isolation:** Each environment with dependencies gets its own classloader
+- **Full inheritance:** Child environments inherit all parent bindings plus new classpath
+- **Maven resolution:** Full transitive dependency resolution using Maven coordinates
+
+### Proposed Implementation
+
+```lisp
+;; ============================================================
+;; EXECUTE WITH DEPENDENCIES
+;; ============================================================
+
+;; Execute code in child environment with additional dependencies
+(env :depends '("com.google.code.gson:gson:2.10.1"
+                "org.apache.commons:commons-lang3:3.14.0")
+  (define Gson (class "com.google.gson.Gson"))
+  (define gson (new Gson))
+  (invoke gson "toJson" '(1 2 3)))
+;; Returns: result of body
+;; Child environment is discarded after execution
+
+;; With custom repositories
+(env :depends '("com.example:internal-lib:1.0.0")
+     :repos '("https://maven.example.com/releases")
+  (use-internal-lib))
+
+;; ============================================================
+;; CREATE REUSABLE ENVIRONMENT
+;; ============================================================
+
+;; Without body: returns environment object for later use
+(define json-env (env :depends '("com.google.code.gson:gson:2.10.1")))
+
+;; Execute in existing environment using eval :env
+(eval :env json-env '(define Gson (class "com.google.gson.Gson")))
+(eval :env json-env '(new Gson))
+
+;; ============================================================
+;; MODULES WITH DEPENDENCIES
+;; ============================================================
+
+;; Module with own classpath - clean abstraction over external libraries
+(module json-utils
+  :depends '("com.google.code.gson:gson:2.10.1")
+  
+  (export parse stringify)
+  
+  (define Gson (class "com.google.gson.Gson"))
+  (define gson (new Gson))
+  
+  (define (parse json-string)
+    :doc "Parse JSON string to JLLL data structure"
+    (invoke gson "fromJson" json-string (class "java.util.Map")))
+  
+  (define (stringify obj)
+    :doc "Convert JLLL data to JSON string"
+    (invoke gson "toJson" obj)))
+
+;; Import and use - module's classloader handles Gson classes
+(import json-utils)
+(json-utils/parse "{\"name\": \"Alice\"}")
+
+;; ============================================================
+;; ENVIRONMENT SWITCHING
+;; ============================================================
+
+;; Switch current environment to specified child env
+(env-switch! json-env)
+
+;; Return to parent environment (no argument)
+(env-switch!)
+
+;; REPL workflow example:
+(define dev-env (env :depends '("gson:2.10.1" "guava:32.1.2-jre")))
+(env-switch! dev-env)          ; now in child env with deps
+;; ... work interactively ...
+(env-switch!)                  ; back to parent
+
+;; ============================================================
+;; INTROSPECTION
+;; ============================================================
+
+;; List JARs in current environment's classpath
+(env-classpath)                       ; => ("/path/to/gson.jar" ...)
+
+;; List JARs in specific environment
+(env-classpath json-env)
+
+;; Get parent environment
+(env-parent)                          ; current env's parent
+(env-parent json-env)                 ; specific env's parent
+```
+
+**Dependency notation:**
+- Full Maven coordinates: `"groupId:artifactId:version"`
+- Short form for well-known groups: `"gson:2.10.1"` (if unambiguous)
+- Keyword arguments also supported: `(:group "com.google.code.gson" :artifact "gson" :version "2.10.1")`
+
+**Repository sources (in resolution order):**
+1. Local Maven cache (`~/.m2/repository`)
+2. Maven Central
+3. Custom repositories specified via `:repos`
+
+**Implementation notes:**
+- Use Maven Resolver (Aether) for dependency resolution
+- Each `env :depends` creates a new `URLClassLoader` with parent delegation
+- Module classloaders are preserved when functions are exported/imported
+- No dependency unloading - exit child environment instead
+- Modules with `:depends` cannot be redefined (immutable once created)
+- Different modules can depend on different versions of same library (isolated classloaders)
+
+### Checklist
+
+- [x] `env :depends` - Execute code in child environment with Maven dependencies
+- [x] `env :depends :repos` - Support custom Maven repositories
+- [x] `env :depends` (no body) - Return environment object
+- [x] `eval :env` integration - Execute in specific environment (extend existing)
+- [x] `module :depends` - Module with own classpath and exports
+- [x] `env-switch!` - Switch current environment to child
+- [x] `env-switch!` (no arg) - Return to parent environment
+- [x] `env-classpath` - List JARs in environment's classpath
+- [x] `env-parent` - Get parent environment
+- [x] `env?` - Test if value is an Environment
+- [x] Maven coordinate parsing - Full notation (groupId:artifactId:version)
+- [x] Transitive dependency resolution
+- [x] Local ~/.m2 cache integration
+- [x] Isolated classloaders per environment/module
+
+---
+
+## 9. Control Flow Macros (Important)
 
 Missing convenience macros that are standard in most Lisps.
 
@@ -517,7 +654,7 @@ Missing convenience macros that are standard in most Lisps.
 
 ---
 
-## 9. Symbol and Macro Utilities (Important)
+## 10. Symbol and Macro Utilities (Important)
 
 Features for metaprogramming and writing hygienic macros.
 
@@ -546,7 +683,7 @@ Features for metaprogramming and writing hygienic macros.
 
 ---
 
-## 10. Math Completion (Nice to Have)
+## 11. Math Completion (Nice to Have)
 
 Fix documented-but-missing functions and add utilities.
 
@@ -589,7 +726,7 @@ e                                     ; => 2.71828...
 
 ---
 
-## 11. Parallel Execution (Nice to Have)
+## 12. Parallel Execution (Nice to Have)
 
 For CPU-bound operations that benefit from parallelism.
 
@@ -644,7 +781,7 @@ For CPU-bound operations that benefit from parallelism.
 
 ---
 
-## 12. Hash Maps / Dictionaries (Nice to Have)
+## 13. Hash Maps / Dictionaries (Nice to Have)
 
 Association lists work but are O(n). Need efficient key-value storage.
 
@@ -701,7 +838,7 @@ Association lists work but are O(n). Need efficient key-value storage.
 
 ---
 
-## 13. Modules / Namespaces (Nice to Have)
+## 14. Modules / Namespaces (Nice to Have)
 
 Currently all definitions are global. For larger projects, need organization.
 
@@ -756,7 +893,7 @@ Currently all definitions are global. For larger projects, need organization.
 
 ---
 
-## 14. Regular Expressions (Important)
+## 15. Regular Expressions (Important)
 
 Pattern matching and text manipulation using Java's regex engine.
 
@@ -816,7 +953,7 @@ Pattern matching and text manipulation using Java's regex engine.
 
 ---
 
-## 15. JSON Support (Important)
+## 16. JSON Support (Important)
 
 Parse and generate JSON for data interchange. Essential for web APIs and configuration files.
 
@@ -872,7 +1009,7 @@ Parse and generate JSON for data interchange. Essential for web APIs and configu
 
 ---
 
-## 16. Date/Time Operations (Important)
+## 17. Date/Time Operations (Important)
 
 Working with timestamps, formatting, and date arithmetic.
 
@@ -947,7 +1084,7 @@ Working with timestamps, formatting, and date arithmetic.
 
 ---
 
-## 17. Debugging and Development Tools (Nice to Have)
+## 18. Debugging and Development Tools (Nice to Have)
 
 Utilities for debugging, testing, and development workflows.
 
@@ -1027,7 +1164,7 @@ Utilities for debugging, testing, and development workflows.
 
 ---
 
-## 18. Environment and System (Nice to Have)
+## 19. Environment and System (Nice to Have)
 
 Access to environment variables, system properties, and system information.
 
@@ -1088,7 +1225,7 @@ Access to environment variables, system properties, and system information.
 
 ---
 
-## 19. Formatted Output (Nice to Have)
+## 20. Formatted Output (Nice to Have)
 
 Printf-style formatting and Scheme-standard output procedures.
 
@@ -1153,7 +1290,7 @@ Printf-style formatting and Scheme-standard output procedures.
 
 ---
 
-## 20. Sets (Nice to Have)
+## 21. Sets (Nice to Have)
 
 Hash-based set data structure for efficient membership testing and set operations.
 
@@ -1220,7 +1357,7 @@ Hash-based set data structure for efficient membership testing and set operation
 
 ---
 
-## 21. Lazy Sequences (Implemented)
+## 22. Lazy Sequences (Implemented)
 
 Lazy evaluation for working with potentially infinite sequences and deferred computation.
 
@@ -1309,17 +1446,17 @@ See [docs/lazy-sequences.md](docs/lazy-sequences.md) for comprehensive documenta
 
 ---
 
-## 22. AI Integration with LangChain4j (Important)
+## 23. AI Integration with LangChain4j (Important)
 
 Integrate LLM capabilities into JLLL using [langchain4j](https://github.com/langchain4j/langchain4j).
 Provides a session-centric model where all AI interactions go through sessions with conversation
 memory, dynamic tool management, and lazy streaming responses.
 
 **Dependencies on other sections:**
-- Section 21 (Lazy Sequences) - All AI responses are lazy sequences
-- Section 15 (JSON Support) - Tool argument parsing, structured responses
-- Section 12 (Hash Maps) - Configuration and structured data
-- Section 11 (Parallel Execution) - Async AI calls via `future`/`pmap`
+- Section 22 (Lazy Sequences) - All AI responses are lazy sequences
+- Section 16 (JSON Support) - Tool argument parsing, structured responses
+- Section 13 (Hash Maps) - Configuration and structured data
+- Section 12 (Parallel Execution) - Async AI calls via `future`/`pmap`
 - Section 7 (File I/O) - Document loading for RAG
 
 ### Configuration
@@ -1469,7 +1606,7 @@ Keys can also be set programmatically to override environment variables.
 ;; User only sees final text output
 
 ;; ============================================================
-;; ASYNC AI (using JLLL concurrency - Section 11)
+;; ASYNC AI (using JLLL concurrency - Section 12)
 ;; ============================================================
 
 ;; Run AI call in background
@@ -1499,7 +1636,7 @@ Keys can also be set programmatically to override environment variables.
 - Provider-agnostic: automatically detects available providers from environment variables
 - All AI responses are **lazy sequences** - no separate streaming API needed
 - Tool execution is synchronous (LLM calls tool → execute → result sent back → continue)
-- For async operations, use JLLL's `future`, `pmap`, `pcalls` from Section 11
+- For async operations, use JLLL's `future`, `pmap`, `pcalls` from Section 12
 - The `eval` tool is **enabled by default** - allows LLM to run JLLL code
 - Eval tool errors return error messages to LLM (allows retry), not exceptions
 - **Security note:** eval tool allows arbitrary code execution - security is user's responsibility
@@ -1568,7 +1705,7 @@ These features may be added in future versions:
 - [ ] `ai-session-name` / `ai-session-id` - Get session identity
 
 **Core Operations:**
-- [ ] `ai` - Chat using active session, returns lazy sequence (depends: Section 21)
+- [ ] `ai` - Chat using active session, returns lazy sequence (depends: Section 22)
 - [ ] `ai-history` - Get conversation history
 - [ ] `ai-clear` - Clear session history
 

@@ -1,8 +1,10 @@
 package ru.ydn.jlll.common;
 
+import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,15 @@ public class Environment implements Serializable
     protected Environment parent = null;
     protected Map<Symbol, Object> current = new HashMap<Symbol, Object>();
     protected Map<Symbol, Map<Symbol, Object>> metadata = new HashMap<Symbol, Map<Symbol, Object>>();
+    /**
+     * Custom classloader for this environment. If null, uses parent's classloader or system
+     * classloader.
+     */
+    protected transient ClassLoader classLoader = null;
+    /**
+     * List of JAR files in this environment's classpath (for introspection).
+     */
+    protected transient List<File> classpathJars = null;
     /**
      * top Environment
      */
@@ -120,8 +131,10 @@ public class Environment implements Serializable
             top = new Environment(null);
         }
         //        top = new SkyNetEnvironment(null);
-        new Primitive("load-lib", top, "Loads a Java library class. (load-lib \"com.example.MyLib\") "
-                + "instantiates the class and calls its load() method to register primitives.")
+        new Primitive("load-lib", top,
+                "Loads a Java library class. (load-lib \"com.example.MyLib\") "
+                        + "instantiates the class and calls its load() method to register primitives. "
+                        + "Uses the current environment's classloader to find the class.")
         {
             private static final long serialVersionUID = -7181172149106048903L;
 
@@ -130,7 +143,9 @@ public class Environment implements Serializable
                 String path = values.get(0).toString();
                 try
                 {
-                    Object lib = Class.forName(path).getDeclaredConstructor().newInstance();
+                    // Use environment's classloader to support dynamic dependencies
+                    Class<?> clazz = env.loadClass(path);
+                    Object lib = clazz.getDeclaredConstructor().newInstance();
                     if (!(lib instanceof Library))
                         throw new JlllException("This is not a library: " + path);
                     Library library = (Library) lib;
@@ -486,6 +501,114 @@ public class Environment implements Serializable
     }
 
     /**
+     * Sets the classloader for this environment.
+     *
+     * @param classLoader
+     *            the classloader to use, or null to inherit from parent
+     */
+    public void setClassLoader(ClassLoader classLoader)
+    {
+        this.classLoader = classLoader;
+    }
+
+    /**
+     * Sets the classloader and records the JAR files for introspection.
+     *
+     * @param classLoader
+     *            the classloader to use
+     * @param jars
+     *            list of JAR files in the classpath
+     */
+    public void setClassLoader(ClassLoader classLoader, List<File> jars)
+    {
+        this.classLoader = classLoader;
+        this.classpathJars = jars != null ? new ArrayList<>(jars) : null;
+    }
+
+    /**
+     * Returns the classloader for this environment.
+     *
+     * <p>
+     * If this environment has a custom classloader, it is returned. Otherwise, the parent's
+     * classloader is used. If no parent has a custom classloader, returns the thread's context
+     * classloader or the system classloader.
+     * </p>
+     *
+     * @return the effective classloader for this environment
+     */
+    public ClassLoader getClassLoader()
+    {
+        if (classLoader != null)
+        {
+            return classLoader;
+        }
+        if (parent != null)
+        {
+            return parent.getClassLoader();
+        }
+        // Fall back to context classloader or system classloader
+        ClassLoader contextLoader = Thread.currentThread().getContextClassLoader();
+        return contextLoader != null ? contextLoader : ClassLoader.getSystemClassLoader();
+    }
+
+    /**
+     * Returns the JAR files in this environment's classpath.
+     *
+     * @return list of JAR files, or empty list if no custom classpath
+     */
+    public List<File> getClasspathJars()
+    {
+        if (classpathJars != null)
+        {
+            return Collections.unmodifiableList(classpathJars);
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Returns all JAR files in the classpath, including parent environments.
+     *
+     * @return combined list of JAR files from this environment and all parents
+     */
+    public List<File> getAllClasspathJars()
+    {
+        List<File> result = new ArrayList<>();
+        if (parent != null)
+        {
+            result.addAll(parent.getAllClasspathJars());
+        }
+        if (classpathJars != null)
+        {
+            result.addAll(classpathJars);
+        }
+        return result;
+    }
+
+    /**
+     * Checks if this environment has a custom classloader (not inherited).
+     *
+     * @return true if this environment has its own classloader
+     */
+    public boolean hasOwnClassLoader()
+    {
+        return classLoader != null;
+    }
+
+    /**
+     * Loads a class using this environment's classloader.
+     *
+     * @param className
+     *            fully qualified class name
+     * @return the loaded class
+     * @throws ClassNotFoundException
+     *             if the class cannot be found
+     */
+    public Class<?> loadClass(String className) throws ClassNotFoundException
+    {
+        return Class.forName(className, true, getClassLoader());
+    }
+
+    /**
      * Returns the level of this environment
      *
      * @return the level of this environment
@@ -521,6 +644,9 @@ public class Environment implements Serializable
         Environment snap = new Environment(parent != null ? parent.snapshot() : null);
         snap.current = new HashMap<>(this.current);
         snap.metadata = new HashMap<>(this.metadata);
+        // Share classloader reference (immutable from env perspective)
+        snap.classLoader = this.classLoader;
+        snap.classpathJars = this.classpathJars;
         return snap;
     }
 }

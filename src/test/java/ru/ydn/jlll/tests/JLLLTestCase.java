@@ -2,7 +2,9 @@ package ru.ydn.jlll.tests;
 
 import static org.junit.Assert.*;
 import java.io.BufferedReader;
+import java.io.PrintWriter;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.Iterator;
@@ -14,6 +16,7 @@ import ru.ydn.jlll.common.Eof;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
+import ru.ydn.jlll.common.PlainConsole;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
 import ru.ydn.jlll.common.ReflectionPrimitive;
@@ -67,6 +70,15 @@ public class JLLLTestCase
     public JLLLTestCase()
     {
         env = new Environment(Environment.top);
+    }
+
+    /**
+     * Helper to bind a PlainConsole with test input to *console*.
+     */
+    private void bindTestInput(String input)
+    {
+        env.addBinding(Symbol.CONSOLE,
+                new PlainConsole(new PrintWriter(new StringWriter()), new BufferedReader(new StringReader(input))));
     }
 
     @Test
@@ -765,8 +777,8 @@ public class JLLLTestCase
     @Test
     public void testReadLine() throws Exception
     {
-        // Setup: bind stdin to a StringReader with test input
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("hello\nworld\n")));
+        // Setup: bind console with test input
+        bindTestInput("hello\nworld\n");
         // Read first line
         eval("hello", "(read-line)");
         // Read second line
@@ -775,7 +787,7 @@ public class JLLLTestCase
         Object result = Jlll.eval("(read-line)", env);
         assertEquals(Eof.EOF, result);
         // eof-object? predicate
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("")));
+        bindTestInput("");
         eval(true, "(eof-object? (read-line))");
         eval(false, "(eof-object? \"hello\")");
         eval(false, "(eof-object? 42)");
@@ -784,8 +796,8 @@ public class JLLLTestCase
     @Test
     public void testRead() throws Exception
     {
-        // Setup: bind stdin to a StringReader with JLLL expressions
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("(+ 1 2) 42 'symbol")));
+        // Setup: bind console with JLLL expressions
+        bindTestInput("(+ 1 2) 42 'symbol");
         // Read first expression: (+ 1 2)
         Object expr1 = Jlll.eval("(read)", env);
         assertTrue(expr1 instanceof Cons);
@@ -800,15 +812,15 @@ public class JLLLTestCase
         Object eof = Jlll.eval("(read)", env);
         assertEquals(Eof.EOF, eof);
         // Test eval of read expression
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("(+ 1 2)")));
+        bindTestInput("(+ 1 2)");
         eval(3, "(eval (read))");
     }
 
     @Test
     public void testReadChar() throws Exception
     {
-        // Setup: bind stdin to a StringReader
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("abc")));
+        // Setup: bind console with test input
+        bindTestInput("abc");
         // Read characters one at a time
         eval("a", "(read-char)");
         eval("b", "(read-char)");
@@ -817,7 +829,7 @@ public class JLLLTestCase
         Object eof = Jlll.eval("(read-char)", env);
         assertEquals(Eof.EOF, eof);
         // Test with special characters
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("\n\t ")));
+        bindTestInput("\n\t ");
         eval("\n", "(read-char)");
         eval("\t", "(read-char)");
         eval(" ", "(read-char)");
@@ -826,8 +838,8 @@ public class JLLLTestCase
     @Test
     public void testPeekChar() throws Exception
     {
-        // Setup: bind stdin to a StringReader
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("ab")));
+        // Setup: bind console with test input
+        bindTestInput("ab");
         // Peek doesn't consume the character
         eval("a", "(peek-char)");
         eval("a", "(peek-char)");
@@ -846,7 +858,7 @@ public class JLLLTestCase
     public void testCharReady() throws Exception
     {
         // StringReader always has characters ready (if not empty)
-        env.addBinding(Symbol.STDIN, new BufferedReader(new StringReader("abc")));
+        bindTestInput("abc");
         eval(true, "(char-ready?)");
         // Read all characters
         Jlll.eval("(read-char)", env);

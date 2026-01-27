@@ -1,11 +1,10 @@
 package ru.ydn.jlll.libs;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -19,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import ru.ydn.jlll.common.CompoundProcedure;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Continuation;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Evaluator;
@@ -30,9 +30,11 @@ import ru.ydn.jlll.common.Macros;
 import ru.ydn.jlll.common.ModuleEnvironment;
 import ru.ydn.jlll.common.Null;
 import ru.ydn.jlll.common.ParameterParser;
+import ru.ydn.jlll.common.PlainConsole;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Procedure;
 import ru.ydn.jlll.common.Symbol;
+import ru.ydn.jlll.deps.DependencyResolver;
 import ru.ydn.jlll.util.CommonUtil;
 import ru.ydn.jlll.util.ListUtil;
 
@@ -56,31 +58,21 @@ import ru.ydn.jlll.util.ListUtil;
 public class KernelLib implements Library
 {
     /**
-     * Gets a PrintWriter from the *stdout* binding, with fallback to System.out.
+     * Gets the Console from the environment, with fallback to a PlainConsole wrapping System.out.
      *
      * @param env
-     *            the environment to look up *stdout*
-     * @return a PrintWriter for output
+     *            the environment to look up *console*
+     * @return the Console for I/O operations
      */
-    public static PrintWriter getStdout(Environment env)
+    public static Console getConsole(Environment env)
     {
-        Object outObject = env.lookup(Symbol.STDOUT);
-        if (outObject instanceof PrintWriter)
+        Object console = env.lookup(Symbol.CONSOLE);
+        if (console instanceof Console)
         {
-            return (PrintWriter) outObject;
+            return (Console) console;
         }
-        else if (outObject instanceof Writer)
-        {
-            return new PrintWriter((Writer) outObject);
-        }
-        else if (outObject instanceof OutputStream)
-        {
-            return new PrintWriter((OutputStream) outObject);
-        }
-        else
-        {
-            return new PrintWriter(System.out);
-        }
+        // Fallback: create PlainConsole wrapping System.out
+        return new PlainConsole(new PrintWriter(System.out, true), null);
     }
 
     /**
@@ -136,6 +128,127 @@ public class KernelLib implements Library
         {
             return "Java: " + value.getClass().getSimpleName();
         }
+    }
+
+    /**
+     * Handles the (env :depends ...) special form for dynamic dependency loading.
+     * This is extracted as a static method so it can be reused by ReplLib.
+     *
+     * @param values
+     *            the unevaluated arguments (starting with :depends)
+     * @param env
+     *            the current environment
+     * @return the result of evaluating the body forms in the child environment,
+     *         or the child environment itself if no body forms are provided
+     * @throws JlllException
+     *             if dependency resolution fails or arguments are invalid
+     */
+    public static Object handleEnvDepends(Cons values, Environment env) throws JlllException
+    {
+        // Parse: (env :depends deps-list [:repos repos-list] body...)
+        List<String> dependencies = new ArrayList<>();
+        List<String> repositories = new ArrayList<>();
+        List<Object> bodyForms = new ArrayList<>();
+        Iterator<Object> it = values.iterator();
+        while (it.hasNext())
+        {
+            Object item = it.next();
+            if (item instanceof Keyword)
+            {
+                String kwName = ((Keyword) item).getName();
+                if (kwName.equals("depends"))
+                {
+                    if (!it.hasNext())
+                    {
+                        throw new JlllException(":depends requires a list of dependency coordinates");
+                    }
+                    Object depsObj = Evaluator.eval(it.next(), env);
+                    if (!(depsObj instanceof Cons))
+                    {
+                        throw new JlllException(":depends value must be a list of strings");
+                    }
+                    for (Object dep : (Cons) depsObj)
+                    {
+                        if (dep instanceof String)
+                        {
+                            dependencies.add((String) dep);
+                        }
+                        else if (dep instanceof Symbol)
+                        {
+                            dependencies.add(((Symbol) dep).getName());
+                        }
+                        else
+                        {
+                            throw new JlllException(
+                                    "Dependency must be a string in format 'group:artifact:version', got: " + dep);
+                        }
+                    }
+                }
+                else if (kwName.equals("repos"))
+                {
+                    if (!it.hasNext())
+                    {
+                        throw new JlllException(":repos requires a list of repository URLs");
+                    }
+                    Object reposObj = Evaluator.eval(it.next(), env);
+                    if (!(reposObj instanceof Cons))
+                    {
+                        throw new JlllException(":repos value must be a list of URL strings");
+                    }
+                    for (Object repo : (Cons) reposObj)
+                    {
+                        if (repo instanceof String)
+                        {
+                            repositories.add((String) repo);
+                        }
+                        else
+                        {
+                            throw new JlllException("Repository must be a URL string, got: " + repo);
+                        }
+                    }
+                }
+                else
+                {
+                    throw new JlllException("Unknown keyword in env: :" + kwName + ". Expected :depends or :repos");
+                }
+            }
+            else
+            {
+                // This and remaining items are body forms
+                bodyForms.add(item);
+                while (it.hasNext())
+                {
+                    bodyForms.add(it.next());
+                }
+            }
+        }
+        if (dependencies.isEmpty())
+        {
+            throw new JlllException("(env :depends ...) requires at least one dependency");
+        }
+        // Resolve dependencies and create classloader
+        DependencyResolver resolver = new DependencyResolver();
+        for (String repo : repositories)
+        {
+            resolver.addRepository(repo);
+        }
+        List<File> jars = resolver.resolve(dependencies);
+        ClassLoader childLoader = resolver.createClassLoader(jars, env.getClassLoader());
+        // Create child environment with new classloader
+        Environment childEnv = new Environment(env);
+        childEnv.setClassLoader(childLoader, jars);
+        // If no body, return the environment object
+        if (bodyForms.isEmpty())
+        {
+            return childEnv;
+        }
+        // Evaluate body forms in child environment
+        Object result = Null.NULL;
+        for (Object form : bodyForms)
+        {
+            result = Evaluator.eval(form, childEnv);
+        }
+        return result;
     }
 
     /** {@inheritDoc} */
@@ -634,14 +747,18 @@ public class KernelLib implements Library
                 return null;
             }
         };
-        new Primitive("module", env, "Defines a module with optional exports. (module name body...) "
-                + "Use (export sym1 sym2) or (export *) within the body to mark exports.")
+        new Primitive("module", env,
+                "Defines a module with optional exports and dependencies. "
+                        + "(module name body...) or (module name :depends '(\"group:artifact:version\") body...) "
+                        + "Use (export sym1 sym2) or (export *) within the body to mark exports. "
+                        + "Modules with :depends get their own classloader for loading external JARs. "
+                        + "Note: Modules with :depends cannot be redefined.")
         {
             private static final long serialVersionUID = 8374619283746192838L;
 
             public Object apply(Cons values, Environment env) throws JlllException
             {
-                // (module name body...)
+                // (module name [:depends deps-list] [:repos repos-list] body...)
                 if (values.length() < 1)
                 {
                     throw new JlllException("module requires a name");
@@ -652,19 +769,120 @@ public class KernelLib implements Library
                     throw new JlllException("module name must be a symbol: " + nameObj);
                 }
                 String moduleName = ((Symbol) nameObj).getName();
-                // Check for re-definition (allow for partial loading / circular deps)
+                // Parse rest of arguments: look for :depends, :repos, and body
+                List<String> dependencies = new ArrayList<>();
+                List<String> repositories = new ArrayList<>();
+                List<Object> bodyForms = new ArrayList<>();
+                Iterator<Object> it = ((Cons) values.cdr()).iterator();
+                while (it.hasNext())
+                {
+                    Object item = it.next();
+                    if (item instanceof Keyword)
+                    {
+                        String kwName = ((Keyword) item).getName();
+                        if (kwName.equals("depends"))
+                        {
+                            if (!it.hasNext())
+                            {
+                                throw new JlllException(":depends requires a list of dependency coordinates");
+                            }
+                            Object depsObj = Evaluator.eval(it.next(), env);
+                            if (!(depsObj instanceof Cons))
+                            {
+                                throw new JlllException(":depends value must be a list of strings");
+                            }
+                            for (Object dep : (Cons) depsObj)
+                            {
+                                if (dep instanceof String)
+                                {
+                                    dependencies.add((String) dep);
+                                }
+                                else if (dep instanceof Symbol)
+                                {
+                                    dependencies.add(((Symbol) dep).getName());
+                                }
+                                else
+                                {
+                                    throw new JlllException(
+                                            "Dependency must be a string 'group:artifact:version', got: " + dep);
+                                }
+                            }
+                        }
+                        else if (kwName.equals("repos"))
+                        {
+                            if (!it.hasNext())
+                            {
+                                throw new JlllException(":repos requires a list of repository URLs");
+                            }
+                            Object reposObj = Evaluator.eval(it.next(), env);
+                            if (!(reposObj instanceof Cons))
+                            {
+                                throw new JlllException(":repos value must be a list of URL strings");
+                            }
+                            for (Object repo : (Cons) reposObj)
+                            {
+                                if (repo instanceof String)
+                                {
+                                    repositories.add((String) repo);
+                                }
+                                else
+                                {
+                                    throw new JlllException("Repository must be a URL string, got: " + repo);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            throw new JlllException(
+                                    "Unknown keyword in module: :" + kwName + ". Expected :depends or :repos");
+                        }
+                    }
+                    else
+                    {
+                        // This and remaining items are body forms
+                        bodyForms.add(item);
+                        while (it.hasNext())
+                        {
+                            bodyForms.add(it.next());
+                        }
+                    }
+                }
+                // Check for re-definition
                 ModuleEnvironment moduleEnv = Environment.getModule(moduleName);
-                if (moduleEnv == null)
+                if (moduleEnv != null)
+                {
+                    // Modules with dependencies cannot be redefined (immutable classloader)
+                    if (moduleEnv.hasOwnClassLoader())
+                    {
+                        throw new JlllException("Module '" + moduleName + "' has dependencies and cannot be redefined");
+                    }
+                    if (!dependencies.isEmpty())
+                    {
+                        throw new JlllException("Module '" + moduleName
+                                + "' already exists; cannot add dependencies to existing module");
+                    }
+                }
+                else
                 {
                     // Create new module with top environment as parent
-                    // This gives access to all standard primitives
                     moduleEnv = new ModuleEnvironment(moduleName, env.getTopEnvironment());
+                    // If there are dependencies, resolve them and set classloader
+                    if (!dependencies.isEmpty())
+                    {
+                        DependencyResolver resolver = new DependencyResolver();
+                        for (String repo : repositories)
+                        {
+                            resolver.addRepository(repo);
+                        }
+                        List<File> jars = resolver.resolve(dependencies);
+                        ClassLoader childLoader = resolver.createClassLoader(jars, env.getClassLoader());
+                        moduleEnv.setClassLoader(childLoader, jars);
+                    }
                     Environment.registerModule(moduleName, moduleEnv);
                 }
                 // Evaluate body in module environment
-                Cons body = (Cons) values.cdr();
                 Object result = null;
-                for (Object form : body)
+                for (Object form : bodyForms)
                 {
                     result = Evaluator.eval(form, moduleEnv);
                 }
@@ -1052,15 +1270,50 @@ public class KernelLib implements Library
                 }
             }
         };
-        new Primitive("eval", env,
-                "Evaluates an expression. (eval '(+ 1 2)) returns 3. Useful for dynamic code execution.")
+        new Primitive("eval", env, "Evaluates an expression. (eval '(+ 1 2)) returns 3. "
+                + "(eval :env my-env '(expression)) evaluates expression in specified environment. "
+                + "Useful for dynamic code execution and executing code in environments with custom classpaths.")
         {
             private static final long serialVersionUID = -8630743653655996673L;
 
             public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
-                //                System.out.println(values);
-                return Evaluator.eval(values.get(0), env);
+                Environment targetEnv = env;
+                Object expr = null;
+                // Check for :env keyword
+                Iterator<Object> it = values.iterator();
+                while (it.hasNext())
+                {
+                    Object item = it.next();
+                    if (item instanceof Keyword && ((Keyword) item).getName().equals("env"))
+                    {
+                        if (!it.hasNext())
+                        {
+                            throw new JlllException(":env requires an environment argument");
+                        }
+                        Object envObj = it.next();
+                        if (!(envObj instanceof Environment))
+                        {
+                            throw new JlllException(":env argument must be an Environment, got: "
+                                    + (envObj == null ? "null" : envObj.getClass().getSimpleName()));
+                        }
+                        targetEnv = (Environment) envObj;
+                    }
+                    else
+                    {
+                        // This is the expression to evaluate
+                        if (expr != null)
+                        {
+                            throw new JlllException("eval expects only one expression (use begin for multiple)");
+                        }
+                        expr = item;
+                    }
+                }
+                if (expr == null)
+                {
+                    throw new JlllException("eval requires an expression to evaluate");
+                }
+                return Evaluator.eval(expr, targetEnv);
             }
         };
         new Primitive("time", env,
@@ -1304,6 +1557,7 @@ public class KernelLib implements Library
                 if (values.length() != 1)
                     throw new JlllException("doc requires exactly one argument");
                 Object arg = values.get(0);
+                Console console = getConsole(env);
                 Symbol sym;
                 String symName;
                 if (arg instanceof Symbol)
@@ -1317,9 +1571,8 @@ public class KernelLib implements Library
                     String doc = ((Procedure) arg).getDoc();
                     if (doc != null && !doc.isEmpty())
                     {
-                        PrintWriter out = getStdout(env);
-                        out.println(doc);
-                        out.flush();
+                        console.println(doc);
+                        console.flush();
                     }
                     return (doc != null && !doc.isEmpty()) ? doc : null;
                 }
@@ -1327,8 +1580,6 @@ public class KernelLib implements Library
                 {
                     throw new JlllException("doc requires a symbol or procedure");
                 }
-                // Get output stream
-                PrintWriter out = getStdout(env);
                 // Primary source: metadata on the binding
                 Object doc = env.getMeta(sym, Symbol.intern("doc"));
                 String docString = null;
@@ -1351,27 +1602,33 @@ public class KernelLib implements Library
                 }
                 // Print formatted output
                 Object value = env.lookup(sym);
+                console.println();
                 if (value == null)
                 {
-                    out.println("Symbol '" + symName + "' is not bound.");
+                    console.printError("Symbol '" + symName + "' is not bound.");
+                    console.println();
                 }
                 else
                 {
-                    out.println(symName);
-                    out.println("──────────────────────────────────────────────────");
+                    console.printColored(symName, Console.Color.CYAN);
+                    console.println();
+                    console.printFaint("──────────────────────────────────────────────────");
+                    console.println();
                     if (docString != null)
                     {
-                        out.println(docString);
+                        console.println(docString);
                     }
                     else
                     {
-                        out.println("No documentation available.");
+                        console.printHint("No documentation available.");
+                        console.println();
                     }
-                    out.println();
-                    out.println("Type: " + getTypeName(value));
+                    console.println();
+                    console.printHint("Type: " + getTypeName(value));
+                    console.println();
                 }
-                out.println();
-                out.flush();
+                console.println();
+                console.flush();
                 return docString;
             }
         };
@@ -1907,18 +2164,39 @@ public class KernelLib implements Library
                 }
             }
         };
-        // ============== Environment Introspection ==============
+        // ============== Environment Operations ==============
         new Primitive("env", env,
-                "Prints environment bindings. (env) prints all bindings grouped by type. "
-                        + "(env \"prefix\") filters by name prefix. "
-                        + "(env :primitives), (env :macros), (env :procedures), (env :variables) " + "filters by type.")
+                "Environment operations. Multiple forms: " + "(env) - prints all bindings grouped by type. "
+                        + "(env \"prefix\") - filters bindings by name prefix. "
+                        + "(env :primitives|:macros|:procedures|:variables) - filters by type. "
+                        + "(env :depends '(\"group:artifact:version\" ...) body...) - executes body in child "
+                        + "environment with Maven dependencies loaded. Returns result of body. "
+                        + "(env :depends '(...)) - without body, returns the environment object for later use. "
+                        + "(env :depends '(...) :repos '(\"url\" ...) body...) - with custom Maven repositories.")
         {
             private static final long serialVersionUID = 8273645091827364520L;
 
             @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                // Check for :depends keyword - special form (don't evaluate args yet)
+                if (values.length() > 0)
+                {
+                    Object first = values.get(0);
+                    if (first instanceof Keyword && ((Keyword) first).getName().equals("depends"))
+                    {
+                        return handleEnvDepends(values, env);
+                    }
+                }
+                // Otherwise, evaluate arguments and use introspection mode
+                Cons evaluated = Jlll.evalEvery(values, env);
+                return applyEvaluated(evaluated, env);
+            }
+
+            @Override
             public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
-                PrintWriter out = getStdout(env);
+                Console console = getConsole(env);
                 Map<Symbol, Object> bindings = env.getAllBindings();
                 String prefixFilter = null;
                 String typeFilter = null;
@@ -1946,10 +2224,10 @@ public class KernelLib implements Library
                     }
                 }
                 // Collect bindings by type
-                List<Map.Entry<Symbol, Object>> primitives = new ArrayList<>();
-                List<Map.Entry<Symbol, Object>> macros = new ArrayList<>();
-                List<Map.Entry<Symbol, Object>> procedures = new ArrayList<>();
-                List<Map.Entry<Symbol, Object>> variables = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> primitivesList = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> macrosList = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> proceduresList = new ArrayList<>();
+                List<Map.Entry<Symbol, Object>> variablesList = new ArrayList<>();
                 for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
                 {
                     String name = entry.getKey().getName();
@@ -1961,60 +2239,68 @@ public class KernelLib implements Library
                     Object value = entry.getValue();
                     if (value instanceof Primitive)
                     {
-                        primitives.add(entry);
+                        primitivesList.add(entry);
                     }
                     else if (value instanceof Macros)
                     {
-                        macros.add(entry);
+                        macrosList.add(entry);
                     }
                     else if (value instanceof Procedure)
                     {
-                        procedures.add(entry);
+                        proceduresList.add(entry);
                     }
                     else
                     {
-                        variables.add(entry);
+                        variablesList.add(entry);
                     }
                 }
                 // Print header
-                out.println();
-                int total = primitives.size() + macros.size() + procedures.size() + variables.size();
+                console.println();
+                int total = primitivesList.size() + macrosList.size() + proceduresList.size() + variablesList.size();
+                String header;
                 if (prefixFilter != null)
                 {
-                    out.println("Bindings matching \"" + prefixFilter + "\" (" + total + "):");
+                    header = "Bindings matching \"" + prefixFilter + "\" (" + total + "):";
                 }
                 else if (typeFilter != null)
                 {
-                    out.println("Environment bindings (" + typeFilter + "):");
+                    header = "Environment bindings (" + typeFilter + "):";
                 }
                 else
                 {
-                    out.println("Environment bindings (" + bindings.size() + " total):");
+                    header = "Environment bindings (" + bindings.size() + " total):";
                 }
-                out.println();
+                console.printHeader(header);
+                console.println();
                 // Print groups based on type filter
                 if (typeFilter == null || typeFilter.equals("primitives"))
                 {
-                    printGroup(out, "Primitives", primitives, typeFilter != null);
+                    printGroup(console, env, "Primitives", primitivesList, typeFilter != null);
                 }
                 if (typeFilter == null || typeFilter.equals("macros"))
                 {
-                    printGroup(out, "Macros", macros, typeFilter != null);
+                    printGroup(console, env, "Macros", macrosList, typeFilter != null);
                 }
                 if (typeFilter == null || typeFilter.equals("procedures"))
                 {
-                    printGroup(out, "Procedures", procedures, typeFilter != null);
+                    printGroup(console, env, "Procedures", proceduresList, typeFilter != null);
                 }
                 if (typeFilter == null || typeFilter.equals("variables"))
                 {
-                    printGroup(out, "Variables", variables, typeFilter != null);
+                    printGroup(console, env, "Variables", variablesList, typeFilter != null);
                 }
-                out.flush();
+                if (prefixFilter == null && typeFilter == null)
+                {
+                    console.printHint("Use (env \"prefix\") to filter by name.");
+                    console.println();
+                }
+                console.println();
+                console.flush();
                 return Null.NULL;
             }
 
-            private void printGroup(PrintWriter out, String groupName, List<Map.Entry<Symbol, Object>> entries,
-                    boolean skipHeader)
+            private void printGroup(Console console, Environment env, String groupName,
+                    List<Map.Entry<Symbol, Object>> entries, boolean skipHeader)
             {
                 if (entries.isEmpty())
                 {
@@ -2022,15 +2308,195 @@ public class KernelLib implements Library
                 }
                 if (!skipHeader)
                 {
-                    out.println(groupName + " (" + entries.size() + "):");
+                    console.printColored(groupName + " (" + entries.size() + "):", Console.Color.CYAN);
+                    console.println();
                 }
                 // Sort alphabetically
                 entries.sort((a, b) -> a.getKey().getName().compareTo(b.getKey().getName()));
                 for (Map.Entry<Symbol, Object> entry : entries)
                 {
-                    out.println("  " + entry.getKey().getName());
+                    String name = entry.getKey().getName();
+                    String docExcerpt = getDocExcerpt(env, entry.getKey(), entry.getValue());
+                    console.print("  ");
+                    console.printName(String.format("%-16s", name));
+                    console.print(" ");
+                    console.println(docExcerpt);
                 }
-                out.println();
+                console.println();
+            }
+
+            private String getDocExcerpt(Environment env, Symbol sym, Object value)
+            {
+                Object doc = env.getMeta(sym, Symbol.intern("doc"));
+                if (doc != null && !doc.toString().isEmpty())
+                {
+                    String text = doc.toString();
+                    int newline = text.indexOf('\n');
+                    if (newline > 0)
+                    {
+                        return text.substring(0, newline);
+                    }
+                    // Truncate long docs
+                    if (text.length() > 80)
+                    {
+                        return text.substring(0, 77) + "...";
+                    }
+                    return text;
+                }
+                // Fallback descriptions
+                if (value instanceof Primitive)
+                {
+                    return "";
+                }
+                else if (value instanceof Macros)
+                {
+                    return "";
+                }
+                else if (value instanceof Procedure)
+                {
+                    return "";
+                }
+                else if (value instanceof Boolean)
+                {
+                    return "Boolean: " + value;
+                }
+                else if (value instanceof Number)
+                {
+                    return value.getClass().getSimpleName() + ": " + value;
+                }
+                else if (value instanceof String)
+                {
+                    String s = (String) value;
+                    if (s.length() > 20)
+                    {
+                        return "String: \"" + s.substring(0, 17) + "...\"";
+                    }
+                    return "String: \"" + s + "\"";
+                }
+                else if (value == null || value instanceof Null)
+                {
+                    return "nil";
+                }
+                else
+                {
+                    return value.getClass().getSimpleName();
+                }
+            }
+        };
+        // ============== env-switch! - Switch current environment ==============
+        new Primitive("env-switch!", env,
+                "Switches the current REPL/evaluation environment. "
+                        + "(env-switch! new-env) switches to the specified environment. "
+                        + "(env-switch!) with no arguments switches to the parent environment. "
+                        + "Returns the environment that was switched to.")
+        {
+            private static final long serialVersionUID = 8273645091827364521L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Environment targetEnv;
+                if (values.length() == 0)
+                {
+                    // No argument: switch to parent
+                    targetEnv = env.getParent();
+                    if (targetEnv == null)
+                    {
+                        throw new JlllException("Cannot switch to parent: already at top environment");
+                    }
+                }
+                else
+                {
+                    Object arg = values.get(0);
+                    if (!(arg instanceof Environment))
+                    {
+                        throw new JlllException("env-switch! argument must be an Environment, got: "
+                                + (arg == null ? "null" : arg.getClass().getSimpleName()));
+                    }
+                    targetEnv = (Environment) arg;
+                }
+                // Set *current-env* binding to the target environment
+                // This allows REPL and other tools to detect the switch
+                env.getTopEnvironment().setBinding(Symbol.intern("*current-env*"), targetEnv);
+                return targetEnv;
+            }
+        };
+        // ============== env-classpath - Get environment's classpath ==============
+        new Primitive("env-classpath", env,
+                "Returns the JAR files in an environment's classpath. "
+                        + "(env-classpath) returns current environment's JARs. "
+                        + "(env-classpath env) returns the specified environment's JARs. "
+                        + "Returns a list of file path strings.")
+        {
+            private static final long serialVersionUID = 8273645091827364522L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Environment targetEnv = env;
+                if (values.length() > 0)
+                {
+                    Object arg = values.get(0);
+                    if (!(arg instanceof Environment))
+                    {
+                        throw new JlllException("env-classpath argument must be an Environment, got: "
+                                + (arg == null ? "null" : arg.getClass().getSimpleName()));
+                    }
+                    targetEnv = (Environment) arg;
+                }
+                List<File> jars = targetEnv.getAllClasspathJars();
+                if (jars.isEmpty())
+                {
+                    return Null.NULL;
+                }
+                Object[] paths = new Object[jars.size()];
+                for (int i = 0; i < jars.size(); i++)
+                {
+                    paths[i] = jars.get(i).getAbsolutePath();
+                }
+                return ListUtil.arrayToCons(paths);
+            }
+        };
+        // ============== env-parent - Get parent environment ==============
+        new Primitive("env-parent", env,
+                "Returns the parent environment. " + "(env-parent) returns current environment's parent. "
+                        + "(env-parent env) returns the specified environment's parent. "
+                        + "Returns null if at top environment.")
+        {
+            private static final long serialVersionUID = 8273645091827364523L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Environment targetEnv = env;
+                if (values.length() > 0)
+                {
+                    Object arg = values.get(0);
+                    if (!(arg instanceof Environment))
+                    {
+                        throw new JlllException("env-parent argument must be an Environment, got: "
+                                + (arg == null ? "null" : arg.getClass().getSimpleName()));
+                    }
+                    targetEnv = (Environment) arg;
+                }
+                Environment parent = targetEnv.getParent();
+                return parent != null ? parent : Null.NULL;
+            }
+        };
+        // ============== env? - Test if value is an Environment ==============
+        new Primitive("env?", env,
+                "Tests if a value is an Environment object. (env? x) returns true if x is an Environment.")
+        {
+            private static final long serialVersionUID = 8273645091827364524L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() != 1)
+                {
+                    throw new JlllException("env? requires exactly one argument");
+                }
+                return values.get(0) instanceof Environment;
             }
         };
         // ============== call/cc (call-with-current-continuation) ==============

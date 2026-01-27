@@ -22,6 +22,11 @@ import ru.ydn.jlll.util.CommonUtil;
  * <li><b>instanceof?:</b> type checking - {@code (instanceof? obj "java.util.List")}</li>
  * <li><b>class:</b> converts string to Class object</li>
  * </ul>
+ *
+ * <p>
+ * All class loading operations use the current environment's classloader, which supports dynamic
+ * dependency loading via {@code (env :depends ...)}.
+ * </p>
  */
 public class ReflectLib extends ReflectionLibrary
 {
@@ -33,8 +38,16 @@ public class ReflectLib extends ReflectionLibrary
     }
 
     /**
-     * Creates a new Java object. {@code (new "java.util.ArrayList")} or {@code (new "java.util.ArrayList" 10)}.
+     * Creates a new Java object. {@code (new "java.util.ArrayList")} or
+     * {@code (new "java.util.ArrayList" 10)}.
      *
+     * <p>
+     * Uses the current environment's classloader to find the class, supporting dynamically loaded
+     * dependencies.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically)
      * @param clazz
      *            class name string or Class object
      * @param params
@@ -44,9 +57,9 @@ public class ReflectLib extends ReflectionLibrary
      *             if instantiation fails
      */
     @JlllName("new")
-    public Object createObject(Object clazz, Object... params) throws JlllException
+    public Object createObject(Environment env, Object clazz, Object... params) throws JlllException
     {
-        return CommonUtil.constactObject(toClass(clazz), params);
+        return CommonUtil.constactObject(toClass(env, clazz), params);
     }
 
     /**
@@ -71,6 +84,13 @@ public class ReflectLib extends ReflectionLibrary
     /**
      * Invokes a static method. {@code (invoke-static "Math" "sqrt" 2.0)}.
      *
+     * <p>
+     * Uses the current environment's classloader to find the class, supporting dynamically loaded
+     * dependencies.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically)
      * @param clazz
      *            class name string or Class object
      * @param method
@@ -82,9 +102,9 @@ public class ReflectLib extends ReflectionLibrary
      *             if invocation fails
      */
     @JlllName("invoke-static")
-    public Object invokeStatic(Object clazz, String method, Object... params) throws JlllException
+    public Object invokeStatic(Environment env, Object clazz, String method, Object... params) throws JlllException
     {
-        return CommonUtil.invokeStatic(toClass(clazz), method, params);
+        return CommonUtil.invokeStatic(toClass(env, clazz), method, params);
     }
 
     /**
@@ -126,6 +146,13 @@ public class ReflectLib extends ReflectionLibrary
     /**
      * Gets a static field value. {@code (peek-static "Integer" "MAX_VALUE")}.
      *
+     * <p>
+     * Uses the current environment's classloader to find the class, supporting dynamically loaded
+     * dependencies.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically)
      * @param clazz
      *            class name string or Class object
      * @param field
@@ -135,14 +162,21 @@ public class ReflectLib extends ReflectionLibrary
      *             if field access fails
      */
     @JlllName("peek-static")
-    public Object peekStatic(Object clazz, String field) throws JlllException
+    public Object peekStatic(Environment env, Object clazz, String field) throws JlllException
     {
-        return CommonUtil.peekStatic(toClass(clazz), field);
+        return CommonUtil.peekStatic(toClass(env, clazz), field);
     }
 
     /**
      * Sets a static field value. {@code (poke-static "MyClass" "counter" 0)}.
      *
+     * <p>
+     * Uses the current environment's classloader to find the class, supporting dynamically loaded
+     * dependencies.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically)
      * @param clazz
      *            class name string or Class object
      * @param field
@@ -154,14 +188,21 @@ public class ReflectLib extends ReflectionLibrary
      *             if field access fails
      */
     @JlllName("poke-static")
-    public Object pokeStatic(Object clazz, String field, Object value) throws JlllException
+    public Object pokeStatic(Environment env, Object clazz, String field, Object value) throws JlllException
     {
-        return CommonUtil.pokeStatic(toClass(clazz), field, value);
+        return CommonUtil.pokeStatic(toClass(env, clazz), field, value);
     }
 
     /**
      * Tests if an object is an instance of a class. {@code (instanceof? obj "java.util.List")}.
      *
+     * <p>
+     * Uses the current environment's classloader to find the class, supporting dynamically loaded
+     * dependencies.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically)
      * @param obj
      *            the object to test
      * @param clazz
@@ -171,14 +212,21 @@ public class ReflectLib extends ReflectionLibrary
      *             if class not found
      */
     @JlllName("instanceof?")
-    public boolean isInstanceOf(Object obj, Object clazz) throws JlllException
+    public boolean isInstanceOf(Environment env, Object obj, Object clazz) throws JlllException
     {
-        return toClass(clazz).isInstance(obj);
+        return toClass(env, clazz).isInstance(obj);
     }
 
     /**
      * Converts a class name to a Class object. {@code (class "java.util.ArrayList")}.
      *
+     * <p>
+     * Uses the current environment's classloader to find the class, supporting dynamically loaded
+     * dependencies via {@code (env :depends ...)}.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically)
      * @param clazz
      *            class name string or existing Class object
      * @return the Class object
@@ -186,11 +234,15 @@ public class ReflectLib extends ReflectionLibrary
      *             if class not found
      */
     @JlllName("class")
-    public Class<?> toClass(Object clazz) throws JlllException
+    public Class<?> toClass(Environment env, Object clazz) throws JlllException
     {
+        if (clazz instanceof Class)
+        {
+            return (Class<?>) clazz;
+        }
         try
         {
-            return clazz instanceof Class ? (Class<?>) clazz : Class.forName(clazz.toString());
+            return env.loadClass(clazz.toString());
         }
         catch (ClassNotFoundException e)
         {
