@@ -167,21 +167,22 @@ public class DependencyTestCase
     @Test
     public void testEnvDependsClassIsolation() throws Exception
     {
-        // Verify that Gson class is NOT available in parent env
+        // Verify that joda-time class is NOT available in parent env
+        // (Using joda-time as Gson is now part of base classpath for JSON support)
         try
         {
-            env.loadClass("com.google.gson.Gson");
-            fail("Gson should not be loadable in parent environment");
+            env.loadClass("org.joda.time.DateTime");
+            fail("joda-time should not be loadable in parent environment");
         }
         catch (ClassNotFoundException expected)
         {
             // Expected
         }
         // But IS available in child env with dependency
-        Object childEnv = Jlll.eval("(env :depends '(\"com.google.code.gson:gson:2.10.1\"))", env);
+        Object childEnv = Jlll.eval("(env :depends '(\"joda-time:joda-time:2.12.7\"))", env);
         assertTrue(childEnv instanceof Environment);
-        Class<?> gsonClass = ((Environment) childEnv).loadClass("com.google.gson.Gson");
-        assertNotNull(gsonClass);
+        Class<?> jodaClass = ((Environment) childEnv).loadClass("org.joda.time.DateTime");
+        assertNotNull(jodaClass);
     }
     // ============== eval :env Tests ==============
 

@@ -574,6 +574,78 @@ Mutable hash tables (associative arrays) with O(1) access. Backed by `LinkedHash
 (define merged (hash-merge defaults config))
 ```
 
+## JSON Library
+
+Parse and generate JSON for data interchange with web APIs and configuration files.
+
+### Type Mappings
+
+| JSON Type | JLLL Type | Java Type |
+|-----------|-----------|-----------|
+| object | hash-map | `LinkedHashMap` |
+| array | list | `Cons` |
+| string | string | `String` |
+| number (int) | integer | `Long` |
+| number (float) | float | `Double` |
+| boolean | boolean | `Boolean` |
+| null | null | `Null` |
+
+### Parsing
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `json-parse` | Parse JSON string to JLLL data | `(json-parse "{\"name\": \"Alice\"}")` |
+| `json-parse` | Parse with keyword keys | `(json-parse "{\"name\": \"Alice\"}" :keywords true)` |
+| `json-read-file` | Parse JSON from file | `(json-read-file "config.json")` |
+| `json-read-file` | Parse with keyword keys | `(json-read-file "data.json" :keywords true)` |
+
+### Generating
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `json-stringify` | Convert JLLL data to JSON string | `(json-stringify data)` |
+| `json-stringify` | Pretty-print with indentation | `(json-stringify data :pretty true)` |
+| `json-write-file` | Write JSON to file | `(json-write-file "out.json" data)` |
+| `json-write-file` | Write pretty JSON | `(json-write-file "out.json" data :pretty true)` |
+
+### Options
+
+- `:keywords true` - Convert JSON object keys to JLLL keywords (`:name` instead of `"name"`)
+- `:pretty true` - Format output with indentation and newlines
+
+### Examples
+
+```lisp
+;; Parse JSON string
+(define data (json-parse "{\"name\": \"Alice\", \"age\": 30}"))
+(hash-ref data "name")                    ; => "Alice"
+(hash-ref data "age")                     ; => 30
+
+;; Parse with keywords for cleaner access
+(define data (json-parse "{\"name\": \"Bob\"}" :keywords true))
+(hash-ref data :name)                     ; => "Bob"
+
+;; Parse JSON array
+(define items (json-parse "[1, 2, 3]"))   ; => (1 2 3)
+
+;; Convert JLLL data to JSON
+(json-stringify (hash-map :x 1 :y 2))     ; => "{\"x\":1,\"y\":2}"
+(json-stringify '(1 2 3))                 ; => "[1,2,3]"
+
+;; Pretty print
+(json-stringify (hash-map :a 1 :b 2) :pretty true)
+;; => "{\n  \"a\": 1,\n  \"b\": 2\n}"
+
+;; File operations
+(define config (json-read-file "config.json" :keywords true))
+(json-write-file "output.json" data :pretty true)
+
+;; Roundtrip: parse, modify, save
+(define data (json-read-file "data.json"))
+(hash-set! data "updated" true)
+(json-write-file "data.json" data :pretty true)
+```
+
 ## Concurrency Library
 
 Parallel execution primitives for async computations and thread-safe state.

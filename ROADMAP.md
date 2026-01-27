@@ -1000,12 +1000,12 @@ Parse and generate JSON for data interchange. Essential for web APIs and configu
 
 ### Checklist
 
-- [ ] `json-parse` / `json-read` - Parse JSON string to JLLL data
-- [ ] `json-stringify` / `json-write` - Convert JLLL data to JSON string
-- [ ] `json-read-file` - Parse JSON from file
-- [ ] `json-write-file` - Write JLLL data as JSON to file
-- [ ] `:pretty` option for formatted output
-- [ ] `:keys-as-symbols` option for symbol keys instead of keywords
+- [x] `json-parse` / `json-read` - Parse JSON string to JLLL data
+- [x] `json-stringify` / `json-write` - Convert JLLL data to JSON string
+- [x] `json-read-file` - Parse JSON from file
+- [x] `json-write-file` - Write JLLL data as JSON to file
+- [x] `:pretty` option for formatted output
+- [x] `:keywords` option for keyword keys instead of strings
 
 ---
 
