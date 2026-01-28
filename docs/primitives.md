@@ -378,6 +378,67 @@ Comprehensive string manipulation operations. JLLL does not have a character typ
 | `string-append` | Concatenate strings (alias for concat) | `(string-append "a" "b")` => `"ab"` |
 | `string-empty?` | Test for empty string | `(string-empty? "")` => `true` |
 
+## Regex Library
+
+Regular expression primitives for pattern matching and text manipulation. Patterns are cached for performance.
+
+### Matching
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `regex-match` | First match (with groups) or false | `(regex-match "\\d+" "abc123")` => `"123"` |
+| `regex-match` | With capture groups | `(regex-match "(\\d+)-(\\d+)" "a12-34b")` => `("12-34" "12" "34")` |
+| `regex-match-all` | All matches as list | `(regex-match-all "\\d+" "a1b23c456")` => `("1" "23" "456")` |
+| `regex-matches?` | Test if entire string matches | `(regex-matches? "\\d+" "123")` => `true` |
+
+### Searching
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `regex-find` | Index of first match or false | `(regex-find "\\d+" "abc123")` => `3` |
+
+### Replacing
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `regex-replace` | Replace all matches | `(regex-replace "\\d+" "a1b2" "X")` => `"aXbX"` |
+| `regex-replace` | With function | `(regex-replace "\\d+" "a1b2" (lambda (m) ...))` |
+| `regex-replace-first` | Replace first match only | `(regex-replace-first "\\d+" "a1b2" "X")` => `"aXb2"` |
+
+### Splitting
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `regex-split` | Split by pattern | `(regex-split "\\s+" "a b  c")` => `("a" "b" "c")` |
+
+### Examples
+
+```lisp
+;; Extract all numbers from text
+(regex-match-all "\\d+" "Order #123, Item #456")  ; => ("123" "456")
+
+;; Validate email format
+(regex-matches? "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}" "test@example.com")
+; => true
+
+;; Replace with function - double all numbers
+(regex-replace "\\d+" "a1b23c456" 
+  (lambda (m) (str (* 2 (string->number m)))))
+; => "a2b46c912"
+
+;; Split CSV line
+(regex-split "," "a,b,c")  ; => ("a" "b" "c")
+
+;; Find position of pattern
+(regex-find "world" "hello world")  ; => 6
+
+;; Match with capture groups
+(regex-match "(\\w+)@(\\w+)" "user@host")
+; => ("user@host" "user" "host")
+```
+
+**Note:** In JLLL strings, backslashes must be escaped: `"\\d+"` for the regex `\d+`.
+
 ## IO Library
 
 Input/output operations.
@@ -644,6 +705,103 @@ Parse and generate JSON for data interchange with web APIs and configuration fil
 (define data (json-read-file "data.json"))
 (hash-set! data "updated" true)
 (json-write-file "data.json" data :pretty true)
+```
+
+## Date/Time Library
+
+Date and time operations using timestamps (milliseconds since Unix epoch).
+
+### Current Time
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `now` | Current timestamp in milliseconds | `(now)` => `1710512345678` |
+| `current-time` | Current time as hash-map | `(current-time)` => `{:year 2024 :month 3 ...}` |
+
+### Formatting and Parsing
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `date-format` | Format timestamp to string | `(date-format ts "yyyy-MM-dd")` => `"2024-03-15"` |
+| `date-parse` | Parse string to timestamp | `(date-parse "2024-03-15" "yyyy-MM-dd")` |
+
+Common format patterns:
+- `"yyyy-MM-dd"` - Date only (2024-03-15)
+- `"HH:mm:ss"` - Time only (14:30:45)
+- `"yyyy-MM-dd'T'HH:mm:ss"` - ISO 8601 datetime
+
+### Date Arithmetic
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `date-add` | Add time units | `(date-add ts :days 1)` |
+| `date-add` | Multiple units | `(date-add ts :hours 2 :minutes 30)` |
+| `date-diff` | Difference in units | `(date-diff t1 t2 :days)` => `10` |
+
+Supported units: `:years`, `:months`, `:weeks`, `:days`, `:hours`, `:minutes`, `:seconds`, `:millis`
+
+### Component Extraction
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `date-year` | Extract year | `(date-year ts)` => `2024` |
+| `date-month` | Extract month (1-12) | `(date-month ts)` => `3` |
+| `date-day` | Extract day of month | `(date-day ts)` => `15` |
+| `date-hour` | Extract hour (0-23) | `(date-hour ts)` => `14` |
+| `date-minute` | Extract minute | `(date-minute ts)` => `30` |
+| `date-second` | Extract second | `(date-second ts)` => `45` |
+| `date-day-of-week` | Day of week (ISO: 1=Mon, 7=Sun) | `(date-day-of-week ts)` => `5` |
+
+### Conversion
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `date->list` | Decompose to list | `(date->list ts)` => `(2024 3 15 14 30 45 123 5)` |
+| `make-date` | Create from components | `(make-date 2024 3 15)` |
+| `make-date` | With time | `(make-date 2024 3 15 14 30 45)` |
+
+### Comparison
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `date<?` | Before | `(date<? t1 t2)` => `true` |
+| `date>?` | After | `(date>? t1 t2)` => `false` |
+| `date=?` | Equal | `(date=? t1 t2)` => `false` |
+
+### Examples
+
+```lisp
+;; Get current time
+(define now-ts (now))
+(date-format now-ts "yyyy-MM-dd HH:mm:ss")  ; => "2024-03-15 14:30:45"
+
+;; Current time as structured data
+(define ct (current-time))
+(hash-ref ct :year)   ; => 2024
+(hash-ref ct :month)  ; => 3
+
+;; Parse a date string
+(define birthday (date-parse "1990-06-15" "yyyy-MM-dd"))
+
+;; Calculate age in years
+(date-diff birthday (now) :years)  ; => 33
+
+;; Add 30 days to today
+(define future (date-add (now) :days 30))
+(date-format future "yyyy-MM-dd")
+
+;; Check if a date is in the past
+(date<? birthday (now))  ; => true
+
+;; Create a specific date/time
+(define meeting (make-date 2024 12 25 10 0 0))
+(date-format meeting "yyyy-MM-dd HH:mm")  ; => "2024-12-25 10:00"
+
+;; Get day of week (1=Monday, 7=Sunday)
+(date-day-of-week (make-date 2024 3 15))  ; => 5 (Friday)
+
+;; Decompose to list: (year month day hour minute second millis day-of-week)
+(date->list (now))  ; => (2024 3 15 14 30 45 123 5)
 ```
 
 ## Concurrency Library

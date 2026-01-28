@@ -14,9 +14,13 @@
 
 (load-lib "ru.ydn.jlll.libs.StringLib")
 
+(load-lib "ru.ydn.jlll.libs.RegexLib")
+
 (load-lib "ru.ydn.jlll.libs.HashLib")
 
 (load-lib "ru.ydn.jlll.libs.JsonLib")
+
+(load-lib "ru.ydn.jlll.libs.DateLib")
 
 (load-lib "ru.ydn.jlll.libs.ConcurrencyLib")
 

@@ -943,13 +943,13 @@ Pattern matching and text manipulation using Java's regex engine.
 
 ### Checklist
 
-- [ ] `regex-match` - First match or false
-- [ ] `regex-match-all` - All matches as list
-- [ ] `regex-replace` - Replace all occurrences
-- [ ] `regex-replace-first` - Replace first occurrence
-- [ ] `regex-split` - Split string by pattern
-- [ ] `regex-matches?` - Test if entire string matches
-- [ ] `regex-find` - Index of first match
+- [x] `regex-match` - First match or false
+- [x] `regex-match-all` - All matches as list
+- [x] `regex-replace` - Replace all occurrences (with string or function)
+- [x] `regex-replace-first` - Replace first occurrence
+- [x] `regex-split` - Split string by pattern
+- [x] `regex-matches?` - Test if entire string matches
+- [x] `regex-find` - Index of first match
 
 ---
 
@@ -1071,16 +1071,16 @@ Working with timestamps, formatting, and date arithmetic.
 
 ### Checklist
 
-- [ ] `now` - Current timestamp in milliseconds
-- [ ] `current-time` - Current time as hash-map
-- [ ] `date-format` - Format timestamp to string
-- [ ] `date-parse` - Parse string to timestamp
-- [ ] `date-add` - Add time units to timestamp
-- [ ] `date-diff` - Difference between timestamps
-- [ ] `date-year` / `date-month` / `date-day` etc. - Extract components
-- [ ] `date->list` - Decompose to list
-- [ ] `make-date` - Create timestamp from components
-- [ ] `date<?` / `date>?` / `date=?` - Comparisons
+- [x] `now` - Current timestamp in milliseconds
+- [x] `current-time` - Current time as hash-map
+- [x] `date-format` - Format timestamp to string
+- [x] `date-parse` - Parse string to timestamp
+- [x] `date-add` - Add time units to timestamp
+- [x] `date-diff` - Difference between timestamps
+- [x] `date-year` / `date-month` / `date-day` / `date-hour` / `date-minute` / `date-second` / `date-day-of-week` - Extract components
+- [x] `date->list` - Decompose to list
+- [x] `make-date` - Create timestamp from components
+- [x] `date<?` / `date>?` / `date=?` - Comparisons
 
 ---
 
