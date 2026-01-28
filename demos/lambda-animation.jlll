@@ -1,0 +1,84 @@
+;; JLLL Animated Lambda Demo
+;; Run: java -jar jlll-*-cli.jar demos/lambda-animation.jlll
+
+;; Import Classes
+(define JFrame (class "javax.swing.JFrame"))
+(define JPanel (class "javax.swing.JPanel"))
+(define JLabel (class "javax.swing.JLabel"))
+(define BorderLayout (class "java.awt.BorderLayout"))
+(define GridLayout (class "java.awt.GridLayout"))
+(define Font (class "java.awt.Font"))
+(define Color (class "java.awt.Color"))
+(define SwingConstants (class "javax.swing.SwingConstants"))
+
+;; Create Frame
+(define frame (new JFrame "JLLL v2.2 - Lisp Powers Java"))
+(invoke frame "setDefaultCloseOperation" (peek-static JFrame "EXIT_ON_CLOSE"))
+(invoke frame "setSize" 500 400)
+
+;; Main panel
+(define panel (new JPanel))
+(invoke panel "setLayout" (new BorderLayout 10 10))
+(invoke panel "setBackground" (new Color 20 20 40))
+
+;; Title
+(define title (new JLabel "Welcome to JLLL" (peek-static SwingConstants "CENTER")))
+(invoke title "setFont" (new Font "SansSerif" (peek-static Font "BOLD") 36))
+(invoke title "setForeground" (new Color 80 160 255))
+(invoke title "setOpaque" true)
+(invoke title "setBackground" (new Color 20 20 40))
+(invoke panel "add" title (peek-static BorderLayout "NORTH"))
+
+;; Lambda in center
+(define lambda-label (new JLabel "\u03BB" (peek-static SwingConstants "CENTER")))
+(invoke lambda-label "setFont" (new Font "Serif" (peek-static Font "BOLD") 200))
+(invoke lambda-label "setForeground" (new Color 100 220 120))
+(invoke lambda-label "setOpaque" true)
+(invoke lambda-label "setBackground" (new Color 20 20 40))
+(invoke panel "add" lambda-label (peek-static BorderLayout "CENTER"))
+
+;; Info panel at bottom
+(define info-panel (new JPanel))
+(invoke info-panel "setLayout" (new GridLayout 3 1))
+(invoke info-panel "setBackground" (new Color 30 30 50))
+
+(define line1 (new JLabel "Java + Lisp = Pure Power" (peek-static SwingConstants "CENTER")))
+(invoke line1 "setFont" (new Font "SansSerif" (peek-static Font "PLAIN") 18))
+(invoke line1 "setForeground" (new Color 200 200 220))
+(invoke info-panel "add" line1)
+
+(define line2 (new JLabel "(map square (range 1 6)) => (1 4 9 16 25)" (peek-static SwingConstants "CENTER")))
+(invoke line2 "setFont" (new Font "Monospaced" (peek-static Font "PLAIN") 14))
+(invoke line2 "setForeground" (new Color 255 200 100))
+(invoke info-panel "add" line2)
+
+(define line3 (new JLabel "Dynamic Maven deps | Console abstraction | Lazy sequences" (peek-static SwingConstants "CENTER")))
+(invoke line3 "setFont" (new Font "SansSerif" (peek-static Font "ITALIC") 12))
+(invoke line3 "setForeground" (new Color 150 150 180))
+(invoke info-panel "add" line3)
+
+(invoke panel "add" info-panel (peek-static BorderLayout "SOUTH"))
+
+;; Show
+(invoke frame "add" panel)
+(invoke frame "setLocationRelativeTo" null)
+(invoke frame "setVisible" true)
+
+;; Animate lambda color
+(define (set-lambda-color r g b)
+  (invoke lambda-label "setForeground" (new Color r g b)))
+
+(println "Window open! Animating...")
+
+;; Pulse animation - 30 iterations
+(dotimes (i 30)
+  ;; Fade green up
+  (set-lambda-color 100 (+ 180 (* 3 (modulo i 10))) 120)
+  (sleep 100)
+  (set-lambda-color 80 (+ 200 (* 2 (modulo i 10))) 100)
+  (sleep 100)
+  (set-lambda-color 100 220 120)
+  (sleep 100))
+
+(println "Animation done. Window stays open 60s...")
+(sleep 60000)

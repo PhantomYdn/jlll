@@ -1,6 +1,0 @@
-<factorypath>
-    <factorypathentry kind="VARJAR" id="M2_REPO/org/jline/jline/3.30.0/jline-3.30.0.jar" enabled="true" runInBatchMode="false"/>
-    <factorypathentry kind="VARJAR" id="M2_REPO/info/picocli/picocli/4.7.7/picocli-4.7.7.jar" enabled="true" runInBatchMode="false"/>
-    <factorypathentry kind="VARJAR" id="M2_REPO/com/github/therapi/therapi-runtime-javadoc-scribe/0.13.0/therapi-runtime-javadoc-scribe-0.13.0.jar" enabled="true" runInBatchMode="false"/>
-    <factorypathentry kind="VARJAR" id="M2_REPO/com/github/therapi/therapi-runtime-javadoc/0.13.0/therapi-runtime-javadoc-0.13.0.jar" enabled="true" runInBatchMode="false"/>
-</factorypath>

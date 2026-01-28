@@ -1,0 +1,241 @@
+;; JLLL Tic-Tac-Toe - Human vs AI!
+;; Run: java -jar jlll-*-cli.jar demos/tic-tac-toe.jlll
+
+;; Import Classes
+(define JFrame (class "javax.swing.JFrame"))
+(define JPanel (class "javax.swing.JPanel"))
+(define JLabel (class "javax.swing.JLabel"))
+(define JButton (class "javax.swing.JButton"))
+(define BorderLayout (class "java.awt.BorderLayout"))
+(define GridLayout (class "java.awt.GridLayout"))
+(define Font (class "java.awt.Font"))
+(define Color (class "java.awt.Color"))
+(define SwingConstants (class "javax.swing.SwingConstants"))
+
+;; Game State
+(define board (atom (list "" "" "" "" "" "" "" "" "")))
+(define current-player (atom "X"))  ; Human is X, AI is O
+(define game-over (atom false))
+
+;; Colors
+(define bg-color (new Color 30 30 50))
+(define x-color (new Color 255 100 100))
+(define o-color (new Color 100 200 255))
+(define btn-color (new Color 50 50 70))
+(define win-color (new Color 100 255 100))
+
+;; Create Frame
+(define frame (new JFrame "JLLL Tic-Tac-Toe - You vs AI"))
+(invoke frame "setDefaultCloseOperation" (peek-static JFrame "EXIT_ON_CLOSE"))
+(invoke frame "setSize" 400 500)
+
+;; Main panel
+(define main-panel (new JPanel))
+(invoke main-panel "setLayout" (new BorderLayout 10 10))
+(invoke main-panel "setBackground" bg-color)
+
+;; Title
+(define title (new JLabel "You (X) vs AI (O)" (peek-static SwingConstants "CENTER")))
+(invoke title "setFont" (new Font "SansSerif" (peek-static Font "BOLD") 28))
+(invoke title "setForeground" (new Color 200 200 220))
+(invoke title "setOpaque" true)
+(invoke title "setBackground" bg-color)
+(invoke main-panel "add" title (peek-static BorderLayout "NORTH"))
+
+;; Status label
+(define status (new JLabel "Your turn! Click a cell." (peek-static SwingConstants "CENTER")))
+(invoke status "setFont" (new Font "SansSerif" (peek-static Font "PLAIN") 18))
+(invoke status "setForeground" x-color)
+(invoke status "setOpaque" true)
+(invoke status "setBackground" bg-color)
+(invoke main-panel "add" status (peek-static BorderLayout "SOUTH"))
+
+;; Game board panel
+(define board-panel (new JPanel))
+(invoke board-panel "setLayout" (new GridLayout 3 3 5 5))
+(invoke board-panel "setBackground" bg-color)
+
+;; Winning combinations
+(define win-patterns (list
+  (list 0 1 2) (list 3 4 5) (list 6 7 8)
+  (list 0 3 6) (list 1 4 7) (list 2 5 8)
+  (list 0 4 8) (list 2 4 6)))
+
+;; Check for winner
+(define (check-winner b)
+  (define (check-pattern pat)
+    (define v0 (list-ref b (car pat)))
+    (define v1 (list-ref b (cadr pat)))
+    (define v2 (list-ref b (caddr pat)))
+    (if (and (not (string=? v0 ""))
+             (string=? v0 v1)
+             (string=? v1 v2))
+        v0
+        false))
+  (define (find-winner patterns)
+    (if (null? patterns)
+        false
+        (let ((result (check-pattern (car patterns))))
+          (if result result (find-winner (cdr patterns))))))
+  (find-winner win-patterns))
+
+;; Check for draw
+(define (check-draw b)
+  (not (any (lambda (cell) (string=? cell "")) b)))
+
+;; Get empty cells
+(define (empty-cells b)
+  (filter (lambda (i) (string=? (list-ref b i) "")) (range 0 9)))
+
+;; Set cell in board (returns new board)
+(define (set-cell b idx val)
+  (let loop ((lst b) (i 0) (result '()))
+    (if (null? lst)
+        (reverse result)
+        (loop (cdr lst) (+ i 1)
+              (cons (if (= i idx) val (car lst)) result)))))
+
+;; AI: Minimax with simple heuristics
+(define (ai-move b)
+  (define empty (empty-cells b))
+  (if (null? empty)
+      -1
+      (begin
+        ;; 1. Win if possible
+        (define win-move
+          (find (lambda (i)
+                  (check-winner (set-cell b i "O")))
+                empty))
+        (if win-move win-move
+            ;; 2. Block human win
+            (let ((block-move
+                   (find (lambda (i)
+                           (check-winner (set-cell b i "X")))
+                         empty)))
+              (if block-move block-move
+                  ;; 3. Take center
+                  (if (member 4 empty) 4
+                      ;; 4. Take corner
+                      (let ((corners (filter (lambda (i) (member i empty)) (list 0 2 6 8))))
+                        (if (not (null? corners))
+                            (car corners)
+                            ;; 5. Take any edge
+                            (car empty))))))))))
+
+;; Create buttons
+(define btn0 (new JButton ""))
+(define btn1 (new JButton ""))
+(define btn2 (new JButton ""))
+(define btn3 (new JButton ""))
+(define btn4 (new JButton ""))
+(define btn5 (new JButton ""))
+(define btn6 (new JButton ""))
+(define btn7 (new JButton ""))
+(define btn8 (new JButton ""))
+
+(define all-buttons (list btn0 btn1 btn2 btn3 btn4 btn5 btn6 btn7 btn8))
+
+;; Setup buttons
+(for-each
+  (lambda (btn)
+    (invoke btn "setFont" (new Font "SansSerif" (peek-static Font "BOLD") 72))
+    (invoke btn "setBackground" btn-color)
+    (invoke btn "setForeground" (new Color 200 200 200))
+    (invoke btn "setFocusPainted" false)
+    (invoke board-panel "add" btn))
+  all-buttons)
+
+(invoke main-panel "add" board-panel (peek-static BorderLayout "CENTER"))
+
+;; Show frame
+(invoke frame "add" main-panel)
+(invoke frame "setLocationRelativeTo" null)
+(invoke frame "setVisible" true)
+
+;; Update display
+(define (update-display)
+  (define b (deref board))
+  (for-each
+    (lambda (i)
+      (define btn (list-ref all-buttons i))
+      (define val (list-ref b i))
+      (invoke btn "setText" val)
+      (invoke btn "setForeground"
+        (cond
+          ((string=? val "X") x-color)
+          ((string=? val "O") o-color)
+          (else (new Color 100 100 100)))))
+    (range 0 9)))
+
+;; Process human move and AI response
+(define (process-human-move idx)
+  (define b (deref board))
+  (when (and (not (deref game-over))
+             (string=? (deref current-player) "X")
+             (string=? (list-ref b idx) ""))
+    ;; Human move
+    (define new-board (set-cell b idx "X"))
+    (reset! board new-board)
+    (update-display)
+    
+    ;; Check human win
+    (define winner (check-winner new-board))
+    (cond
+      (winner
+        (reset! game-over true)
+        (invoke status "setText" "You WIN!")
+        (invoke status "setForeground" win-color))
+      ((check-draw new-board)
+        (reset! game-over true)
+        (invoke status "setText" "It's a DRAW!")
+        (invoke status "setForeground" (new Color 255 200 100)))
+      (else
+        ;; AI turn
+        (invoke status "setText" "AI thinking...")
+        (invoke status "setForeground" o-color)
+        (sleep 500)
+        
+        (define ai-idx (ai-move new-board))
+        (when (>= ai-idx 0)
+          (define ai-board (set-cell new-board ai-idx "O"))
+          (reset! board ai-board)
+          (update-display)
+          
+          (define ai-winner (check-winner ai-board))
+          (cond
+            (ai-winner
+              (reset! game-over true)
+              (invoke status "setText" "AI wins!")
+              (invoke status "setForeground" (new Color 255 150 50)))
+            ((check-draw ai-board)
+              (reset! game-over true)
+              (invoke status "setText" "It's a DRAW!")
+              (invoke status "setForeground" (new Color 255 200 100)))
+            (else
+              (invoke status "setText" "Your turn!")
+              (invoke status "setForeground" x-color))))))))
+
+(println "Game ready! Polling for your moves...")
+
+;; Main game loop - poll for 2 minutes
+(define start-time (time true))
+(define (game-loop)
+  (when (< (- (time true) start-time) 120000)
+    (when (not (deref game-over))
+      ;; Check each button
+      (let check ((i 0))
+        (when (< i 9)
+          (define btn (list-ref all-buttons i))
+          (define b (deref board))
+          (define board-val (list-ref b i))
+          (define btn-model (invoke btn "getModel"))
+          (when (and (string=? board-val "")
+                     (string=? (deref current-player) "X")
+                     (invoke btn-model "isPressed"))
+            (process-human-move i))
+          (check (+ i 1)))))
+    (sleep 50)
+    (game-loop)))
+
+(game-loop)
+(println "Game session ended.")

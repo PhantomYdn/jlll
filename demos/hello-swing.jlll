@@ -1,0 +1,12 @@
+;; Simple Swing Hello World
+;; Run: java -jar jlll-*-cli.jar demos/hello-swing.jlll
+
+(define JFrame (class "javax.swing.JFrame"))
+(define JLabel (class "javax.swing.JLabel"))
+
+(define frame (new JFrame "JLLL Test"))
+(invoke frame "setSize" 400 300)
+(invoke frame "add" (new JLabel "Hello from JLLL!"))
+(invoke frame "setVisible" true)
+
+(sleep 30000)
