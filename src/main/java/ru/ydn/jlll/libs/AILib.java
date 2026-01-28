@@ -1,0 +1,850 @@
+package ru.ydn.jlll.libs;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Environment;
+import ru.ydn.jlll.common.JlllException;
+import ru.ydn.jlll.common.LazyThunk;
+import ru.ydn.jlll.common.Library;
+import ru.ydn.jlll.common.Null;
+import ru.ydn.jlll.common.Primitive;
+import ru.ydn.jlll.common.Procedure;
+import ru.ydn.jlll.common.Symbol;
+import ru.ydn.jlll.libs.ai.AIConfig;
+import ru.ydn.jlll.libs.ai.AISession;
+import ru.ydn.jlll.libs.ai.AITool;
+
+/**
+ * AI/LLM integration library using LangChain4j.
+ *
+ * <p>
+ * Provides session-based AI interactions with streaming responses returned as lazy sequences.
+ * Supports multiple providers (OpenAI, Anthropic, Google AI, Ollama) with automatic detection.
+ * </p>
+ *
+ * <h3>Session Management</h3>
+ * <ul>
+ * <li><b>ai-session-create:</b> Create a new AI session</li>
+ * <li><b>ai-session-activate:</b> Make a session active for the current environment</li>
+ * <li><b>ai-session-deactivate:</b> Deactivate the current session</li>
+ * <li><b>ai-session-current:</b> Get the currently active session</li>
+ * <li><b>ai-sessions:</b> List all sessions</li>
+ * </ul>
+ *
+ * <h3>Core Operations</h3>
+ * <ul>
+ * <li><b>ai:</b> Chat with the LLM, returns lazy sequence of response chunks</li>
+ * <li><b>ai-history:</b> Get conversation history</li>
+ * <li><b>ai-clear:</b> Clear conversation history</li>
+ * </ul>
+ *
+ * <h3>Tool Management</h3>
+ * <ul>
+ * <li><b>ai-tool:</b> Define a custom tool from a JLLL procedure</li>
+ * <li><b>ai-tool-add:</b> Add a tool to a session</li>
+ * <li><b>ai-tool-remove:</b> Remove a tool from a session</li>
+ * <li><b>ai-tools:</b> List tools in a session</li>
+ * </ul>
+ *
+ * <h3>Configuration</h3>
+ * <ul>
+ * <li><b>ai-configure:</b> Set API keys and defaults</li>
+ * <li><b>ai-config:</b> Get current configuration</li>
+ * </ul>
+ */
+public class AILib implements Library
+{
+    /** Symbol for active session binding in environment */
+    private static final Symbol AI_SESSION_SYMBOL = Symbol.intern("*ai-session*");
+    /** Sentinel object to signal end of stream */
+    private static final Object END_OF_STREAM = new Object();
+
+    /** Sentinel object to signal error */
+    private static final class StreamError
+    {
+        final Throwable error;
+
+        StreamError(Throwable error)
+        {
+            this.error = error;
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void load(Environment env) throws JlllException
+    {
+        // ========== ai-session-create ==========
+        new Primitive("ai-session-create", env,
+                "Creates a new AI session. Options: :name (string), :system (system prompt), "
+                        + ":model (model name), :tools (list of tools). Returns the session object.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                String name = null;
+                String systemPrompt = null;
+                String modelName = null;
+                List<AITool> tools = new ArrayList<>();
+                boolean addEvalTool = true;
+                // Parse keyword arguments
+                for (int i = 0; i < values.length(); i += 2)
+                {
+                    Object key = values.get(i);
+                    if (i + 1 >= values.length())
+                        break;
+                    Object value = values.get(i + 1);
+                    String keyStr = key.toString();
+                    switch (keyStr)
+                    {
+                        case ":name" :
+                            name = value.toString();
+                            break;
+                        case ":system" :
+                            systemPrompt = value.toString();
+                            break;
+                        case ":model" :
+                            modelName = value.toString();
+                            break;
+                        case ":tools" :
+                            if (value instanceof Cons toolList)
+                            {
+                                for (Object t : toolList)
+                                {
+                                    if (t instanceof AITool tool)
+                                    {
+                                        tools.add(tool);
+                                    }
+                                }
+                            }
+                            break;
+                        case ":eval" :
+                            addEvalTool = Boolean.TRUE.equals(value);
+                            break;
+                    }
+                }
+                // Detect provider
+                AIConfig config = AIConfig.getInstance();
+                AIConfig.Provider provider = config.detectProvider();
+                // Create session
+                AISession session = new AISession(name, provider, modelName, systemPrompt, env);
+                // Add eval tool by default
+                if (addEvalTool)
+                {
+                    session.addTool(AITool.createEvalTool(env));
+                }
+                // Add custom tools
+                for (AITool tool : tools)
+                {
+                    session.addTool(tool);
+                }
+                return session;
+            }
+        };
+        // ========== ai-session-activate ==========
+        new Primitive("ai-session-activate", env,
+                "Makes the given session active for the current environment. " + "(ai-session-activate session)")
+        {
+            private static final long serialVersionUID = 2L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("ai-session-activate requires a session argument");
+                }
+                Object sessionObj = values.get(0);
+                if (!(sessionObj instanceof AISession session))
+                {
+                    throw new JlllException("ai-session-activate: argument must be an AISession");
+                }
+                session.setEnvironment(env);
+                // Use setBinding to update the *ai-session* variable defined in init.jlll
+                env.setBinding(AI_SESSION_SYMBOL, session);
+                return session;
+            }
+        };
+        // ========== ai-session-deactivate ==========
+        new Primitive("ai-session-deactivate", env,
+                "Deactivates the current session by setting *ai-session* to null. (ai-session-deactivate)")
+        {
+            private static final long serialVersionUID = 3L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                // Set *ai-session* to null (don't remove, just clear)
+                env.setBinding(AI_SESSION_SYMBOL, Null.NULL);
+                return Null.NULL;
+            }
+        };
+        // ========== ai-session-current ==========
+        new Primitive("ai-session-current", env,
+                "Returns the currently active session, or null if none. (ai-session-current)")
+        {
+            private static final long serialVersionUID = 4L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Object session = env.lookup(AI_SESSION_SYMBOL);
+                return session != null ? session : Null.NULL;
+            }
+        };
+        // ========== ai-sessions ==========
+        new Primitive("ai-sessions", env, "Returns a list of all registered AI sessions. (ai-sessions)")
+        {
+            private static final long serialVersionUID = 5L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                List<AISession> sessions = AISession.getAllSessions();
+                return Cons.list(sessions.toArray());
+            }
+        };
+        // ========== ai-session-name ==========
+        new Primitive("ai-session-name", env, "Returns the name of a session. (ai-session-name session)")
+        {
+            private static final long serialVersionUID = 6L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session = getSessionArg(values, env, 0);
+                return session.getName();
+            }
+        };
+        // ========== ai-session-id ==========
+        new Primitive("ai-session-id", env, "Returns the unique ID of a session. (ai-session-id session)")
+        {
+            private static final long serialVersionUID = 7L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session = getSessionArg(values, env, 0);
+                return session.getId();
+            }
+        };
+        // ========== ai-prompt ==========
+        new Primitive("ai-prompt", env,
+                "Chat with the LLM using the active session. Returns a lazy sequence of response chunks. "
+                        + "(ai-prompt \"prompt\") or (ai-prompt \"prompt\" :temperature 0.7 :model \"gpt-4\")")
+        {
+            private static final long serialVersionUID = 8L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("ai-prompt requires at least a prompt argument");
+                }
+                String prompt = values.get(0).toString();
+                // Get or create session
+                AISession session = getCurrentOrCreateSession(env);
+                // Update session environment to user level (skip transient procedure scopes)
+                // This ensures AI tool definitions persist in the user's environment
+                session.setEnvironment(env.getUserEnvironment());
+                // Parse optional parameters
+                Double temperature = null;
+                String modelOverride = null;
+                for (int i = 1; i < values.length(); i += 2)
+                {
+                    if (i + 1 >= values.length())
+                        break;
+                    String key = values.get(i).toString();
+                    Object value = values.get(i + 1);
+                    switch (key)
+                    {
+                        case ":temperature" :
+                            temperature = ((Number) value).doubleValue();
+                            break;
+                        case ":model" :
+                            modelOverride = value.toString();
+                            break;
+                        case ":session" :
+                            if (value instanceof AISession s)
+                            {
+                                session = s;
+                            }
+                            break;
+                    }
+                }
+                // Execute AI request and return lazy sequence
+                return executeAiRequest(session, prompt, temperature, modelOverride);
+            }
+        };
+        // ========== ai-history ==========
+        new Primitive("ai-history", env, "Returns the conversation history of a session as a list. "
+                + "(ai-history) for current session or (ai-history session)")
+        {
+            private static final long serialVersionUID = 9L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session = values.length() > 0 ? getSessionArg(values, env, 0) : getCurrentSession(env);
+                List<ChatMessage> history = session.getHistory();
+                // Convert to JLLL list of hash-maps
+                List<Object> result = new ArrayList<>();
+                for (ChatMessage msg : history)
+                {
+                    Map<Object, Object> map = new LinkedHashMap<>();
+                    map.put(Symbol.intern("type"), msg.type().name().toLowerCase());
+                    if (msg instanceof dev.langchain4j.data.message.UserMessage um)
+                    {
+                        map.put(Symbol.intern("content"), um.singleText());
+                    }
+                    else if (msg instanceof AiMessage am)
+                    {
+                        map.put(Symbol.intern("content"), am.text());
+                    }
+                    result.add(map);
+                }
+                return Cons.list(result.toArray());
+            }
+        };
+        // ========== ai-clear ==========
+        new Primitive("ai-clear", env,
+                "Clears the conversation history. (ai-clear) for current session or (ai-clear session)")
+        {
+            private static final long serialVersionUID = 10L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session = values.length() > 0 ? getSessionArg(values, env, 0) : getCurrentSession(env);
+                session.clearHistory();
+                return Null.NULL;
+            }
+        };
+        // ========== ai-tool ==========
+        new Primitive("ai-tool", env, "Creates a tool from a JLLL procedure. "
+                + "(ai-tool \"name\" :description \"desc\" :parameters '((param1 \"string\" \"desc\")) :fn procedure)")
+        {
+            private static final long serialVersionUID = 11L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("ai-tool requires a name");
+                }
+                String name = values.get(0).toString();
+                String description = "";
+                Cons parameters = null;
+                Procedure fn = null;
+                // Parse keyword arguments
+                for (int i = 1; i < values.length(); i += 2)
+                {
+                    if (i + 1 >= values.length())
+                        break;
+                    String key = values.get(i).toString();
+                    Object value = values.get(i + 1);
+                    switch (key)
+                    {
+                        case ":description" :
+                            description = value.toString();
+                            break;
+                        case ":parameters" :
+                            if (value instanceof Cons c)
+                            {
+                                parameters = c;
+                            }
+                            break;
+                        case ":fn" :
+                            if (value instanceof Procedure p)
+                            {
+                                fn = p;
+                            }
+                            break;
+                    }
+                }
+                if (fn == null)
+                {
+                    throw new JlllException("ai-tool requires :fn procedure");
+                }
+                return AITool.fromSpec(name, description, parameters, fn, env);
+            }
+        };
+        // ========== ai-tool-add ==========
+        new Primitive("ai-tool-add", env,
+                "Adds a tool to a session. (ai-tool-add session tool) or (ai-tool-add tool) for current session")
+        {
+            private static final long serialVersionUID = 12L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session;
+                AITool tool;
+                if (values.length() >= 2 && values.get(0) instanceof AISession)
+                {
+                    session = (AISession) values.get(0);
+                    tool = (AITool) values.get(1);
+                }
+                else if (values.length() >= 1 && values.get(0) instanceof AITool)
+                {
+                    session = getCurrentSession(env);
+                    tool = (AITool) values.get(0);
+                }
+                else
+                {
+                    throw new JlllException("ai-tool-add requires a tool argument");
+                }
+                session.addTool(tool);
+                return tool;
+            }
+        };
+        // ========== ai-tool-remove ==========
+        new Primitive("ai-tool-remove", env,
+                "Removes a tool from a session by name. (ai-tool-remove session \"name\") or (ai-tool-remove \"name\")")
+        {
+            private static final long serialVersionUID = 13L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session;
+                String toolName;
+                if (values.length() >= 2 && values.get(0) instanceof AISession)
+                {
+                    session = (AISession) values.get(0);
+                    toolName = values.get(1).toString();
+                }
+                else if (values.length() >= 1)
+                {
+                    session = getCurrentSession(env);
+                    toolName = values.get(0).toString();
+                }
+                else
+                {
+                    throw new JlllException("ai-tool-remove requires a tool name");
+                }
+                AITool removed = session.removeTool(toolName);
+                return removed != null ? removed : Null.NULL;
+            }
+        };
+        // ========== ai-tools ==========
+        new Primitive("ai-tools", env, "Lists tools in a session. (ai-tools) for current session or (ai-tools session)")
+        {
+            private static final long serialVersionUID = 14L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AISession session = values.length() > 0 ? getSessionArg(values, env, 0) : getCurrentSession(env);
+                Map<String, AITool> tools = session.getTools();
+                List<Object> result = new ArrayList<>();
+                for (AITool tool : tools.values())
+                {
+                    Map<Object, Object> map = new LinkedHashMap<>();
+                    map.put(Symbol.intern("name"), tool.getName());
+                    map.put(Symbol.intern("description"), tool.getDescription());
+                    result.add(map);
+                }
+                return Cons.list(result.toArray());
+            }
+        };
+        // ========== ai-configure ==========
+        new Primitive("ai-configure", env, "Configures AI settings. (ai-configure :openai-api-key \"sk-...\") or "
+                + "(ai-configure :default-model \"gpt-4\")")
+        {
+            private static final long serialVersionUID = 15L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                AIConfig config = AIConfig.getInstance();
+                for (int i = 0; i < values.length(); i += 2)
+                {
+                    if (i + 1 >= values.length())
+                        break;
+                    String key = values.get(i).toString();
+                    Object value = values.get(i + 1);
+                    switch (key)
+                    {
+                        case ":openai-api-key" :
+                            config.setApiKey(AIConfig.Provider.OPENAI, value.toString());
+                            break;
+                        case ":anthropic-api-key" :
+                            config.setApiKey(AIConfig.Provider.ANTHROPIC, value.toString());
+                            break;
+                        case ":google-ai-api-key" :
+                            config.setApiKey(AIConfig.Provider.GOOGLE_AI, value.toString());
+                            break;
+                        case ":ollama-base-url" :
+                            config.setApiKey(AIConfig.Provider.OLLAMA, value.toString());
+                            break;
+                        case ":default-model" :
+                            config.setDefaultModel(value.toString());
+                            break;
+                        case ":default-temperature" :
+                            config.setDefaultTemperature(((Number) value).doubleValue());
+                            break;
+                    }
+                }
+                return Null.NULL;
+            }
+        };
+        // ========== ai-config ==========
+        new Primitive("ai-config", env, "Returns current AI configuration as a hash-map. (ai-config)")
+        {
+            private static final long serialVersionUID = 16L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Map<String, Object> config = AIConfig.getInstance().toMap();
+                // Convert to JLLL hash-map with keyword keys
+                Map<Object, Object> result = new LinkedHashMap<>();
+                for (Map.Entry<String, Object> entry : config.entrySet())
+                {
+                    result.put(Symbol.intern(entry.getKey()), entry.getValue());
+                }
+                return result;
+            }
+        };
+        // ========== ai-session? ==========
+        new Primitive("ai-session?", env, "Returns true if the argument is an AI session. (ai-session? obj)")
+        {
+            private static final long serialVersionUID = 17L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                return values.length() > 0 && values.get(0) instanceof AISession;
+            }
+        };
+        // ========== ai-tool? ==========
+        new Primitive("ai-tool?", env, "Returns true if the argument is an AI tool. (ai-tool? obj)")
+        {
+            private static final long serialVersionUID = 18L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                return values.length() > 0 && values.get(0) instanceof AITool;
+            }
+        };
+    }
+    // ========== Helper Methods ==========
+
+    /**
+     * Gets a session argument, or current session if not specified.
+     */
+    private AISession getSessionArg(Cons values, Environment env, int index) throws JlllException
+    {
+        if (values.length() > index)
+        {
+            Object obj = values.get(index);
+            if (obj instanceof AISession session)
+            {
+                return session;
+            }
+        }
+        return getCurrentSession(env);
+    }
+
+    /**
+     * Gets the current session from the environment.
+     * Returns null if *ai-session* is null or not set.
+     */
+    private AISession getCurrentSessionOrNull(Environment env)
+    {
+        Object session = env.lookup(AI_SESSION_SYMBOL);
+        if (session instanceof AISession s)
+        {
+            return s;
+        }
+        return null;
+    }
+
+    /**
+     * Gets the current session from the environment.
+     * Throws exception if no session is active.
+     */
+    private AISession getCurrentSession(Environment env) throws JlllException
+    {
+        AISession session = getCurrentSessionOrNull(env);
+        if (session != null)
+        {
+            return session;
+        }
+        throw new JlllException("No active AI session. Use (ai-session-create) and (ai-session-activate) first.");
+    }
+
+    /**
+     * Gets the current session or creates a default one.
+     * Auto-created session is stored in *ai-session* using setBinding (set! semantics).
+     */
+    private AISession getCurrentOrCreateSession(Environment env) throws JlllException
+    {
+        AISession session = getCurrentSessionOrNull(env);
+        if (session != null)
+        {
+            return session;
+        }
+        // Auto-create a default session and store in *ai-session*
+        AIConfig config = AIConfig.getInstance();
+        AIConfig.Provider provider = config.detectProvider();
+        AISession newSession = new AISession(null, provider, null, null, env);
+        newSession.addTool(AITool.createEvalTool(env));
+        // Use setBinding to update the *ai-session* variable defined in init.jlll
+        env.setBinding(AI_SESSION_SYMBOL, newSession);
+        return newSession;
+    }
+
+    /**
+     * Executes an AI request and returns a lazy sequence of response chunks.
+     */
+    private Object executeAiRequest(AISession session, String prompt, Double temperature, String modelOverride)
+            throws JlllException
+    {
+        // Add user message to history
+        session.addUserMessage(prompt);
+        // Build messages list
+        List<ChatMessage> messages = session.getMessagesForRequest();
+        // Get tool specifications
+        List<ToolSpecification> toolSpecs = session.getToolSpecifications();
+        // Get the model
+        StreamingChatLanguageModel model = session.getModel();
+        // Create a blocking queue for streaming tokens
+        BlockingQueue<Object> tokenQueue = new LinkedBlockingQueue<>();
+        AtomicBoolean completed = new AtomicBoolean(false);
+        AtomicReference<StringBuilder> fullResponse = new AtomicReference<>(new StringBuilder());
+        AtomicReference<AiMessage> aiMessageRef = new AtomicReference<>();
+        // Build chat request
+        ChatRequest.Builder requestBuilder = ChatRequest.builder().messages(messages);
+        if (!toolSpecs.isEmpty())
+        {
+            requestBuilder.toolSpecifications(toolSpecs);
+        }
+        // Note: temperature is set at model level, not request level in langchain4j
+        // Start streaming request
+        model.chat(requestBuilder.build(), new StreamingChatResponseHandler()
+        {
+            @Override
+            public void onPartialResponse(String partialResponse)
+            {
+                if (partialResponse != null && !partialResponse.isEmpty())
+                {
+                    fullResponse.get().append(partialResponse);
+                    tokenQueue.offer(partialResponse);
+                }
+            }
+
+            @Override
+            public void onCompleteResponse(ChatResponse completeResponse)
+            {
+                AiMessage aiMessage = completeResponse.aiMessage();
+                aiMessageRef.set(aiMessage);
+                // Check for tool calls
+                if (aiMessage.hasToolExecutionRequests())
+                {
+                    try
+                    {
+                        handleToolCalls(session, aiMessage, tokenQueue, fullResponse, messages, toolSpecs, model,
+                                temperature);
+                    }
+                    catch (Exception e)
+                    {
+                        tokenQueue.offer(new StreamError(e));
+                    }
+                }
+                else
+                {
+                    // Add AI response to history
+                    session.addAiMessage(aiMessage);
+                    completed.set(true);
+                    tokenQueue.offer(END_OF_STREAM);
+                }
+            }
+
+            @Override
+            public void onError(Throwable error)
+            {
+                tokenQueue.offer(new StreamError(error));
+            }
+        });
+        // Return a lazy sequence that pulls from the queue
+        return createLazyStream(tokenQueue);
+    }
+
+    /**
+     * Handles tool execution requests from the AI.
+     */
+    private void handleToolCalls(AISession session, AiMessage aiMessage, BlockingQueue<Object> tokenQueue,
+            AtomicReference<StringBuilder> fullResponse, List<ChatMessage> messages, List<ToolSpecification> toolSpecs,
+            StreamingChatLanguageModel model, Double temperature)
+    {
+        // Execute each tool call
+        List<ToolExecutionResultMessage> toolResults = new ArrayList<>();
+        for (ToolExecutionRequest request : aiMessage.toolExecutionRequests())
+        {
+            String toolName = request.name();
+            AITool tool = session.getTool(toolName);
+            String result;
+            if (tool != null)
+            {
+                result = tool.execute(request);
+            }
+            else
+            {
+                result = "Error: Unknown tool '" + toolName + "'";
+            }
+            toolResults.add(ToolExecutionResultMessage.from(request, result));
+        }
+        // Add AI message and tool results to messages for next request
+        List<ChatMessage> newMessages = new ArrayList<>(messages);
+        newMessages.add(aiMessage);
+        newMessages.addAll(toolResults);
+        // Continue conversation with tool results
+        ChatRequest.Builder requestBuilder = ChatRequest.builder().messages(newMessages);
+        if (!toolSpecs.isEmpty())
+        {
+            requestBuilder.toolSpecifications(toolSpecs);
+        }
+        // Note: temperature is set at model level, not request level
+        model.chat(requestBuilder.build(), new StreamingChatResponseHandler()
+        {
+            @Override
+            public void onPartialResponse(String partialResponse)
+            {
+                if (partialResponse != null && !partialResponse.isEmpty())
+                {
+                    fullResponse.get().append(partialResponse);
+                    tokenQueue.offer(partialResponse);
+                }
+            }
+
+            @Override
+            public void onCompleteResponse(ChatResponse completeResponse)
+            {
+                AiMessage finalMessage = completeResponse.aiMessage();
+                // Check for more tool calls (recursive)
+                if (finalMessage.hasToolExecutionRequests())
+                {
+                    handleToolCalls(session, finalMessage, tokenQueue, fullResponse, newMessages, toolSpecs, model,
+                            temperature);
+                }
+                else
+                {
+                    // Add final AI response to history (skip intermediate tool messages)
+                    session.addAiMessage(finalMessage);
+                    tokenQueue.offer(END_OF_STREAM);
+                }
+            }
+
+            @Override
+            public void onError(Throwable error)
+            {
+                tokenQueue.offer(new StreamError(error));
+            }
+        });
+    }
+
+    /**
+     * Extracts a user-friendly error message from an AI streaming error.
+     */
+    private String extractErrorMessage(Throwable error)
+    {
+        // Walk the cause chain to find useful information
+        Throwable current = error;
+        while (current != null)
+        {
+            String msg = current.getMessage();
+            if (msg != null)
+            {
+                String lowerMsg = msg.toLowerCase();
+                // Check for common API errors
+                if (lowerMsg.contains("quota") || lowerMsg.contains("insufficient_quota"))
+                {
+                    return "AI API quota exceeded. Check your API plan and billing.";
+                }
+                if (lowerMsg.contains("rate_limit") || lowerMsg.contains("rate limit"))
+                {
+                    return "AI API rate limit reached. Please wait and try again.";
+                }
+                if (lowerMsg.contains("invalid_api_key") || lowerMsg.contains("invalid api key")
+                        || lowerMsg.contains("unauthorized"))
+                {
+                    return "Invalid AI API key. Check your API key configuration.";
+                }
+                if (lowerMsg.contains("connection") || lowerMsg.contains("timeout"))
+                {
+                    return "AI API connection error. Check your network connection.";
+                }
+            }
+            current = current.getCause();
+        }
+        // Fall back to generic message
+        return "AI streaming error: " + (error.getMessage() != null ? error.getMessage() : error.getClass().getName());
+    }
+
+    /**
+     * Creates a lazy sequence that pulls from a blocking queue.
+     */
+    private Object createLazyStream(BlockingQueue<Object> queue)
+    {
+        return createLazyStreamNode(queue);
+    }
+
+    /**
+     * Creates a single node in the lazy stream.
+     */
+    private Object createLazyStreamNode(BlockingQueue<Object> queue)
+    {
+        try
+        {
+            // Wait for next token (with timeout to avoid hanging forever)
+            Object token = queue.poll(60, TimeUnit.SECONDS);
+            if (token == null)
+            {
+                // Timeout - end stream
+                return Null.NULL;
+            }
+            if (token == END_OF_STREAM)
+            {
+                return Null.NULL;
+            }
+            if (token instanceof StreamError error)
+            {
+                // Try to extract a more helpful error message
+                String errorMessage = extractErrorMessage(error.error);
+                throw new RuntimeException(errorMessage, error.error);
+            }
+            // Return cons with lazy tail
+            LazyThunk lazyTail = new LazyThunk(() -> createLazyStreamNode(queue));
+            return new Cons(token.toString(), lazyTail);
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+            return Null.NULL;
+        }
+    }
+}

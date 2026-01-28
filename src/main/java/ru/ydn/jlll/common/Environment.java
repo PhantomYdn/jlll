@@ -427,6 +427,47 @@ public class Environment implements Serializable
     }
 
     /**
+     * Returns whether this environment is transient (temporary scope).
+     *
+     * <p>
+     * Transient environments are temporary scopes created during evaluation,
+     * such as procedure call frames. Definitions made in transient environments
+     * are lost when the scope exits.
+     * </p>
+     *
+     * <p>
+     * Override this method in subclasses that represent transient scopes.
+     * </p>
+     *
+     * @return true if this is a transient environment, false otherwise
+     */
+    public boolean isTransient()
+    {
+        return false;
+    }
+
+    /**
+     * Returns the nearest "user-level" environment by walking up the parent chain
+     * and skipping transient environments.
+     *
+     * <p>
+     * This is useful for operations that should affect the user's interactive
+     * environment rather than a temporary procedure scope, such as AI tool definitions.
+     * </p>
+     *
+     * @return the nearest non-transient ancestor, or this if already at user level
+     */
+    public Environment getUserEnvironment()
+    {
+        Environment current = this;
+        while (current.isTransient() && current.getParent() != null)
+        {
+            current = current.getParent();
+        }
+        return current;
+    }
+
+    /**
      * Remove binding from environment where symbol is binded
      *
      * @param sym

@@ -27,6 +27,7 @@
         <picocli.version>4.7.7</picocli.version>
         <therapi-runtime-javadoc.version>0.13.0</therapi-runtime-javadoc.version>
         <maven-resolver.version>1.9.22</maven-resolver.version>
+        <langchain4j.version>1.0.0-beta3</langchain4j.version>
 
         <!-- Plugin versions -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -146,6 +147,41 @@
             <version>${gson.version}</version>
         </dependency>
 
+        <!-- LangChain4j core library -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+
+        <!-- LangChain4j OpenAI provider -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+
+        <!-- LangChain4j Anthropic provider -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-anthropic</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+
+        <!-- LangChain4j Google AI Gemini provider -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-google-ai-gemini</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+
+        <!-- LangChain4j Ollama provider (local models) -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-ollama</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -169,6 +205,12 @@
                 <excludes>
                     <exclude>**/version.properties</exclude>
                 </excludes>
+            </resource>
+            <!-- Include documentation in JAR for jlll-docs function -->
+            <resource>
+                <directory>docs</directory>
+                <targetPath>docs</targetPath>
+                <filtering>false</filtering>
             </resource>
         </resources>
         <plugins>

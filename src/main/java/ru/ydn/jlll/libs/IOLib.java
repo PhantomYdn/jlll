@@ -21,6 +21,7 @@ import ru.ydn.jlll.common.Evaluator;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Library;
+import ru.ydn.jlll.common.Null;
 import ru.ydn.jlll.common.PlainConsole;
 import ru.ydn.jlll.common.Primitive;
 import ru.ydn.jlll.common.Symbol;
@@ -422,7 +423,8 @@ public class IOLib implements Library
                 }
             }
         };
-        new Primitive("print", env, "Outputs values to the console. (print a b c) prints without newline.")
+        new Primitive("print", env, "Outputs values to the console. (print a b c) prints without newline. "
+                + "If a value is a lazy sequence, prints each element as it is realized (streaming output).")
         {
             private static final long serialVersionUID = -92971491929006863L;
 
@@ -432,9 +434,50 @@ public class IOLib implements Library
                 Console console = KernelLib.getConsole(env);
                 while (it.hasNext())
                 {
-                    console.print(String.valueOf(Evaluator.eval(it.next(), env)));
+                    Object value = Evaluator.eval(it.next(), env);
+                    printValue(value, console);
                 }
                 return vaCons;
+            }
+
+            /**
+             * Prints a value, streaming lazy sequences element by element.
+             */
+            private void printValue(Object value, Console console)
+            {
+                if (value instanceof Cons cons && cons.hasLazyCdr())
+                {
+                    // Stream lazy sequence: print each element as it's realized
+                    Cons current = cons;
+                    while (current != null && !Null.NULL.equals(current) && !current.isNull())
+                    {
+                        Object car = current.car();
+                        console.print(String.valueOf(car));
+                        console.flush(); // Flush after each chunk for real-time streaming
+                        Object cdr = current.cdr(); // This forces the lazy thunk
+                        if (cdr instanceof Cons)
+                        {
+                            current = (Cons) cdr;
+                        }
+                        else if (Null.NULL.equals(cdr) || cdr == null)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            // Dotted pair - print remaining
+                            console.print(String.valueOf(cdr));
+                            console.flush();
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    // Normal print
+                    console.print(String.valueOf(value));
+                    console.flush();
+                }
             }
         };
         Jlll.eval("(load-system-script \"iolib.jlll\")", env);

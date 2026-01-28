@@ -64,6 +64,19 @@ public class ProcEnvironment extends Environment
     }
 
     /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * ProcEnvironment is transient - it's a temporary scope for a single procedure call.
+     * </p>
+     */
+    @Override
+    public boolean isTransient()
+    {
+        return true;
+    }
+
+    /**
      * Legacy binding for backward compatibility with old-style (symbol ...) parameter lists.
      */
     private void substLegacy(Object vars, Cons values) throws JlllException

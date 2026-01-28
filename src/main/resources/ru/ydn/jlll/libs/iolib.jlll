@@ -1,6 +1,7 @@
 (define (println . rest)
-  :doc "Prints arguments followed by a newline."
-  (eval (cons 'print (append rest '("\n")))))
+  :doc "Prints arguments followed by a newline. Lazy sequences are streamed element by element."
+  (for-each print rest)
+  (print "\n"))
 
 (define (newline)
   :doc "Outputs a newline character to stdout."

@@ -28,6 +28,19 @@ public class DelegateEnvironment extends Environment
         super(parent);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * DelegateEnvironment is transient - it's a transparent wrapper that should be skipped.
+     * </p>
+     */
+    @Override
+    public boolean isTransient()
+    {
+        return true;
+    }
+
     /** {@inheritDoc} Delegates to parent environment. */
     @Override
     public void addBinding(Symbol sym, Object obj)

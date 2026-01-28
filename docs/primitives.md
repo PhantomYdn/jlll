@@ -104,9 +104,9 @@ Core language primitives.
 | `quit` / `exit` | Exit JLLL | `(quit)` |
 | `describe` | Describe object (includes metadata) | `(describe 'my-var)` |
 
-### Metadata
+### Metadata and Documentation
 
-See [Metadata](metadata.md) for detailed documentation.
+See [Metadata](metadata.md) for detailed documentation on metadata system.
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
@@ -114,6 +114,27 @@ See [Metadata](metadata.md) for detailed documentation.
 | `meta` | Get metadata by key | `(meta 'x :version)` => `"1.0"` |
 | `meta` | Get all metadata | `(meta 'x)` => `((:doc . "desc"))` |
 | `set-meta!` | Set metadata on binding | `(set-meta! 'x :author "Jane")` |
+| `jlll-docs` | Access JLLL documentation | `(jlll-docs)` or `(jlll-docs "topic")` |
+| `apropos` | Search for functions by name | `(apropos "string")` |
+
+**Using `jlll-docs`:**
+
+```lisp
+;; List all documentation topics
+(jlll-docs)
+
+;; Read specific topic
+(jlll-docs "java-interop")
+(jlll-docs "primitives")
+(jlll-docs "syntax")
+
+;; Topic aliases are supported
+(jlll-docs "interop")    ; same as "java-interop"
+(jlll-docs "functions")  ; same as "primitives"
+(jlll-docs "lazy")       ; same as "lazy-sequences"
+```
+
+Available topics: README, syntax, special-forms, procedures, primitives, macros, java-interop, lazy-sequences, metadata, system-prompt
 
 ### Macro Utilities
 
@@ -447,9 +468,18 @@ Input/output operations.
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
-| `print` | Print without newline | `(print "hello")` |
-| `println` | Print with newline | `(println "hello")` |
+| `print` | Print without newline (streams lazy sequences) | `(print "hello")` |
+| `println` | Print with newline (streams lazy sequences) | `(println "hello")` |
 | `newline` | Print newline | `(newline)` |
+
+**Lazy Sequence Streaming:**
+
+When `print` or `println` receive a lazy sequence, they stream each element as it becomes available:
+
+```lisp
+(print (lazy-range 0 5))   ; prints: 01234
+(println (ai-prompt "Hi")) ; streams AI response chunk by chunk
+```
 
 ### Input
 
@@ -893,6 +923,160 @@ Atoms provide thread-safe mutable references with atomic updates.
 - **Futures** execute in Java's `ForkJoinPool.commonPool()`. Each future receives a snapshot of the environment at creation time.
 - **Atoms** use compare-and-swap for lock-free atomic updates. The update function in `swap!` may be called multiple times if there is contention.
 - **`call/cc`** (continuations) cannot cross thread boundaries - continuations captured in one thread cannot be invoked from another.
+
+## AI Library
+
+LLM integration using LangChain4j. Provides session-based AI interactions with conversation memory, streaming responses, and tool calling.
+
+**Configuration:** API keys are read from environment variables:
+- `OPENAI_API_KEY` - OpenAI (GPT-4, GPT-4o, etc.)
+- `ANTHROPIC_API_KEY` - Anthropic (Claude)
+- `GOOGLE_AI_API_KEY` - Google AI (Gemini)
+- `OLLAMA_BASE_URL` - Ollama (local models)
+
+### Session Management
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `ai-session-create` | Create a new session | `(ai-session-create :name "coder")` |
+| `ai-session-activate` | Set session as current | `(ai-session-activate sess)` |
+| `ai-session-deactivate` | Clear current session | `(ai-session-deactivate)` |
+| `ai-session-current` | Get current session | `(ai-session-current)` |
+| `ai-sessions` | List all sessions | `(ai-sessions)` |
+| `ai-session-name` | Get session name | `(ai-session-name sess)` => `"coder"` |
+| `ai-session-id` | Get session ID | `(ai-session-id sess)` => `"sess-12345"` |
+| `ai-session?` | Test if value is session | `(ai-session? x)` => `true` |
+
+**Session Options:**
+- `:name "name"` - Session name (auto-generated if omitted)
+- `:system "prompt"` - Custom system message (default: loaded from `docs/system-prompt.md`)
+- `:model "gpt-4o"` - Model override
+- `:tools (list tool1 tool2)` - Additional tools
+- `:eval true/false` - Enable/disable eval tool (default: true)
+
+**Custom System Prompt:**
+
+```lisp
+;; Use default system prompt (loaded from docs/system-prompt.md)
+(ai-session-create)
+
+;; Custom system prompt for specific use case
+(ai-session-create :system "You are a helpful math tutor. Use (eval ...) to verify calculations.")
+
+;; Combine with other options
+(ai-session-create :name "math-tutor" 
+                   :system "Focus on explaining step by step."
+                   :model "gpt-4o")
+```
+
+### Core AI Operations
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `ai` | Chat with LLM, prints streaming response, returns full text | `(ai "Explain closures")` |
+| `ai-prompt` | Chat with LLM, returns lazy sequence (for programmatic use) | `(ai-prompt "Hello")` |
+| `ai-history` | Get conversation history | `(ai-history)` => list of hash-maps |
+| `ai-clear` | Clear conversation history | `(ai-clear)` |
+
+**Console-friendly `ai`:**
+
+The `ai` function prints the response to the console as it streams, then returns the full response as a string:
+
+```lisp
+(ai "Tell me a joke")
+;; Output appears chunk by chunk as it streams...
+;; => "Why did the programmer quit? Because he didn't get arrays!"
+```
+
+**Programmatic `ai-prompt`:**
+
+For programmatic use, `ai-prompt` returns a lazy sequence of text chunks:
+
+```lisp
+(define response (ai-prompt "Hello"))
+(realize response)  ; => ("Hello" "!" " How" " can" " I" " help" "?")
+(string-join (realize response) "")  ; => "Hello! How can I help?"
+
+;; Stream with custom processing
+(for-each (lambda (chunk) (print "[" chunk "]")) (ai-prompt "Hi"))
+```
+
+### Tool Management
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `ai-tool` | Create a custom tool | See below |
+| `ai-tool-add` | Add tool to session | `(ai-tool-add my-tool)` |
+| `ai-tool-remove` | Remove tool by name | `(ai-tool-remove "my-tool")` |
+| `ai-tools` | List tools in session | `(ai-tools)` |
+| `ai-tool?` | Test if value is tool | `(ai-tool? x)` => `true` |
+
+**Creating Tools:**
+
+```lisp
+(define weather-tool
+  (ai-tool "get-weather"
+    :description "Get current weather for a city"
+    :parameters '((city "string" "City name"))
+    :fn (lambda (city) (concat "Weather in " city ": Sunny, 72F"))))
+```
+
+**Built-in Eval Tool:**
+
+By default, sessions include an `eval` tool that allows the LLM to execute JLLL code:
+
+```lisp
+;; Session with eval tool (default)
+(ai-session-create)
+
+;; Session without eval tool
+(ai-session-create :eval false)
+```
+
+### Configuration
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `ai-configure` | Set configuration options | `(ai-configure :default-model "gpt-4")` |
+| `ai-config` | Get current configuration | `(ai-config)` => hash-map |
+
+**Configuration Options:**
+- `:openai-api-key` - Set OpenAI API key
+- `:anthropic-api-key` - Set Anthropic API key
+- `:google-ai-api-key` - Set Google AI API key
+- `:ollama-base-url` - Set Ollama base URL
+- `:default-model` - Override default model
+
+### Examples
+
+```lisp
+;; Simple conversation
+(ai-session-create :name "assistant")
+(ai-session-activate (car (ai-sessions)))
+(println (string-join (realize (ai "What is 2+2?")) ""))
+
+;; With system prompt
+(define coder (ai-session-create 
+  :name "coder"
+  :system "You are a helpful coding assistant. Be concise."))
+(ai-session-activate coder)
+(println (string-join (realize (ai "Write a factorial function")) ""))
+
+;; Custom tool
+(define calc-tool
+  (ai-tool "calculate"
+    :description "Evaluate a math expression"
+    :parameters '((expr "string" "Math expression like '2+2'"))
+    :fn (lambda (expr) (to-string (eval (read-from-string expr))))))
+(ai-tool-add calc-tool)
+(ai "What is 123 * 456?")  ; LLM can use the calculate tool
+
+;; Check history
+(ai-history)  ; => list of messages with :role and :content
+
+;; Clear and start fresh
+(ai-clear)
+```
 
 ## Reflect Library (Java Interop)
 

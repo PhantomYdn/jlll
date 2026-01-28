@@ -36,6 +36,19 @@ public class ArgsEnvironment extends Environment
         this.args = args;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p>
+     * ArgsEnvironment is transient - it's a temporary wrapper for positional arguments.
+     * </p>
+     */
+    @Override
+    public boolean isTransient()
+    {
+        return true;
+    }
+
     /** {@inheritDoc} Delegates to parent environment. */
     @Override
     public void addBinding(Symbol sym, Object obj)

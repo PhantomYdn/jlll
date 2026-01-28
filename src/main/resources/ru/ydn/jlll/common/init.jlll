@@ -28,8 +28,24 @@
 
 (load-lib "ru.ydn.jlll.libs.SQLLib")
 
+(load-lib "ru.ydn.jlll.libs.AILib")
 
+;; AI session placeholder - null means no active session
+;; This is set by ai-session-activate or auto-created by ai-prompt
+(define *ai-session* null)
 
-
+;; Console-friendly AI function
+;; Prints streaming response to console, returns full response as string
+(define (ai prompt . args)
+  :doc "Chat with AI, prints streaming response to console, returns full text. Use ai-prompt for programmatic access (returns lazy sequence)."
+  (define response (apply ai-prompt (cons prompt args)))
+  (define result 
+    (fold-left (lambda (acc chunk)
+                 (print chunk)
+                 (concat acc chunk))
+               ""
+               response))
+  (newline)
+  result)
 
 

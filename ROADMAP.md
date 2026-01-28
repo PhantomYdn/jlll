@@ -1697,28 +1697,32 @@ These features may be added in future versions:
 ### Checklist
 
 **Session Management:**
-- [ ] `ai-session-create` - Create session (`:name`, `:system`, `:model`, `:tools`)
-- [ ] `ai-session-activate` - Make session active for current environment
-- [ ] `ai-session-deactivate` - Deactivate current session
-- [ ] `ai-session-current` - Get active session or nil
-- [ ] `ai-sessions` - List all sessions
-- [ ] `ai-session-name` / `ai-session-id` - Get session identity
+- [x] `ai-session-create` - Create session (`:name`, `:system`, `:model`, `:tools`, `:eval`)
+- [x] `ai-session-activate` - Make session active for current environment
+- [x] `ai-session-deactivate` - Deactivate current session
+- [x] `ai-session-current` - Get active session or nil
+- [x] `ai-sessions` - List all sessions
+- [x] `ai-session-name` / `ai-session-id` - Get session identity
+- [x] `ai-session?` - Test if value is a session
 
 **Core Operations:**
-- [ ] `ai` - Chat using active session, returns lazy sequence (depends: Section 22)
-- [ ] `ai-history` - Get conversation history
-- [ ] `ai-clear` - Clear session history
+- [x] `ai` - Chat using active session, returns lazy sequence (depends: Section 22)
+- [x] `ai-history` - Get conversation history
+- [x] `ai-clear` - Clear session history
 
 **Tool Management:**
-- [ ] `ai-tool` - Define custom tool
-- [ ] `ai-tool-add` - Add tool to session dynamically
-- [ ] `ai-tool-remove` - Remove tool from session
-- [ ] `ai-tools` - List tools in session
-- [ ] Built-in `eval` tool (default, errors returned as messages)
+- [x] `ai-tool` - Define custom tool from JLLL lambda
+- [x] `ai-tool-add` - Add tool to session dynamically
+- [x] `ai-tool-remove` - Remove tool from session
+- [x] `ai-tools` - List tools in session
+- [x] `ai-tool?` - Test if value is a tool
+- [x] Built-in `eval` tool (enabled by default, errors returned as messages)
 
 **Configuration:**
-- [ ] `ai-configure` - Set API keys and defaults
-- [ ] `ai-config` - Get configuration as hash-map
+- [x] `ai-configure` - Set API keys and defaults
+- [x] `ai-config` - Get configuration as hash-map
+- [x] Provider auto-detection from environment variables
+- [x] Multi-provider support: OpenAI, Anthropic, Google AI Gemini, Ollama
 
 ---
 
@@ -1819,6 +1823,23 @@ JLLL follows Scheme naming conventions but is not strictly R5RS/R7RS compatible:
 - Keywords (`:foo`) are JLLL-specific
 - Java interop is JLLL-specific
 - `format` uses Common Lisp / SRFI-28 directives (`~a`, `~s`, etc.)
+
+---
+
+## Future Enhancements
+
+### Error Message Improvements
+
+JLLL should provide user-friendly, verbose error messages that help both humans and AI:
+
+- [ ] Detect common mistakes and provide suggestions
+- [ ] "Did you forget to quote the class name?" for unbound Java class symbols (e.g., `java.util.Date` → suggest `'java.util.Date`)
+- [ ] Include examples of correct syntax in error messages
+- [ ] Suggest similar function names for typos (e.g., "Did you mean 'string-length'?")
+- [ ] Better error context showing the expression that caused the error
+- [ ] Stack traces with source locations when available
+
+These improvements benefit both human users and AI using the eval tool.
 
 ---
 

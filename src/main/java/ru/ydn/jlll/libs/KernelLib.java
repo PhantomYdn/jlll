@@ -3,10 +3,12 @@ package ru.ydn.jlll.libs;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -1630,6 +1632,209 @@ public class KernelLib implements Library
                 console.println();
                 console.flush();
                 return docString;
+            }
+        };
+        // ============== Documentation Access ==============
+        new Primitive("jlll-docs", env,
+                "Access JLLL documentation. (jlll-docs) lists topics, (jlll-docs \"topic\") shows documentation.")
+        {
+            private static final long serialVersionUID = 9182736450918273699L;
+            // Topic aliases for convenience
+            private final java.util.Map<String, String> ALIASES = java.util.Map.ofEntries(
+                    java.util.Map.entry("interop", "java-interop"), java.util.Map.entry("java", "java-interop"),
+                    java.util.Map.entry("forms", "special-forms"), java.util.Map.entry("special", "special-forms"),
+                    java.util.Map.entry("procs", "procedures"), java.util.Map.entry("funcs", "primitives"),
+                    java.util.Map.entry("functions", "primitives"), java.util.Map.entry("lazy", "lazy-sequences"),
+                    java.util.Map.entry("prompt", "system-prompt"), java.util.Map.entry("ai", "system-prompt"));
+            // Available documentation topics with descriptions
+            private final java.util.Map<String, String> TOPICS = new java.util.LinkedHashMap<>();
+            {
+                TOPICS.put("README", "Overview & Quick Start");
+                TOPICS.put("syntax", "Atoms, lists, reader macros, keywords");
+                TOPICS.put("special-forms", "define, if, lambda, let, cond");
+                TOPICS.put("procedures", "Keyword arguments, defaults, rest args");
+                TOPICS.put("primitives", "Built-in functions by library");
+                TOPICS.put("macros", "Macro definition and expansion");
+                TOPICS.put("java-interop", "Calling Java from JLLL");
+                TOPICS.put("lazy-sequences", "Lazy evaluation and streams");
+                TOPICS.put("metadata", "Documentation and metadata on bindings");
+                TOPICS.put("system-prompt", "AI assistant system prompt");
+            }
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Console console = getConsole(env);
+                if (values.length() == 0)
+                {
+                    // List available topics
+                    return listTopics(console);
+                }
+                String topic = values.get(0).toString();
+                // Resolve alias
+                topic = ALIASES.getOrDefault(topic.toLowerCase(), topic);
+                // Load and display documentation
+                return showDocumentation(topic, console);
+            }
+
+            private String listTopics(Console console)
+            {
+                console.println();
+                console.printHeader("Available Documentation Topics");
+                console.printFaint("──────────────────────────────────────────────────");
+                console.println();
+                for (java.util.Map.Entry<String, String> entry : TOPICS.entrySet())
+                {
+                    console.print("  ");
+                    console.printKeyword(String.format("%-16s", entry.getKey()));
+                    console.printFaint(" - " + entry.getValue());
+                    console.println();
+                }
+                console.println();
+                console.printFaint("Aliases: interop, java, forms, special, procs, funcs, functions, lazy, prompt, ai");
+                console.println();
+                console.println();
+                console.printHint("Usage: (jlll-docs \"topic\") to read documentation");
+                console.println();
+                console.flush();
+                return null;
+            }
+
+            private String showDocumentation(String topic, Console console) throws JlllException
+            {
+                String resourcePath = "docs/" + topic + ".md";
+                try (InputStream is = KernelLib.class.getClassLoader().getResourceAsStream(resourcePath))
+                {
+                    if (is == null)
+                    {
+                        throw new JlllException("Documentation topic not found: " + topic
+                                + ". Use (jlll-docs) to list available topics.");
+                    }
+                    String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    // Render with console formatting if supported
+                    if (console.supportsColor())
+                    {
+                        renderMarkdown(content, console);
+                    }
+                    else
+                    {
+                        console.println(content);
+                    }
+                    console.flush();
+                    return content;
+                }
+                catch (IOException e)
+                {
+                    throw new JlllException("Error reading documentation: " + e.getMessage(), e);
+                }
+            }
+
+            private void renderMarkdown(String content, Console console)
+            {
+                String[] lines = content.split("\n");
+                boolean inCodeBlock = false;
+                for (String line : lines)
+                {
+                    // Code block handling
+                    if (line.startsWith("```"))
+                    {
+                        inCodeBlock = !inCodeBlock;
+                        if (inCodeBlock)
+                        {
+                            console.printFaint("┌─────────────────────────────────────────");
+                            console.println();
+                        }
+                        else
+                        {
+                            console.printFaint("└─────────────────────────────────────────");
+                            console.println();
+                        }
+                        continue;
+                    }
+                    if (inCodeBlock)
+                    {
+                        console.printFaint("│ ");
+                        console.printKeyword(line);
+                        console.println();
+                        continue;
+                    }
+                    // Headers
+                    if (line.startsWith("### "))
+                    {
+                        console.println();
+                        console.printBold(line.substring(4));
+                        console.println();
+                        continue;
+                    }
+                    if (line.startsWith("## "))
+                    {
+                        console.println();
+                        console.printHeader(line.substring(3));
+                        console.printFaint("──────────────────────────────────────────────────");
+                        console.println();
+                        continue;
+                    }
+                    if (line.startsWith("# "))
+                    {
+                        console.println();
+                        console.printColored(line.substring(2), Console.Color.CYAN);
+                        console.println();
+                        console.printFaint("══════════════════════════════════════════════════");
+                        console.println();
+                        continue;
+                    }
+                    // Horizontal rule
+                    if (line.matches("^-{3,}$") || line.matches("^\\*{3,}$"))
+                    {
+                        console.printFaint("──────────────────────────────────────────────────");
+                        console.println();
+                        continue;
+                    }
+                    // List items
+                    if (line.matches("^\\s*[-*]\\s+.*"))
+                    {
+                        String item = line.replaceFirst("^(\\s*)[-*]\\s+", "$1• ");
+                        renderInlineFormatting(item, console);
+                        console.println();
+                        continue;
+                    }
+                    // Regular line with inline formatting
+                    renderInlineFormatting(line, console);
+                    console.println();
+                }
+            }
+
+            private void renderInlineFormatting(String line, Console console)
+            {
+                // Simple inline formatting: `code`, **bold**
+                int i = 0;
+                while (i < line.length())
+                {
+                    // Inline code
+                    if (line.charAt(i) == '`' && i + 1 < line.length())
+                    {
+                        int end = line.indexOf('`', i + 1);
+                        if (end > i)
+                        {
+                            console.printKeyword(line.substring(i + 1, end));
+                            i = end + 1;
+                            continue;
+                        }
+                    }
+                    // Bold
+                    if (i + 1 < line.length() && line.charAt(i) == '*' && line.charAt(i + 1) == '*')
+                    {
+                        int end = line.indexOf("**", i + 2);
+                        if (end > i)
+                        {
+                            console.printBold(line.substring(i + 2, end));
+                            i = end + 2;
+                            continue;
+                        }
+                    }
+                    console.print(String.valueOf(line.charAt(i)));
+                    i++;
+                }
             }
         };
         new Primitive("meta", env, "Returns metadata for a symbol. "
