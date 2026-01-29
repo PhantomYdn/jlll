@@ -35,17 +35,11 @@
 (define *ai-session* null)
 
 ;; Console-friendly AI function
-;; Prints streaming response to console, returns full response as string
+;; Prints streaming response to console, returns null (side-effect only)
 (define (ai prompt . args)
-  :doc "Chat with AI, prints streaming response to console, returns full text. Use ai-prompt for programmatic access (returns lazy sequence)."
+  :doc "Chat with AI, prints streaming response to console. Use ai-prompt for programmatic access (returns lazy sequence)."
   (define response (apply ai-prompt (cons prompt args)))
-  (define result 
-    (fold-left (lambda (acc chunk)
-                 (print chunk)
-                 (concat acc chunk))
-               ""
-               response))
-  (newline)
-  result)
+  (for-each print response)
+  (newline))
 
 

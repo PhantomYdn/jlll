@@ -18,10 +18,13 @@ import dev.langchain4j.model.chat.request.json.JsonNumberSchema;
 import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import dev.langchain4j.model.chat.request.json.JsonSchemaElement;
 import dev.langchain4j.model.chat.request.json.JsonStringSchema;
+import ru.ydn.jlll.common.CapturingConsole;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
+import ru.ydn.jlll.common.Null;
 import ru.ydn.jlll.common.Procedure;
 import ru.ydn.jlll.common.Symbol;
 
@@ -238,46 +241,24 @@ public class AITool implements Serializable
      */
     public String execute(ToolExecutionRequest request)
     {
-        try
-        {
-            // Parse arguments from JSON
-            String argsJson = request.arguments();
-            JsonObject argsObj = GSON.fromJson(argsJson, JsonObject.class);
-            // Convert JSON arguments to JLLL values
-            List<Object> jlllArgs = new ArrayList<>();
-            for (ToolParameter param : parameters)
-            {
-                JsonElement element = argsObj.get(param.getName());
-                Object value = jsonElementToJlll(element);
-                jlllArgs.add(value);
-            }
-            // Execute the JLLL procedure
-            Cons argsCons = Cons.list(jlllArgs.toArray());
-            Object result = procedure.applyEvaluated(argsCons, environment);
-            // Convert result to string for LLM
-            return resultToString(result);
-        }
-        catch (JlllException e)
-        {
-            // Return error message to LLM (allows retry)
-            return "Error: " + e.getMessage();
-        }
-        catch (Exception e)
-        {
-            // Return error message to LLM (allows retry)
-            return "Error executing tool: " + e.getMessage();
-        }
+        return execute(request.arguments());
     }
 
     /**
      * Executes the tool with raw JSON arguments string.
+     * Captures any printed output and includes it in the response to the LLM.
      *
      * @param argumentsJson
      *            JSON string of arguments
-     * @return the result as a string
+     * @return the result as a string, including any captured output
      */
     public String execute(String argumentsJson)
     {
+        // Save current console and install capturing console
+        Object originalConsole = environment.lookup(Symbol.CONSOLE);
+        Console parentConsole = originalConsole instanceof Console ? (Console) originalConsole : null;
+        CapturingConsole capturingConsole = new CapturingConsole(parentConsole, false);
+        environment.setBinding(Symbol.CONSOLE, capturingConsole);
         try
         {
             // Parse arguments from JSON
@@ -293,17 +274,73 @@ public class AITool implements Serializable
             // Execute the JLLL procedure
             Cons argsCons = Cons.list(jlllArgs.toArray());
             Object result = procedure.applyEvaluated(argsCons, environment);
-            // Convert result to string for LLM
-            return resultToString(result);
+            // Build response with captured output and result
+            return buildResponse(capturingConsole.getCapturedOutput(), result);
         }
         catch (JlllException e)
         {
+            String output = capturingConsole.getCapturedOutput();
+            if (!output.isEmpty())
+            {
+                return "Output:\n" + output + "\nError: " + e.getMessage();
+            }
             return "Error: " + e.getMessage();
         }
         catch (Exception e)
         {
+            String output = capturingConsole.getCapturedOutput();
+            if (!output.isEmpty())
+            {
+                return "Output:\n" + output + "\nError executing tool: " + e.getMessage();
+            }
             return "Error executing tool: " + e.getMessage();
         }
+        finally
+        {
+            // Restore original console
+            if (originalConsole != null)
+            {
+                environment.setBinding(Symbol.CONSOLE, originalConsole);
+            }
+        }
+    }
+
+    /**
+     * Builds the response string for the LLM, combining captured output and result.
+     *
+     * @param output
+     *            the captured console output (may be empty)
+     * @param result
+     *            the execution result
+     * @return formatted response string
+     */
+    private String buildResponse(String output, Object result)
+    {
+        StringBuilder response = new StringBuilder();
+        // Include captured output if any
+        if (output != null && !output.isEmpty())
+        {
+            response.append("Output:\n").append(output);
+            if (!output.endsWith("\n"))
+            {
+                response.append("\n");
+            }
+        }
+        // Include result (skip if null/nil since output was the point)
+        if (result != null && !Null.NULL.equals(result))
+        {
+            if (response.length() > 0)
+            {
+                response.append("Result: ");
+            }
+            response.append(resultToString(result));
+        }
+        else if (response.length() == 0)
+        {
+            // No output and null result - indicate success
+            response.append("Done (no output)");
+        }
+        return response.toString();
     }
 
     /**

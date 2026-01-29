@@ -1162,6 +1162,32 @@ Utilities for debugging, testing, and development workflows.
 - [ ] `tap` - Debug inspection in pipelines
 - [ ] `inspect` - Detailed object inspection
 
+### AI Tool Traceability
+
+When AI uses tools (via the `eval` tool), output is captured and returned to the AI for visibility.
+For debugging AI interactions, a traceability option can echo this output to the user console.
+
+**Current Implementation:**
+- `CapturingConsole` captures all output during tool execution
+- AI sees both captured output and return values
+- User console is restored after tool execution
+
+**Future Enhancement:**
+```lisp
+;; Enable AI tool tracing (echo tool output to user)
+(ai-configure :trace-tools true)
+
+;; When enabled:
+;; 1. User sees what AI's eval tool prints
+;; 2. Helps debug AI-generated code
+;; 3. Provides transparency into AI actions
+```
+
+**Use Cases:**
+- Debugging when AI-generated code doesn't work as expected
+- Understanding what the AI "sees" during tool execution
+- Auditing AI interactions for security/compliance
+
 ---
 
 ## 19. Environment and System (Nice to Have)

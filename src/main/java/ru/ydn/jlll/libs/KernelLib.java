@@ -261,6 +261,7 @@ public class KernelLib implements Library
         env.addBinding(Symbol.FALSE, Boolean.FALSE);
         //       env.addBinding(Symbol.FALSE2, new Boolean(false));
         env.addBinding(Symbol.NULL, Null.NULL);
+        env.addBinding(Symbol.intern("nil"), Null.NULL); // Lisp-style alias for null
         new Primitive("define", env, "Defines a new binding. (define name value) for variables, "
                 + "(define (name args...) body...) for functions. Supports :doc and other metadata keywords.")
         {
@@ -1677,7 +1678,7 @@ public class KernelLib implements Library
                 return showDocumentation(topic, console);
             }
 
-            private String listTopics(Console console)
+            private Object listTopics(Console console)
             {
                 console.println();
                 console.printHeader("Available Documentation Topics");
@@ -1697,10 +1698,10 @@ public class KernelLib implements Library
                 console.printHint("Usage: (jlll-docs \"topic\") to read documentation");
                 console.println();
                 console.flush();
-                return null;
+                return Null.NULL; // Side-effect only, no return value
             }
 
-            private String showDocumentation(String topic, Console console) throws JlllException
+            private Object showDocumentation(String topic, Console console) throws JlllException
             {
                 String resourcePath = "docs/" + topic + ".md";
                 try (InputStream is = KernelLib.class.getClassLoader().getResourceAsStream(resourcePath))
@@ -1721,7 +1722,7 @@ public class KernelLib implements Library
                         console.println(content);
                     }
                     console.flush();
-                    return content;
+                    return Null.NULL; // Side-effect only, no return value
                 }
                 catch (IOException e)
                 {

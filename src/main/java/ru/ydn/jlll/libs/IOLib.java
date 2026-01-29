@@ -437,7 +437,7 @@ public class IOLib implements Library
                     Object value = Evaluator.eval(it.next(), env);
                     printValue(value, console);
                 }
-                return vaCons;
+                return Null.NULL; // Side-effect only, no return value
             }
 
             /**

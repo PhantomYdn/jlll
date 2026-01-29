@@ -488,6 +488,78 @@ public class AILibTestCase
     }
 
     /**
+     * Test that eval tool captures printed output and returns it to AI.
+     */
+    @Test
+    public void testEvalToolCapturesOutput() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testEvalToolCapturesOutput: No AI provider configured");
+            return;
+        }
+        // Create and activate session
+        eval("(define sess (ai-session-create))", env);
+        eval("(ai-session-activate sess)", env);
+        // Get the eval tool
+        AISession session = (AISession) eval("(ai-session-current)", env);
+        AITool evalTool = session.getTool("eval");
+        // Execute code that prints something
+        String result = evalTool.execute("{\"code\": \"(println \\\"Hello from AI\\\")\"}");
+        System.out.println("Captured output result: " + result);
+        // The result should contain the printed text
+        assertTrue("Result should contain printed output", result.contains("Hello from AI"));
+    }
+
+    /**
+     * Test that eval tool returns both output and result when there's a non-null result.
+     */
+    @Test
+    public void testEvalToolOutputAndResult() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testEvalToolOutputAndResult: No AI provider configured");
+            return;
+        }
+        // Create and activate session
+        eval("(define sess (ai-session-create))", env);
+        eval("(ai-session-activate sess)", env);
+        // Get the eval tool
+        AISession session = (AISession) eval("(ai-session-current)", env);
+        AITool evalTool = session.getTool("eval");
+        // Execute code that prints and returns a value
+        String result = evalTool.execute("{\"code\": \"(begin (println \\\"Computing...\\\") (+ 1 2 3))\"}");
+        System.out.println("Output and result: " + result);
+        // The result should contain both the output and the result
+        assertTrue("Result should contain printed output", result.contains("Computing..."));
+        assertTrue("Result should contain return value 6", result.contains("6"));
+    }
+
+    /**
+     * Test that nil is bound as alias for null.
+     */
+    @Test
+    public void testNilBinding() throws Exception
+    {
+        // Both nil and null should refer to the same Null.NULL
+        Object nilValue = eval("nil", env);
+        Object nullValue = eval("null", env);
+        assertEquals("nil should equal null", nullValue, nilValue);
+        assertTrue("nil should be Null.NULL", Null.NULL.equals(nilValue));
+    }
+
+    /**
+     * Test that print returns null (no double printing).
+     */
+    @Test
+    public void testPrintReturnsNull() throws Exception
+    {
+        Object result = eval("(print \"test\")", env);
+        assertTrue("print should return null", Null.NULL.equals(result));
+    }
+
+    /**
      * Check if exception is an API error that should cause test to skip.
      */
     private boolean isApiError(Exception e)
