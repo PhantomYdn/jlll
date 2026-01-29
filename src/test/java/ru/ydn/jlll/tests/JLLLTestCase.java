@@ -297,6 +297,15 @@ public class JLLLTestCase
         eval(true, "(instanceof? '(a b) 'ru.ydn.jlll.common.Cons)");
         eval(false, "(instanceof? '(a b) 'java.util.Date)");
         eval(true, "(instanceof? (new 'java.util.HashMap) 'java.util.Map)");
+        // Test numeric widening in reflection calls (int -> double)
+        eval(2.0, "(invoke-static 'java.lang.Math 'sqrt 4)");
+        eval(2.0, "(invoke-static 'java.lang.Math 'sqrt 4.0)");
+        eval(8.0, "(invoke-static 'java.lang.Math 'pow 2 3)");
+        eval(8.0, "(invoke-static 'java.lang.Math 'pow 2.0 3.0)");
+        // Test math.jlll functions with integer arguments
+        eval(2.0, "(sqrt 4)");
+        eval(3.0, "(sqrt 9)");
+        eval(4.0, "(sqrt 16.0)");
     }
 
     @Test

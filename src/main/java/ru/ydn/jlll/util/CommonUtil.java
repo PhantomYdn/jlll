@@ -61,7 +61,10 @@ public class CommonUtil
                 {
                     Class<?>[] classes = cnst[i].getParameterTypes();
                     if (matchClasses(classes, constr))
-                        return cnst[i].newInstance(constr);
+                    {
+                        Object[] convertedArgs = convertArgs(classes, constr);
+                        return cnst[i].newInstance(convertedArgs);
+                    }
                 }
                 //Creating exception
                 String message = "No such constructor for: ";
@@ -123,7 +126,8 @@ public class CommonUtil
                 Class<?>[] classes = methods[i].getParameterTypes();
                 if (methodS.equals(methods[i].getName()) && matchClasses(classes, params))
                 {
-                    return methods[i].invoke(object, params);
+                    Object[] convertedParams = convertArgs(classes, params);
+                    return methods[i].invoke(object, convertedParams);
                 }
             }
         }
@@ -165,7 +169,10 @@ public class CommonUtil
             {
                 Class<?>[] classes = methods[i].getParameterTypes();
                 if (methodS.equals(methods[i].getName()) && matchClasses(classes, params))
-                    return methods[i].invoke(null, params);
+                {
+                    Object[] convertedParams = convertArgs(classes, params);
+                    return methods[i].invoke(null, convertedParams);
+                }
             }
         }
         catch (Exception e)
@@ -331,6 +338,7 @@ public class CommonUtil
 
     /**
      * Checks if an object is assignable to a class (null-safe, handles primitives).
+     * Supports Java primitive widening conversions (JLS §5.1.2) for numeric types.
      *
      * @param clss
      *            the target class
@@ -344,6 +352,9 @@ public class CommonUtil
             return true;
         if (clss.isAssignableFrom(object.getClass()))
             return true;
+        // Check for numeric primitive widening
+        if (object instanceof Number && canWidenNumeric(clss, object.getClass()))
+            return true;
         try
         {
             return object.getClass().getField("TYPE").get(object).equals(clss);
@@ -352,6 +363,104 @@ public class CommonUtil
         {
             return false;
         }
+    }
+
+    /**
+     * Checks if a numeric type can be widened to another type.
+     * Follows Java Language Specification §5.1.2 for primitive widening.
+     *
+     * @param targetType
+     *            the target primitive or wrapper type
+     * @param sourceType
+     *            the source object's type
+     * @return true if source can be widened to target
+     */
+    private static boolean canWidenNumeric(Class<?> targetType, Class<?> sourceType)
+    {
+        // double accepts any numeric type
+        if (targetType == double.class || targetType == Double.class)
+        {
+            return Number.class.isAssignableFrom(sourceType);
+        }
+        // float accepts int, long, short, byte, float
+        if (targetType == float.class || targetType == Float.class)
+        {
+            return sourceType == Integer.class || sourceType == int.class || sourceType == Long.class
+                    || sourceType == long.class || sourceType == Short.class || sourceType == short.class
+                    || sourceType == Byte.class || sourceType == byte.class || sourceType == Float.class
+                    || sourceType == float.class;
+        }
+        // long accepts int, short, byte, long
+        if (targetType == long.class || targetType == Long.class)
+        {
+            return sourceType == Integer.class || sourceType == int.class || sourceType == Short.class
+                    || sourceType == short.class || sourceType == Byte.class || sourceType == byte.class
+                    || sourceType == Long.class || sourceType == long.class;
+        }
+        // int accepts short, byte, int
+        if (targetType == int.class || targetType == Integer.class)
+        {
+            return sourceType == Short.class || sourceType == short.class || sourceType == Byte.class
+                    || sourceType == byte.class || sourceType == Integer.class || sourceType == int.class;
+        }
+        // short accepts byte, short
+        if (targetType == short.class || targetType == Short.class)
+        {
+            return sourceType == Byte.class || sourceType == byte.class || sourceType == Short.class
+                    || sourceType == short.class;
+        }
+        return false;
+    }
+
+    /**
+     * Converts a numeric argument to the target type if widening is needed.
+     *
+     * @param targetType
+     *            the expected parameter type
+     * @param arg
+     *            the argument value
+     * @return the converted value, or original if no conversion needed
+     */
+    private static Object convertNumericArg(Class<?> targetType, Object arg)
+    {
+        if (arg == null || !(arg instanceof Number))
+            return arg;
+        Number num = (Number) arg;
+        if (targetType == double.class || targetType == Double.class)
+            return num.doubleValue();
+        if (targetType == float.class || targetType == Float.class)
+            return num.floatValue();
+        if (targetType == long.class || targetType == Long.class)
+            return num.longValue();
+        if (targetType == int.class || targetType == Integer.class)
+            return num.intValue();
+        if (targetType == short.class || targetType == Short.class)
+            return num.shortValue();
+        if (targetType == byte.class || targetType == Byte.class)
+            return num.byteValue();
+        return arg;
+    }
+
+    /**
+     * Converts an array of arguments to match the expected parameter types.
+     * Handles numeric widening conversions.
+     *
+     * @param paramTypes
+     *            the expected parameter types
+     * @param args
+     *            the argument values
+     * @return array with converted arguments
+     */
+    private static Object[] convertArgs(Class<?>[] paramTypes, Object[] args)
+    {
+        if (args == null || paramTypes == null)
+            return args;
+        Object[] result = new Object[args.length];
+        for (int i = 0; i < args.length; i++)
+        {
+            result[i] = convertNumericArg(paramTypes[i], args[i]);
+        }
+        return result;
     }
 
     /**
