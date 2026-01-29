@@ -73,6 +73,10 @@ Before committing or ending a session:
    - Update relevant documentation in `docs/` when adding or modifying functionality
 5. **Commit all changes**: Ensure working tree is clean
 
+## Lessons Learned
+
+- When modifying output format of a function, search for tests that assert on that output — tests often encode specific format expectations
+
 ## Project Structure
 
 ```
