@@ -374,16 +374,17 @@ public class JlllRepl
     private void printResult(Object result)
     {
         Console console = KernelLib.getConsole(env);
+        // Suppress nil results (like Scheme's unspecified value)
+        // This avoids cluttering output after side-effect-only operations like print
+        // But still ensure we're on a new line for the next prompt
         if (result == null || result instanceof Null)
         {
-            console.printHint("nil");
             console.println();
+            console.flush();
+            return;
         }
-        else
-        {
-            console.printSuccess(result.toString());
-            console.println();
-        }
+        console.printSuccess(result.toString());
+        console.println();
         console.flush();
     }
 
