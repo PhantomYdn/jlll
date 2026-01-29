@@ -216,9 +216,12 @@ public class MetadataTestCase
         eval("(define x :doc \"test\" :author \"me\" 42)");
         String desc = (String) eval("(describe 'x)");
         assertTrue(desc.contains("42"));
+        // :doc is shown at top as "Doc: test", not in Metadata section
+        assertTrue(desc.contains("Doc: test"));
+        // Other metadata still appears in Metadata section
         assertTrue(desc.contains("Metadata"));
-        assertTrue(desc.contains(":doc"));
-        assertTrue(desc.contains("test"));
+        assertTrue(desc.contains(":author"));
+        assertTrue(desc.contains("me"));
     }
     // === env Primitive ===
 

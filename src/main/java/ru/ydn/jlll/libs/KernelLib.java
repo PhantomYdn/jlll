@@ -1498,6 +1498,13 @@ public class KernelLib implements Library
                 {
                     Symbol sym = (Symbol) obj;
                     Object value = env.lookup(sym);
+                    // Check for :doc metadata first - show at top if present
+                    Symbol docSym = Symbol.intern("doc");
+                    Object docMeta = env.getMeta(sym, docSym);
+                    if (docMeta != null)
+                    {
+                        sb.append("Doc: ").append(docMeta).append("\n\n");
+                    }
                     if (value instanceof Procedure)
                     {
                         sb.append(((Procedure) value).describe());
@@ -1510,14 +1517,22 @@ public class KernelLib implements Library
                             sb.append("\nValue: ").append(value);
                         }
                     }
-                    // Append metadata if present
+                    // Append remaining metadata (excluding :doc since already shown at top)
                     if (env.hasMeta(sym))
                     {
                         Map<Symbol, Object> meta = env.getAllMeta(sym);
-                        sb.append("\nMetadata:");
-                        for (Map.Entry<Symbol, Object> entry : meta.entrySet())
+                        boolean hasOtherMeta = meta.entrySet().stream().anyMatch(e -> !e.getKey().equals(docSym));
+                        if (hasOtherMeta)
                         {
-                            sb.append("\n  :").append(entry.getKey().getName()).append(" ").append(entry.getValue());
+                            sb.append("\nMetadata:");
+                            for (Map.Entry<Symbol, Object> entry : meta.entrySet())
+                            {
+                                if (!entry.getKey().equals(docSym))
+                                {
+                                    sb.append("\n  :").append(entry.getKey().getName()).append(" ")
+                                            .append(entry.getValue());
+                                }
+                            }
                         }
                     }
                 }
