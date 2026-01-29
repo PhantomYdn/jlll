@@ -1492,7 +1492,13 @@ public class KernelLib implements Library
                 StringBuilder sb = new StringBuilder();
                 if (obj instanceof Procedure)
                 {
-                    sb.append(((Procedure) obj).describe());
+                    Procedure proc = (Procedure) obj;
+                    String procDoc = proc.getDoc();
+                    if (procDoc != null && !procDoc.isEmpty())
+                    {
+                        sb.append("Doc: ").append(procDoc).append("\n\n");
+                    }
+                    sb.append(proc.describe());
                 }
                 else if (obj instanceof Symbol)
                 {

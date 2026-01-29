@@ -153,7 +153,7 @@ public class Primitive extends Procedure
      */
     public String describe()
     {
-        return "JLLL primitive with original name: " + originalName + "\n" + "Doc: " + getDoc();
+        return "JLLL primitive with original name: " + originalName;
     }
 
     /**

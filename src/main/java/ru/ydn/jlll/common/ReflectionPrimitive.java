@@ -253,7 +253,6 @@ public class ReflectionPrimitive extends Primitive
             Class<?> class1 = paramsClasses[i];
             out.println("Class of argument #" + i + ":" + class1.getName());
         }
-        out.println("Doc: " + getDoc());
         return sw.toString();
     }
 }
