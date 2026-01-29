@@ -1,0 +1,31 @@
+;;; debug.jlll - Debugging and development utilities
+;;;
+;;; Provides tools for debugging, testing, and functional programming utilities.
+;;; Java primitives (type-of, inspect, trace, untrace, traced?) are defined in DebugLib.java
+
+;; ============================================================
+;; Functional Utilities
+;; ============================================================
+
+(define (identity x)
+  :doc "Returns its argument unchanged. Useful as a default function, for filtering falsy values with (filter identity lst), or as a no-op transformation."
+  x)
+
+(define (constantly value)
+  :doc "Returns a function that always returns the given value, regardless of any arguments passed to it. Useful for placeholders, mocking, or filling sequences. Example: (map (constantly 0) '(a b c)) => (0 0 0)"
+  (lambda args value))
+
+(define (complement pred)
+  :doc "Returns a function that returns the logical negation of a single-argument predicate pred. Example: (filter (complement null?) '(1 null 2)) => (1 2)"
+  (lambda (x) (not (pred x))))
+
+;; ============================================================
+;; Debugging Utilities
+;; ============================================================
+
+(define (tap value . args)
+  :doc "Prints value with optional label and returns value unchanged. Useful for debugging in pipelines. With no label, prints just the value."
+  (if (null? args)
+      (println value)
+      (println (car args) ": " value))
+  value)

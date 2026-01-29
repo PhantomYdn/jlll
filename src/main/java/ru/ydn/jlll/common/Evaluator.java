@@ -117,7 +117,19 @@ public class Evaluator
                     {
                         Procedure proc = (Procedure) car;
                         proc.cnt++;
+                        // Trace entry if enabled
+                        int depth = 0;
+                        if (TraceContext.isEnabled())
+                        {
+                            depth = env.getDepth();
+                            TraceContext.traceEntry(depth, eval, env);
+                        }
                         ret = proc.apply(cons.cdr(), env);
+                        // Trace exit if enabled
+                        if (TraceContext.isEnabled())
+                        {
+                            TraceContext.traceExit(depth, cons.car(), ret, env);
+                        }
                     }
                     else
                     {

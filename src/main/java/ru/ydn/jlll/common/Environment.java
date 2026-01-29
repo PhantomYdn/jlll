@@ -184,6 +184,24 @@ public class Environment implements Serializable
     }
 
     /**
+     * Returns the depth of this environment in the parent chain.
+     * The top environment has depth 0.
+     *
+     * @return the depth (number of parent environments)
+     */
+    public int getDepth()
+    {
+        int depth = 0;
+        Environment e = this.parent;
+        while (e != null)
+        {
+            depth++;
+            e = e.parent;
+        }
+        return depth;
+    }
+
+    /**
      * Adds new binding to the environmet
      *
      * @param symbolName

@@ -1153,14 +1153,15 @@ Utilities for debugging, testing, and development workflows.
 
 ### Checklist
 
-- [ ] `trace` / `untrace` - Trace function calls
-- [ ] `assert` - Assertion with optional message
-- [ ] `type-of` - Get type name as string
-- [ ] `identity` - Return argument unchanged
-- [ ] `constantly` - Function that always returns given value
-- [ ] `complement` - Negate a predicate
-- [ ] `tap` - Debug inspection in pipelines
-- [ ] `inspect` - Detailed object inspection
+- [x] `trace` / `untrace` - Deep tracing (all procedure calls)
+- [x] `traced?` - Check if tracing is enabled
+- [x] `assert` - Assertion with optional message
+- [x] `type-of` - Get type name as string
+- [x] `identity` - Return argument unchanged
+- [x] `constantly` - Function that always returns given value
+- [x] `complement` - Negate a predicate
+- [x] `tap` - Debug inspection in pipelines
+- [x] `inspect` - Detailed object inspection
 
 ### AI Tool Traceability
 
@@ -1849,6 +1850,107 @@ JLLL follows Scheme naming conventions but is not strictly R5RS/R7RS compatible:
 - Keywords (`:foo`) are JLLL-specific
 - Java interop is JLLL-specific
 - `format` uses Common Lisp / SRFI-28 directives (`~a`, `~s`, etc.)
+
+---
+
+## 24. Lexical Closures (Critical - Core Language Fix)
+
+JLLL currently uses **dynamic scoping** instead of **lexical scoping**. When a `lambda` is
+created, it does NOT capture its definition-time environment. This means inner functions
+cannot close over variables from their enclosing scope - a fundamental expectation in
+modern Lisp dialects.
+
+### The Problem
+
+```lisp
+;; This SHOULD work with lexical closures but FAILS in JLLL:
+(define (make-adder n)
+  (lambda (x) (+ x n)))  ; lambda does NOT capture 'n'
+
+(define add5 (make-adder 5))
+(add5 10)  ; ERROR: Symbol is unbound: n
+
+;; Counter example - also fails:
+(define (make-counter)
+  (let ((count 0))
+    (lambda ()
+      (set! count (+ count 1))
+      count)))
+
+(define c (make-counter))
+(c)  ; ERROR: Symbol is unbound: count
+```
+
+### Root Cause
+
+In `CompoundProcedure.java`:
+- The class stores `variables` (parameter names) and `body` (code)
+- It does **NOT** store the definition-time environment
+- When called, `applyEvaluated()` creates `ProcEnvironment` with the **call-time** environment
+- This is **dynamic scoping**, not lexical scoping
+
+### Solution
+
+Modify `CompoundProcedure` to:
+1. Add a `lexicalEnv` field to store the definition-time environment
+2. Pass this environment from the `lambda` primitive when creating the procedure
+3. Use `lexicalEnv` (not call-time `env`) as parent for `ProcEnvironment` in `applyEvaluated()`
+
+### Test Cases
+
+After implementation, these should work:
+
+```lisp
+;; Basic closure
+(define (make-adder n)
+  (lambda (x) (+ x n)))
+(define add5 (make-adder 5))
+(add5 10)                              ; => 15
+
+;; Stateful closure
+(define (make-counter)
+  (let ((count 0))
+    (lambda ()
+      (set! count (+ count 1))
+      count)))
+(define c (make-counter))
+(c)                                    ; => 1
+(c)                                    ; => 2
+(c)                                    ; => 3
+
+;; Currying
+(define (curry f x)
+  (lambda (y) (f x y)))
+(define add10 (curry + 10))
+(add10 5)                              ; => 15
+```
+
+### Post-Implementation: Simplify Existing Code
+
+Once closures work, `constantly` and `complement` in `KernelLib.java` can be rewritten
+as simple JLLL functions in `debug.jlll`:
+
+```lisp
+(define (constantly value)
+  :doc "Returns a function that always returns the given value."
+  (lambda args value))
+
+(define (complement pred)
+  :doc "Returns a function that negates the predicate."
+  (lambda args (not (apply pred args))))
+```
+
+### Checklist
+
+- [x] Add `lexicalEnv` field to `CompoundProcedure.java`
+- [x] Modify constructors to capture definition-time environment
+- [x] Update `applyEvaluated()` to use `lexicalEnv` as parent
+- [x] Update `lambda` primitive in `KernelLib.java` to pass environment
+- [x] Update `define` function form to pass environment
+- [x] Create `ClosureTestCase.java` with comprehensive tests
+- [x] Rewrite `constantly` as JLLL function
+- [x] Rewrite `complement` as JLLL function
+- [x] Update documentation in `docs/`
 
 ---
 

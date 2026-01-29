@@ -1078,6 +1078,129 @@ By default, sessions include an `eval` tool that allows the LLM to execute JLLL 
 (ai-clear)
 ```
 
+## Debugging and Development Tools
+
+Utilities for debugging, testing, and functional programming.
+
+### Functional Utilities
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `identity` | Return argument unchanged | `(identity x)` => `x` |
+| `constantly` | Function that always returns given value | `((constantly 42) 'ignored)` => `42` |
+| `complement` | Negate a predicate | `((complement null?) '(1 2))` => `true` |
+
+**Examples:**
+
+```lisp
+;; Filter falsy values (in JLLL, only nil/() is falsy)
+(filter identity '(1 null 2 () 3))  ; => (1 2 3)
+
+;; Fill list with constant value
+(map (constantly 0) '(a b c))  ; => (0 0 0)
+
+;; Inverse predicate
+(filter (complement null?) '(1 null 2))  ; => (1 2)
+```
+
+### Type Inspection
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `type-of` | Get type name as string | `(type-of 42)` => `"Number"` |
+| `describe` | Human-readable description | `(describe 'my-func)` |
+| `inspect` | Detailed object info | `(inspect obj)` |
+
+**Type names returned by `type-of`:**
+- `"Number"` - integers and floats
+- `"String"` - strings
+- `"Boolean"` - true/false
+- `"Symbol"` - symbols
+- `"Keyword"` - keywords like `:foo`
+- `"List"` - lists (cons cells)
+- `"Nil"` - null/empty list
+- `"Procedure"` - user-defined functions
+- `"Primitive"` - built-in functions
+- `"Macro"` - macros
+- `"Java: ClassName"` - Java objects
+
+**`inspect` output includes:**
+- For JLLL types: type name, value representation, structure details
+- For Java objects: class name, accessible fields and their values, available methods
+- Returns the inspected value unchanged (can be used in pipelines like `tap`)
+
+### Assertions
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `assert` | Throw if test is false | `(assert (> x 0))` |
+| `assert` | With message | `(assert (> x 0) "x must be positive")` |
+| `assert` | With concatenated message | `(assert (> x 0) "x must be > 0, got: " x)` |
+
+Returns `true` if assertion passes. Message parts are lazily evaluated (only computed if assertion fails).
+
+### Debug Output
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `tap` | Print value and return it (for pipelines) | `(tap x)` or `(tap x "label")` |
+
+**Examples:**
+
+```lisp
+;; Debug a value in a pipeline
+(map square (tap (filter positive? data)))  
+;; prints the filtered list, then maps square over it
+
+;; With label
+(tap (compute-result) "result")  ; prints: result: <value>
+```
+
+### Deep Tracing
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `trace` | Enable deep tracing (all procedure calls) | `(trace)` |
+| `untrace` | Disable deep tracing | `(untrace)` |
+| `traced?` | Check if tracing is enabled | `(traced?)` => `true` |
+
+Deep tracing shows **all** procedure calls when enabled, with indentation reflecting call depth.
+
+**Trace output format:**
+```
+TRACE: (func-name arg1 arg2 ...)
+  TRACE: (nested-call ...)        ; indented for depth
+  TRACE: nested-call => result
+TRACE: func-name => result
+```
+
+**Examples:**
+
+```lisp
+;; Enable tracing and call a function
+(define (factorial n) 
+  (if (<= n 1) 1 (* n (factorial (- n 1)))))
+
+(trace)           ; Enable deep tracing
+(factorial 3)
+;; Output shows ALL calls including internal ones:
+;; TRACE: (factorial 3)
+;;   TRACE: (<= n 1)
+;;   TRACE: <= => false
+;;   TRACE: (* n (factorial (- n 1)))
+;;     TRACE: (- n 1)
+;;     TRACE: - => 2
+;;     TRACE: (factorial (- n 1))
+;;       ...
+;;     TRACE: factorial => 2
+;;   TRACE: * => 6
+;; TRACE: factorial => 6
+
+(untrace)         ; Disable tracing
+```
+
+**Note:** Trace output goes to the console, so AI can see trace results when debugging.
+
 ## Reflect Library (Java Interop)
 
 See [Java Interop](java-interop.md) for detailed documentation.

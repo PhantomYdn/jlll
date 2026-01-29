@@ -27,6 +27,8 @@ public class CompoundProcedure extends Procedure
     protected final List<ParameterInfo> parameters;
     /** True if using new parameter binding with keywords/defaults support. */
     protected final boolean useNewParameterBinding;
+    /** The lexical environment captured at definition time for closure support. */
+    protected final Environment lexicalEnv;
 
     /**
      * Constructor of compound procedure.
@@ -38,22 +40,22 @@ public class CompoundProcedure extends Procedure
      */
     public CompoundProcedure(Object variables, Object body)
     {
-        this(variables, body, null, null);
+        this(variables, body, null, null, null);
     }
 
     /**
-     * Constructor with environment for parsing default values.
+     * Constructor with environment for parsing default values and lexical closure.
      *
      * @param variables
      *            names of arguments for this procedure
      * @param body
      *            body of the procedure
      * @param env
-     *            environment for evaluating !defaults
+     *            environment for evaluating !defaults and lexical closure
      */
     public CompoundProcedure(Object variables, Object body, Environment env)
     {
-        this(variables, body, env, null);
+        this(variables, body, env, null, env);
     }
 
     /**
@@ -67,10 +69,14 @@ public class CompoundProcedure extends Procedure
      *            environment for evaluating !defaults
      * @param precomputedParams
      *            pre-parsed parameters (or null to parse from variables)
+     * @param lexicalEnv
+     *            the lexical environment captured at definition time for closure support
      */
-    public CompoundProcedure(Object variables, Object body, Environment env, List<ParameterInfo> precomputedParams)
+    public CompoundProcedure(Object variables, Object body, Environment env, List<ParameterInfo> precomputedParams,
+            Environment lexicalEnv)
     {
         this.variables = variables;
+        this.lexicalEnv = lexicalEnv;
         if (body != null && body instanceof Cons && ((Cons) body).cdr().equals(Null.NULL))
             this.body = ((Cons) body).car();
         else
@@ -119,6 +125,8 @@ public class CompoundProcedure extends Procedure
     public Object applyEvaluated(Cons values, Environment env) throws JlllException
     {
         ProcEnvironment pe;
+        // Use lexical environment (definition-time) for closure support, fall back to call-time env
+        Environment parentEnv = lexicalEnv != null ? lexicalEnv : env;
         // Decide whether to use keyword-aware binding:
         // 1. Procedure has defaults (useNewParameterBinding), OR
         // 2. Call contains keywords AND procedure has regular params (not pure rest)
@@ -133,18 +141,18 @@ public class CompoundProcedure extends Procedure
                 // Parse parameters on demand (legacy syntax but called with keywords)
                 try
                 {
-                    params = ParameterParser.parse(variables, env);
+                    params = ParameterParser.parse(variables, parentEnv);
                 }
                 catch (JlllException e)
                 {
                     throw new JlllException("Failed to parse parameters for keyword binding", e);
                 }
             }
-            pe = new ProcEnvironment(params, values, env, null);
+            pe = new ProcEnvironment(params, values, parentEnv, null);
         }
         else
         {
-            pe = new ProcEnvironment(variables, values, env);
+            pe = new ProcEnvironment(variables, values, parentEnv);
         }
         return Evaluator.eval(body, pe);
     }
