@@ -212,15 +212,22 @@ JLLL automatically converts between types:
 
 ## Exception Handling
 
-Java exceptions are wrapped in `JlllException`:
+Java exceptions are wrapped in `JlllException` and can be caught using JLLL's exception handling:
 
 ```lisp
-;; This will throw
+;; Unhandled exception
 (invoke-static "java.lang.Integer" "parseInt" "not-a-number")
 ; => JlllException: java.lang.NumberFormatException: For input string: "not-a-number"
+
+;; Caught with try/catch
+(try
+  (invoke-static "java.lang.Integer" "parseInt" "not-a-number")
+  (catch "java.lang.NumberFormatException" e
+    (println "Invalid number: " (exception-message e))
+    0))  ; => 0
 ```
 
-Currently JLLL has no try/catch syntax. Exceptions propagate to the top level.
+See [Special Forms](special-forms.md) for full documentation on `try`/`catch`/`finally` and `guard`.
 
 ## Practical Examples
 

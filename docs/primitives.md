@@ -236,6 +236,13 @@ Arithmetic and numeric operations.
 | `truncate` | Truncate toward zero | `(truncate -3.7)` => `-3` |
 | `sign` | Sign of number (-1, 0, or 1) | `(sign -5)` => `-1` |
 
+### Random Numbers
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `random` | Random integer in [0, max) | `(random 100)` => `42` |
+| `random-seed` | Set random seed for reproducibility | `(random-seed 12345)` |
+
 ### Constants
 
 | Variable | Description | Value |
@@ -279,6 +286,77 @@ List manipulation functions.
 | `collection->list` | Java collection to list | `(collection->list java-list)` |
 | `vector->list` | Alias for collection->list | `(vector->list arr)` |
 
+### List Access
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `list-ref` | Element at index (0-based) | `(list-ref '(a b c) 1)` => `b` |
+| `list-tail` | Sublist starting at index | `(list-tail '(a b c d) 2)` => `(c d)` |
+
+### List Search
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `member` | Find element (equal?), returns sublist or false | `(member 'b '(a b c))` => `(b c)` |
+| `memq` | Find element (eq?), returns sublist or false | `(memq 'b '(a b c))` => `(b c)` |
+| `memv` | Find element (eqv?), returns sublist or false | `(memv 2 '(1 2 3))` => `(2 3)` |
+
+### Association Lists
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `assoc` | Find pair by key (equal?) | `(assoc 'b '((a 1) (b 2)))` => `(b 2)` |
+| `assq` | Find pair by key (eq?) | `(assq 'b '((a 1) (b 2)))` => `(b 2)` |
+| `assv` | Find pair by key (eqv?) | `(assv 2 '((1 a) (2 b)))` => `(2 b)` |
+
+### Iteration
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `for-each` | Apply proc for side effects | `(for-each println '(1 2 3))` |
+| `fold-left` | Left fold (accumulate left to right) | `(fold-left + 0 '(1 2 3))` => `6` |
+| `fold-right` | Right fold (accumulate right to left) | `(fold-right cons '() '(1 2 3))` => `(1 2 3)` |
+| `reduce` | Fold with first element as init | `(reduce + '(1 2 3 4))` => `10` |
+
+### List Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `any` | True if pred true for any element | `(any even? '(1 2 3))` => `true` |
+| `every` | True if pred true for all elements | `(every positive? '(1 2 3))` => `true` |
+| `find` | First element matching pred, or false | `(find even? '(1 2 3))` => `2` |
+
+### List Generation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `range` | Generate number sequence | `(range 5)` => `(0 1 2 3 4)` |
+| `range` | With start and end | `(range 1 5)` => `(1 2 3 4)` |
+| `range` | With step | `(range 0 10 2)` => `(0 2 4 6 8)` |
+| `iota` | Alias for range | `(iota 5)` => `(0 1 2 3 4)` |
+| `make-list` | Create list of n elements | `(make-list 3 'x)` => `(x x x)` |
+
+### List Slicing
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `take` | First n elements | `(take '(a b c d) 2)` => `(a b)` |
+| `drop` | All but first n elements | `(drop '(a b c d) 2)` => `(c d)` |
+| `take-while` | Leading elements while pred true | `(take-while even? '(2 4 5 6))` => `(2 4)` |
+| `drop-while` | Drop leading while pred true | `(drop-while even? '(2 4 5 6))` => `(5 6)` |
+
+### List Utilities
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `flatten` | Flatten nested lists | `(flatten '((1 2) (3 (4))))` => `(1 2 3 4)` |
+| `zip` | Combine two lists pairwise | `(zip '(1 2) '(a b))` => `((1 a) (2 b))` |
+| `unzip` | Split list of pairs | `(unzip '((1 a) (2 b)))` => `((1 2) (a b))` |
+| `remove` | Remove all occurrences | `(remove 2 '(1 2 3 2))` => `(1 3)` |
+| `delete` | Remove first occurrence | `(delete 2 '(1 2 3 2))` => `(1 3 2)` |
+| `remove-duplicates` | Remove duplicates | `(remove-duplicates '(1 2 1 3))` => `(1 2 3)` |
+| `append*` | Variadic append | `(append* '(1) '(2) '(3))` => `(1 2 3)` |
+
 ## Predicates Library
 
 Type checking and testing functions.
@@ -294,8 +372,30 @@ Type checking and testing functions.
 | `atom?` | Test for non-pair (includes empty list) | `(atom? 'x)` => `true` |
 | `number?` | Test for any number | `(number? 42)` => `true` |
 | `integer?` | Test for integer | `(integer? 42)` => `true` |
+| `real?` | Test for real number | `(real? 3.14)` => `true` |
+| `string?` | Test for string | `(string? "hello")` => `true` |
+| `symbol?` | Test for symbol | `(symbol? 'foo)` => `true` |
+| `boolean?` | Test for boolean | `(boolean? true)` => `true` |
 | `keyword?` | Test for keyword | `(keyword? :foo)` => `true` |
+| `procedure?` | Test for procedure | `(procedure? +)` => `true` |
 | `jlll-bound?` | Test if symbol is bound | `(jlll-bound? 'x)` |
+
+### Equality Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `eq?` | Identity comparison (same object) | `(eq? 'a 'a)` => `true` |
+| `eqv?` | Value comparison | `(eqv? 1 1)` => `true` |
+| `equal?` | Deep equality comparison | `(equal? '(1 2) '(1 2))` => `true` |
+
+### Port Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `port?` | Test for I/O port | `(port? p)` |
+| `input-port?` | Test for input port | `(input-port? p)` |
+| `output-port?` | Test for output port | `(output-port? p)` |
+| `eof-object?` | Test for end-of-file object | `(eof-object? x)` => `true` if EOF |
 
 ### Numeric Predicates
 
@@ -444,7 +544,7 @@ Regular expression primitives for pattern matching and text manipulation. Patter
 
 ;; Replace with function - double all numbers
 (regex-replace "\\d+" "a1b23c456" 
-  (lambda (m) (str (* 2 (string->number m)))))
+  (lambda (m) (number->string (* 2 (string->number m)))))
 ; => "a2b46c912"
 
 ;; Split CSV line
