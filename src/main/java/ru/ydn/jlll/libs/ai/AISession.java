@@ -22,7 +22,7 @@ import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
@@ -70,7 +70,7 @@ public class AISession implements Serializable
     /** Tool specifications for LangChain4j */
     private final Map<String, ToolSpecification> toolSpecs = new ConcurrentHashMap<>();
     /** The streaming chat model (transient - rebuilt on demand) */
-    private transient volatile StreamingChatLanguageModel model;
+    private transient volatile StreamingChatModel model;
     /** Temperature setting (null = provider default) */
     private Double temperature;
     /** Max tokens setting (null = provider default) */
@@ -191,7 +191,7 @@ public class AISession implements Serializable
      *
      * @return the streaming chat model
      */
-    public synchronized StreamingChatLanguageModel getModel()
+    public synchronized StreamingChatModel getModel()
     {
         if (model == null)
         {
@@ -205,7 +205,7 @@ public class AISession implements Serializable
      *
      * @return the streaming chat model
      */
-    private StreamingChatLanguageModel buildModel()
+    private StreamingChatModel buildModel()
     {
         AIConfig config = AIConfig.getInstance();
         String apiKey = config.getApiKey(provider);

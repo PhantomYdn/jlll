@@ -22,7 +22,7 @@ import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
@@ -86,6 +86,8 @@ public class AILib implements Library
     private static final Symbol AI_SESSION_SYMBOL = Symbol.intern("*ai-session*");
     /** Sentinel object to signal end of stream */
     private static final Object END_OF_STREAM = new Object();
+    /** Maximum depth for recursive tool calls to prevent infinite loops */
+    private static final int MAX_TOOL_CALL_DEPTH = 10;
 
     /** Sentinel object to signal error */
     private static final class StreamError
@@ -1028,7 +1030,7 @@ public class AILib implements Library
         // Get tool specifications
         List<ToolSpecification> toolSpecs = session.getToolSpecifications();
         // Get the model
-        StreamingChatLanguageModel model = session.getModel();
+        StreamingChatModel model = session.getModel();
         // Create a blocking queue for streaming tokens
         BlockingQueue<Object> tokenQueue = new LinkedBlockingQueue<>();
         AtomicBoolean completed = new AtomicBoolean(false);
@@ -1065,7 +1067,7 @@ public class AILib implements Library
                     try
                     {
                         handleToolCalls(session, aiMessage, tokenQueue, fullResponse, messages, toolSpecs, model,
-                                temperature);
+                                temperature, 0);
                     }
                     catch (Exception e)
                     {
@@ -1095,11 +1097,26 @@ public class AILib implements Library
 
     /**
      * Handles tool execution requests from the AI.
+     *
+     * @param depth
+     *            current recursion depth for tool calls (starts at 0)
      */
     private void handleToolCalls(AISession session, AiMessage aiMessage, BlockingQueue<Object> tokenQueue,
             AtomicReference<StringBuilder> fullResponse, List<ChatMessage> messages, List<ToolSpecification> toolSpecs,
-            StreamingChatLanguageModel model, Double temperature)
+            StreamingChatModel model, Double temperature, int depth)
     {
+        // Check for maximum tool call depth to prevent infinite loops
+        if (depth >= MAX_TOOL_CALL_DEPTH)
+        {
+            Console errorConsole = KernelLib.getConsole(session.getEnvironment());
+            String errorMsg = "Error: Maximum tool call depth (" + MAX_TOOL_CALL_DEPTH + ") exceeded. "
+                    + "This usually indicates repeated failures or an infinite loop. "
+                    + "Please try a simpler request or break it into smaller steps.";
+            errorConsole.println("[ERROR] " + errorMsg);
+            tokenQueue.offer(errorMsg);
+            tokenQueue.offer(END_OF_STREAM);
+            return;
+        }
         boolean tracing = session.isTraceToolCalls();
         Console console = tracing ? KernelLib.getConsole(session.getEnvironment()) : null;
         // If tracing, store the AI message with tool calls in history
@@ -1175,7 +1192,7 @@ public class AILib implements Library
                 if (finalMessage.hasToolExecutionRequests())
                 {
                     handleToolCalls(session, finalMessage, tokenQueue, fullResponse, newMessages, toolSpecs, model,
-                            temperature);
+                            temperature, depth + 1);
                 }
                 else
                 {

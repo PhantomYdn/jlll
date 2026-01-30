@@ -943,6 +943,35 @@ public class JLLLTestCase
     }
 
     @Test
+    public void testApropos() throws Exception
+    {
+        // Test apropos returns list of symbols
+        Object result = Jlll.eval("(apropos \"string\")", env);
+        assertTrue("apropos should return a Cons list", result instanceof Cons);
+        Cons list = (Cons) result;
+        assertTrue("Should find string functions", list.length() > 0);
+        // Verify string-length is found
+        boolean found = false;
+        for (Object item : list)
+        {
+            if (item instanceof Symbol && ((Symbol) item).getName().equals("string-length"))
+            {
+                found = true;
+                break;
+            }
+        }
+        assertTrue("Should find string-length in results", found);
+    }
+
+    @Test
+    public void testAproposEmptyResult() throws Exception
+    {
+        // Test apropos with no matches returns null
+        Object result = Jlll.eval("(apropos \"xyznonexistent123\")", env);
+        assertEquals("apropos with no match should return null", Null.NULL, result);
+    }
+
+    @Test
     public void testInputWithPort() throws Exception
     {
         // Test read-line with explicit port argument

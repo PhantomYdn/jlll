@@ -27,7 +27,7 @@
         <picocli.version>4.7.7</picocli.version>
         <therapi-runtime-javadoc.version>0.13.0</therapi-runtime-javadoc.version>
         <maven-resolver.version>1.9.22</maven-resolver.version>
-        <langchain4j.version>1.0.0-beta3</langchain4j.version>
+        <langchain4j.version>1.10.0</langchain4j.version>
 
         <!-- Plugin versions -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>

@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -2392,6 +2393,43 @@ public class KernelLib implements Library
             }
         };
         // ============== Environment Operations ==============
+        // ========== apropos ==========
+        new Primitive("apropos", env,
+                "Search for bindings by name pattern. Returns a list of matching symbols. "
+                        + "(apropos \"string\") finds all functions containing 'string' in their name. "
+                        + "Use (doc 'symbol) to get documentation for each result. "
+                        + "For detailed output with descriptions, use (env \"pattern\") instead.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("apropos: requires a search pattern string");
+                }
+                String pattern = values.get(0).toString().toLowerCase();
+                Map<Symbol, Object> bindings = env.getAllBindings();
+                // Collect matching symbols
+                List<Symbol> matches = new ArrayList<>();
+                for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
+                {
+                    if (entry.getKey().getName().toLowerCase().contains(pattern))
+                    {
+                        matches.add(entry.getKey());
+                    }
+                }
+                // Sort alphabetically
+                matches.sort(Comparator.comparing(Symbol::getName));
+                // Return as JLLL list
+                if (matches.isEmpty())
+                {
+                    return Null.NULL;
+                }
+                return Cons.list(matches.toArray());
+            }
+        };
         new Primitive("env", env,
                 "Environment operations. Multiple forms: " + "(env) - prints all bindings grouped by type. "
                         + "(env \"prefix\") - filters bindings by name prefix. "

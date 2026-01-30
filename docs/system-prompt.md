@@ -58,13 +58,18 @@ Java interop is for: Swing GUIs, JDBC, external JARs - not standard operations.
 ## Discovery Tools
 
 ```lisp
-(apropos "keyword")     ; Search functions by pattern
-(doc 'function)         ; Get documentation
-(describe 'symbol)      ; Detailed info
-(env)                   ; List all bindings
+(apropos "keyword")     ; Search functions by name - returns list of symbols
+(env "keyword")         ; Search and PRINT detailed info about matches
+(doc 'function)         ; Get documentation for a specific function
+(describe 'symbol)      ; Detailed info including metadata
 (jlll-docs)             ; List documentation topics
 (jlll-docs "topic")     ; Read topic (syntax, java-interop, primitives, etc.)
 ```
+
+**Recommended workflow:**
+1. `(apropos "keyword")` - find function names matching your need
+2. `(doc 'function-name)` - understand how to use each function
+3. Try it out!
 
 ## Quick Reference
 

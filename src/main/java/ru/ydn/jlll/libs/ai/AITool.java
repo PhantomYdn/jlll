@@ -280,6 +280,15 @@ public class AITool implements Serializable
      */
     public String execute(String argumentsJson)
     {
+        // Handle empty/null arguments gracefully - this usually happens when
+        // the AI response was truncated during streaming (large code blocks)
+        if (argumentsJson == null || argumentsJson.isBlank())
+        {
+            return "Error: Tool called with empty arguments. "
+                    + "This usually happens when the AI response was truncated during streaming. "
+                    + "Required parameter(s): " + getRequiredParameterNames() + ". "
+                    + "Please try again with a shorter code block, or break your code into smaller steps.";
+        }
         // Save current console and install capturing console
         Object originalConsole = environment.lookup(Symbol.CONSOLE);
         Console parentConsole = originalConsole instanceof Console ? (Console) originalConsole : null;
@@ -289,6 +298,14 @@ public class AITool implements Serializable
         {
             // Parse arguments from JSON
             JsonObject argsObj = GSON.fromJson(argumentsJson, JsonObject.class);
+            // Handle case where JSON parses to null (malformed JSON)
+            if (argsObj == null)
+            {
+                return "Error: Failed to parse tool arguments as JSON. " + "Received: "
+                        + (argumentsJson.length() > 100 ? argumentsJson.substring(0, 100) + "..." : argumentsJson)
+                        + ". " + "Please ensure arguments are valid JSON with required parameters: "
+                        + getRequiredParameterNames();
+            }
             // Convert JSON arguments to JLLL values
             List<Object> jlllArgs = new ArrayList<>();
             for (ToolParameter param : parameters)
@@ -449,6 +466,17 @@ public class AITool implements Serializable
     public String toString()
     {
         return "AITool[name=" + name + ", params=" + parameters.size() + "]";
+    }
+
+    /**
+     * Returns a comma-separated list of required parameter names.
+     *
+     * @return the required parameter names
+     */
+    private String getRequiredParameterNames()
+    {
+        return parameters.stream().filter(ToolParameter::isRequired).map(ToolParameter::getName)
+                .collect(java.util.stream.Collectors.joining(", "));
     }
 
     /**
