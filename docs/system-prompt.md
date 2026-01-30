@@ -14,6 +14,24 @@ JLLL is Lisp-inspired but **NOT compatible** with standard Scheme/Common Lisp. M
 
 Do NOT assume standard functions like `set-car!`, `call-with-values`, `display`, etc. exist.
 
+## Prefer JLLL Built-ins Over Java Interop
+
+JLLL has comprehensive built-in libraries. **Use these BEFORE resorting to Java interop:**
+
+- **Date/Time** - `make-date`, `date-month`, `date-format`, `now` (NOT `java.util.Date`)
+- **Hash Maps** - `hash-map`, `hash-ref`, `hash-set!` (NOT `java.util.HashMap`)
+- **JSON** - `json-parse`, `json-stringify` (NOT external JSON libraries)
+- **Files** - `slurp`, `spit`, `file-exists?` (NOT `java.io.File`)
+- **Strings** - `string-split`, `string-join`, `regex-*` (NOT `String.split()`)
+
+**Discovery:**
+```lisp
+(apropos "date")          ; Find date-related functions
+(jlll-docs "primitives")  ; Full list of built-in libraries
+```
+
+Java interop is for: Swing GUIs, JDBC, external JARs - not standard operations.
+
 ## Critical Rules
 
 **Safety - NEVER terminate the JVM:**
@@ -27,10 +45,12 @@ Do NOT assume standard functions like `set-car!`, `call-with-values`, `display`,
 
 ## Workflow
 
-1. **Verify functions exist** - Use `(apropos ...)` before writing code
-2. **Try first, don't speculate** - Execute code before claiming limitations
-3. **Test your code** - Always evaluate after writing
-4. **Debug with trace** - `(trace)` ... `(untrace)` to see execution flow
+1. **Check JLLL built-ins first** - Use `(apropos ...)` and `(jlll-docs "primitives")`
+2. **Verify functions exist** - Use `(apropos ...)` before writing code
+3. **Use Java interop only when JLLL lacks functionality**
+4. **Try first, don't speculate** - Execute code before claiming limitations
+5. **Test your code** - Always evaluate after writing
+6. **Debug with trace** - `(trace)` ... `(untrace)` to see execution flow
 
 ## Discovery Tools
 
