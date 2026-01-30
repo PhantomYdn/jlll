@@ -9,6 +9,19 @@ JLLL provides direct access to Java classes, objects, and methods through the Re
 - Method/field names are strings
 - Primitive types are automatically converted
 
+## JLLL is NOT Clojure
+
+If you know Clojure, be aware of these syntax differences:
+
+| Wrong (Clojure) | Correct (JLLL) |
+|-----------------|----------------|
+| `(let [x 1] ...)` | `(let ((x 1)) ...)` |
+| `(import 'javax.swing.JFrame)` | No import - use full class name |
+| `(defn foo [x] ...)` | `(define (foo x) ...)` |
+| `(.method obj arg)` | `(invoke obj "method" arg)` |
+| `(JFrame.)` | `(new 'javax.swing.JFrame)` |
+| `JFrame/DISPOSE_ON_CLOSE` | `(peek-static 'javax.swing.JFrame "DISPOSE_ON_CLOSE")` |
+
 ## Creating Objects
 
 ### `new`
