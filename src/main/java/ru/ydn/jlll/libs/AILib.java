@@ -1048,7 +1048,7 @@ public class AILib implements Library
         // If tracing, store the AI message with tool calls in history
         if (tracing)
         {
-            session.getHistory().add(aiMessage);
+            session.addMessage(aiMessage);
         }
         // Execute each tool call
         List<ToolExecutionResultMessage> toolResults = new ArrayList<>();
@@ -1084,7 +1084,7 @@ public class AILib implements Library
             // If tracing, store tool result in history
             if (tracing)
             {
-                session.getHistory().add(resultMsg);
+                session.addMessage(resultMsg);
             }
         }
         // Add AI message and tool results to messages for next request

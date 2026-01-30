@@ -386,6 +386,18 @@ public class AISession implements Serializable
     {
         history.clear();
     }
+
+    /**
+     * Adds a message directly to the conversation history.
+     * This is used internally for adding tool-related messages when tracing is enabled.
+     *
+     * @param message
+     *            the message to add
+     */
+    public void addMessage(ChatMessage message)
+    {
+        history.add(message);
+    }
     // ========== Tool Management ==========
 
     /**
