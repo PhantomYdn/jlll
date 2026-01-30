@@ -1954,6 +1954,47 @@ as simple JLLL functions in `debug.jlll`:
 
 ---
 
+## 25. Java Interop Enhancements (Nice to Have)
+
+Enhancements to Java interoperability beyond basic reflection.
+
+### Implemented: SAM/Functional Interface Conversion
+
+JLLL now automatically converts procedures/lambdas to Java functional interfaces (SAM - Single Abstract Method) when passed to `invoke`, `invoke-static`, or `new`. This works transparently with `Runnable`, `Comparator`, `ActionListener`, `Consumer`, `Function`, `Predicate`, etc.
+
+See [docs/java-interop.md](docs/java-interop.md#functional-interface-support-sam-conversion) for documentation.
+
+### Proposed: Explicit `proxy` for Multi-Method Interfaces
+
+For interfaces with multiple abstract methods (like `MouseListener`, `DocumentListener`), an explicit `proxy` function would allow implementing all methods:
+
+```lisp
+;; Implement MouseListener with multiple methods
+(define my-listener (proxy 'java.awt.event.MouseListener
+  (hash-map
+    "mouseClicked" (lambda (e) (println "clicked"))
+    "mousePressed" (lambda (e) (println "pressed"))
+    "mouseReleased" (lambda (e) null)
+    "mouseEntered" (lambda (e) null)
+    "mouseExited" (lambda (e) null))))
+
+(invoke component "addMouseListener" my-listener)
+
+;; Support multiple interfaces
+(define handler (proxy '(Interface1 Interface2)
+  (hash-map
+    "method1" (lambda (args) ...)
+    "method2" (lambda (args) ...))))
+```
+
+### Checklist
+
+- [x] SAM/Functional interface auto-conversion (ByteBuddy)
+- [ ] `proxy` - Explicit multi-method interface implementation
+- [ ] Support for implementing multiple interfaces in single proxy
+
+---
+
 ## Future Enhancements
 
 ### Error Message Improvements
