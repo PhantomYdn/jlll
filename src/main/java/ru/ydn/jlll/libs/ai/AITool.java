@@ -19,6 +19,7 @@ import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import dev.langchain4j.model.chat.request.json.JsonSchemaElement;
 import dev.langchain4j.model.chat.request.json.JsonStringSchema;
 import ru.ydn.jlll.common.CapturingConsole;
+import ru.ydn.jlll.common.CompoundProcedure;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
@@ -60,6 +61,8 @@ public class AITool implements Serializable
     private final Procedure procedure;
     /** The environment for procedure execution */
     private transient Environment environment;
+    /** True if this is a built-in tool (like eval) that should not be serialized */
+    private final boolean builtIn;
 
     /**
      * Creates a new AI tool.
@@ -78,11 +81,34 @@ public class AITool implements Serializable
     public AITool(String name, String description, List<ToolParameter> parameters, Procedure procedure,
             Environment environment)
     {
+        this(name, description, parameters, procedure, environment, false);
+    }
+
+    /**
+     * Creates a new AI tool with built-in flag.
+     *
+     * @param name
+     *            the tool name
+     * @param description
+     *            description of what the tool does
+     * @param parameters
+     *            list of parameter specifications
+     * @param procedure
+     *            the JLLL procedure to execute
+     * @param environment
+     *            the environment for execution
+     * @param builtIn
+     *            true if this is a built-in tool that should not be serialized
+     */
+    public AITool(String name, String description, List<ToolParameter> parameters, Procedure procedure,
+            Environment environment, boolean builtIn)
+    {
         this.name = name;
         this.description = description;
         this.parameters = parameters != null ? new ArrayList<>(parameters) : new ArrayList<>();
         this.procedure = procedure;
         this.environment = environment;
+        this.builtIn = builtIn;
     }
 
     /**
@@ -424,6 +450,99 @@ public class AITool implements Serializable
     {
         return "AITool[name=" + name + ", params=" + parameters.size() + "]";
     }
+
+    /**
+     * Returns true if this is a built-in tool (like eval) that should not be serialized.
+     *
+     * @return true if built-in
+     */
+    public boolean isBuiltIn()
+    {
+        return builtIn;
+    }
+    // ========== Serialization Methods ==========
+
+    /**
+     * Converts this tool to a serializable map for JSON persistence.
+     * Only works for tools with {@link CompoundProcedure} procedures (user-defined lambdas).
+     *
+     * @return a map containing tool state, or null if the procedure cannot be serialized
+     */
+    public Map<String, Object> toSerializableMap()
+    {
+        // Only CompoundProcedure can be serialized (has getBody())
+        if (!(procedure instanceof CompoundProcedure cp))
+        {
+            return null;
+        }
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("name", name);
+        map.put("description", description);
+        // Serialize parameters
+        List<Map<String, Object>> paramsList = new ArrayList<>();
+        for (ToolParameter param : parameters)
+        {
+            Map<String, Object> paramMap = new LinkedHashMap<>();
+            paramMap.put("name", param.getName());
+            paramMap.put("type", param.getType());
+            paramMap.put("description", param.getDescription());
+            paramMap.put("required", param.isRequired());
+            paramsList.add(paramMap);
+        }
+        map.put("parameters", paramsList);
+        // Serialize procedure as source code
+        Object body = cp.getBody();
+        map.put("procedureSource", body.toString());
+        return map;
+    }
+
+    /**
+     * Creates an AITool from a serialized map (typically loaded from JSON).
+     *
+     * @param map
+     *            the serialized tool data
+     * @param env
+     *            the environment for procedure evaluation
+     * @return the restored tool
+     * @throws JlllException
+     *             if the map is invalid or the procedure cannot be restored
+     */
+    @SuppressWarnings("unchecked")
+    public static AITool fromSerializableMap(Map<String, Object> map, Environment env) throws JlllException
+    {
+        String name = (String) map.get("name");
+        String description = (String) map.get("description");
+        String procedureSource = (String) map.get("procedureSource");
+        if (name == null || procedureSource == null)
+        {
+            throw new JlllException("Invalid tool data: missing name or procedureSource");
+        }
+        // Parse parameters
+        List<ToolParameter> params = new ArrayList<>();
+        Object paramsObj = map.get("parameters");
+        if (paramsObj instanceof List)
+        {
+            for (Object item : (List<?>) paramsObj)
+            {
+                if (item instanceof Map)
+                {
+                    Map<String, Object> paramMap = (Map<String, Object>) item;
+                    String paramName = (String) paramMap.get("name");
+                    String type = (String) paramMap.get("type");
+                    String desc = (String) paramMap.get("description");
+                    boolean required = Boolean.TRUE.equals(paramMap.get("required"));
+                    params.add(new ToolParameter(paramName, type, desc, required));
+                }
+            }
+        }
+        // Evaluate procedure source to recreate the procedure
+        Object result = Jlll.eval(procedureSource, env);
+        if (!(result instanceof Procedure proc))
+        {
+            throw new JlllException("Tool procedureSource did not evaluate to a procedure: " + procedureSource);
+        }
+        return new AITool(name, description != null ? description : "", params, proc, env, false);
+    }
     // ========== Factory Methods ==========
 
     /**
@@ -458,7 +577,7 @@ public class AITool implements Serializable
                 "Evaluate JLLL code and return the result. "
                         + "Use this to perform calculations, manipulate data, or interact with the JLLL environment. "
                         + "The code is executed in the current session's environment.",
-                params, evalProc, environment);
+                params, evalProc, environment, true); // builtIn = true
     }
 
     /**

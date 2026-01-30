@@ -9,6 +9,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
@@ -20,7 +24,9 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Environment;
+import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
+import ru.ydn.jlll.common.Keyword;
 import ru.ydn.jlll.common.LazyThunk;
 import ru.ydn.jlll.common.Library;
 import ru.ydn.jlll.common.Null;
@@ -550,6 +556,136 @@ public class AILib implements Library
                 return values.length() > 0 && values.get(0) instanceof AITool;
             }
         };
+        // ========== ai-session-save ==========
+        new Primitive("ai-session-save", env, "Saves an AI session to a file. "
+                + "(ai-session-save session \"path.json\") or (ai-session-save \"path.json\") for current session. "
+                + "Options: :pretty true for formatted output.")
+        {
+            private static final long serialVersionUID = 19L;
+            private static final Gson GSON = new Gson();
+            private static final Gson GSON_PRETTY = new GsonBuilder().setPrettyPrinting().create();
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("ai-session-save requires at least a file path argument");
+                }
+                AISession session;
+                String path;
+                int optionStart;
+                // Determine if first arg is session or path
+                Object firstArg = values.get(0);
+                if (firstArg instanceof AISession)
+                {
+                    session = (AISession) firstArg;
+                    if (values.length() < 2)
+                    {
+                        throw new JlllException("ai-session-save: missing file path");
+                    }
+                    path = values.get(1).toString();
+                    optionStart = 2;
+                }
+                else
+                {
+                    session = getCurrentSession(env);
+                    path = firstArg.toString();
+                    optionStart = 1;
+                }
+                // Parse options
+                boolean pretty = false;
+                for (int i = optionStart; i < values.length(); i += 2)
+                {
+                    if (i + 1 >= values.length())
+                        break;
+                    Object key = values.get(i);
+                    Object value = values.get(i + 1);
+                    String keyStr = key instanceof Keyword ? ((Keyword) key).getName() : key.toString();
+                    if ("pretty".equals(keyStr) || ":pretty".equals(keyStr))
+                    {
+                        pretty = Boolean.TRUE.equals(value);
+                    }
+                }
+                // Serialize session to JSON
+                Map<String, Object> sessionMap = session.toSerializableMap();
+                String json = pretty ? GSON_PRETTY.toJson(sessionMap) : GSON.toJson(sessionMap);
+                // Write to file using spit
+                Jlll.invokeProcedure("spit", env, path, json);
+                return session;
+            }
+        };
+        // ========== ai-session-load ==========
+        new Primitive("ai-session-load", env,
+                "Loads an AI session from a file. " + "(ai-session-load \"path.json\") returns the restored session. "
+                        + "Options: :name \"override\" to use different name, :activate true to make it current, "
+                        + ":eval true/false to include eval tool (default true).")
+        {
+            private static final long serialVersionUID = 20L;
+            private static final Gson GSON = new Gson();
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values.length() < 1)
+                {
+                    throw new JlllException("ai-session-load requires a file path argument");
+                }
+                String path = values.get(0).toString();
+                // Parse options
+                String nameOverride = null;
+                boolean activate = false;
+                boolean addEvalTool = true;
+                for (int i = 1; i < values.length(); i += 2)
+                {
+                    if (i + 1 >= values.length())
+                        break;
+                    Object key = values.get(i);
+                    Object value = values.get(i + 1);
+                    String keyStr = key instanceof Keyword ? ((Keyword) key).getName() : key.toString();
+                    switch (keyStr)
+                    {
+                        case "name", ":name" -> nameOverride = value.toString();
+                        case "activate", ":activate" -> activate = Boolean.TRUE.equals(value);
+                        case "eval", ":eval" -> addEvalTool = Boolean.TRUE.equals(value);
+                    }
+                }
+                // Read file using slurp
+                Object content = Jlll.invokeProcedure("slurp", env, path);
+                if (content == null || content instanceof Null)
+                {
+                    throw new JlllException("ai-session-load: could not read file: " + path);
+                }
+                String json = content.toString();
+                // Parse JSON to map
+                Map<String, Object> sessionMap;
+                try
+                {
+                    sessionMap = GSON.fromJson(json, new TypeToken<Map<String, Object>>()
+                    {
+                    }.getType());
+                }
+                catch (JsonSyntaxException e)
+                {
+                    throw new JlllException("ai-session-load: invalid JSON in " + path + " - " + e.getMessage());
+                }
+                if (sessionMap == null)
+                {
+                    throw new JlllException("ai-session-load: empty or invalid session file: " + path);
+                }
+                // Restore session
+                AISession session = AISession.fromSerializableMap(sessionMap, env, nameOverride, addEvalTool);
+                // Optionally activate
+                if (activate)
+                {
+                    session.setEnvironment(env);
+                    env.setBinding(AI_SESSION_SYMBOL, session);
+                }
+                return session;
+            }
+        };
+        // Load additional JLLL definitions (ai-session-restore, etc.)
+        Jlll.eval("(load-system-script \"ai.jlll\")", env);
     }
     // ========== Helper Methods ==========
 

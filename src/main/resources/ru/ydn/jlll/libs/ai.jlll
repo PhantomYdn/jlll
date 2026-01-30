@@ -1,0 +1,8 @@
+;;; ai.jlll - Additional AI library functions
+;;; These are convenience wrappers around the Java primitives
+
+(define (ai-session-restore path (name false) (eval true))
+  :doc "Loads and activates an AI session from a file. Convenience wrapper for ai-session-load with activation. Options: name to override name, eval true/false for eval tool."
+  (if name
+      (ai-session-load path :activate true :name name :eval eval)
+      (ai-session-load path :activate true :eval eval)))

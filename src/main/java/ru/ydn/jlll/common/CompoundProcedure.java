@@ -207,8 +207,10 @@ public class CompoundProcedure extends Procedure
      */
     public Object getBody()
     {
-        return new Cons(Symbol.intern("lambda"),
-                new Cons(variables, (body instanceof Cons ? ((Cons) body).clone() : body)));
+        // Construct (lambda args body) properly
+        // The body needs to be wrapped in a cons cell to be the third element
+        Object bodyPart = body instanceof Cons ? ((Cons) body).clone() : body;
+        return new Cons(Symbol.intern("lambda"), new Cons(variables, new Cons(bodyPart, Null.NULL)));
     }
 
     /**

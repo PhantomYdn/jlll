@@ -2,10 +2,13 @@ package ru.ydn.jlll.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static ru.ydn.jlll.common.Jlll.eval;
+import java.io.File;
+import java.nio.file.Files;
 import java.util.Map;
 import org.junit.After;
 import org.junit.Before;
@@ -595,5 +598,338 @@ public class AILibTestCase
         // Store in env and return variable name
         env.addBinding("_test_response", obj);
         return "_test_response";
+    }
+    // ========== Session Save/Load Tests ==========
+
+    /**
+     * Test basic session save and load cycle.
+     */
+    @Test
+    public void testAiSessionSaveLoad() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionSaveLoad: No AI provider configured");
+            return;
+        }
+        // Create a temp file for the session
+        File tempFile = File.createTempFile("jlll-session-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session
+        eval("(define sess (ai-session-create :name \"save-test\" :system \"Test system prompt\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Verify file was created and contains JSON
+        String content = Files.readString(tempFile.toPath());
+        assertTrue("Saved file should contain session name", content.contains("save-test"));
+        assertTrue("Saved file should contain system prompt", content.contains("Test system prompt"));
+        assertTrue("Saved file should contain version", content.contains("\"version\""));
+        // Load the session
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\")", env);
+        assertTrue("Loaded object should be AISession", loaded instanceof AISession);
+        AISession loadedSession = (AISession) loaded;
+        assertEquals("Loaded session should have same name", "save-test", loadedSession.getName());
+        assertEquals("Loaded session should have same system prompt", "Test system prompt",
+                loadedSession.getSystemPrompt());
+    }
+
+    /**
+     * Test session save with pretty formatting option.
+     */
+    @Test
+    public void testAiSessionSavePretty() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionSavePretty: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-pretty-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Save with pretty formatting
+        eval("(define sess (ai-session-create :name \"pretty-test\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\" :pretty true)", env);
+        // Verify file contains indentation (pretty printed)
+        String content = Files.readString(tempFile.toPath());
+        assertTrue("Pretty printed JSON should contain newlines", content.contains("\n"));
+        assertTrue("Pretty printed JSON should have proper formatting", content.contains("  \""));
+    }
+
+    /**
+     * Test session load with name override.
+     */
+    @Test
+    public void testAiSessionLoadNameOverride() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionLoadNameOverride: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-name-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session with original name
+        eval("(define sess (ai-session-create :name \"original-name\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Load with name override
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\" :name \"overridden-name\")", env);
+        AISession loadedSession = (AISession) loaded;
+        assertEquals("Loaded session should have overridden name", "overridden-name", loadedSession.getName());
+    }
+
+    /**
+     * Test session load with activate option.
+     */
+    @Test
+    public void testAiSessionLoadActivate() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionLoadActivate: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-activate-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session
+        eval("(define sess (ai-session-create :name \"activate-test\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Deactivate and clear sessions
+        eval("(ai-session-deactivate)", env);
+        AISession.clearAllSessions();
+        // Load with activate option
+        eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\" :activate true)", env);
+        // Verify it's the current session
+        Object current = eval("(ai-session-current)", env);
+        assertTrue("Current session should be set", current instanceof AISession);
+        assertEquals("activate-test", ((AISession) current).getName());
+    }
+
+    /**
+     * Test session save/load preserves conversation history.
+     */
+    @Test
+    public void testAiSessionSaveLoadWithHistory() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionSaveLoadWithHistory: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-history-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create session and add history manually
+        eval("(define sess (ai-session-create :name \"history-test\"))", env);
+        AISession session = (AISession) eval("sess", env);
+        session.addUserMessage("Hello from user");
+        session.addAiMessage("Hello from AI");
+        session.addUserMessage("Second message");
+        // Save session
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Clear and load
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\")", env);
+        AISession loadedSession = (AISession) loaded;
+        // Verify history
+        assertEquals("History should have 3 messages", 3, loadedSession.getHistory().size());
+    }
+
+    /**
+     * Test session save/load with custom tools.
+     */
+    @Test
+    public void testAiSessionSaveLoadWithCustomTools() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionSaveLoadWithCustomTools: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-tools-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create session without eval tool, add custom tool
+        eval("(define sess (ai-session-create :name \"tools-test\" :eval false))", env);
+        eval("(ai-session-activate sess)", env);
+        eval("(define my-tool (ai-tool \"custom-tool\" :description \"A custom tool\" "
+                + ":parameters '((x \"string\" \"input\" true)) " + ":fn (lambda (x) (concat \"result: \" x))))", env);
+        eval("(ai-tool-add my-tool)", env);
+        // Save session
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Clear and load
+        eval("(ai-session-deactivate)", env);
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\" :eval false)", env);
+        AISession loadedSession = (AISession) loaded;
+        // Verify custom tool was restored
+        assertTrue("Loaded session should have custom-tool", loadedSession.hasTool("custom-tool"));
+        AITool restoredTool = loadedSession.getTool("custom-tool");
+        assertEquals("custom-tool", restoredTool.getName());
+        assertEquals("A custom tool", restoredTool.getDescription());
+        // Test that the restored tool works
+        String result = restoredTool.execute("{\"x\": \"hello\"}");
+        System.out.println("Restored tool result: " + result);
+        assertTrue("Restored tool should work, got: " + result, result.contains("result: hello"));
+    }
+
+    /**
+     * Test session load ID collision handling.
+     */
+    @Test
+    public void testAiSessionLoadIdCollision() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionLoadIdCollision: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-collision-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session
+        eval("(define sess (ai-session-create :name \"collision-test\"))", env);
+        AISession original = (AISession) eval("sess", env);
+        String originalId = original.getId();
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Load without clearing - should get new ID due to collision
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\")", env);
+        AISession loadedSession = (AISession) loaded;
+        assertNotEquals("Loaded session should have different ID due to collision", originalId, loadedSession.getId());
+        assertTrue("New ID should contain 'restored'", loadedSession.getId().contains("-restored-"));
+    }
+
+    /**
+     * Test that eval tool is added by default when loading.
+     */
+    @Test
+    public void testAiSessionLoadWithEvalTool() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionLoadWithEvalTool: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-eval-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create session without eval tool (to verify it's added on load)
+        eval("(define sess (ai-session-create :name \"eval-test\" :eval false))", env);
+        AISession session = (AISession) eval("sess", env);
+        assertFalse("Original session should not have eval tool", session.hasTool("eval"));
+        // Save session
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Clear and load (default: eval tool added)
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\")", env);
+        AISession loadedSession = (AISession) loaded;
+        assertTrue("Loaded session should have eval tool by default", loadedSession.hasTool("eval"));
+    }
+
+    /**
+     * Test session load without eval tool.
+     */
+    @Test
+    public void testAiSessionLoadWithoutEvalTool() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionLoadWithoutEvalTool: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-noeval-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session
+        eval("(define sess (ai-session-create :name \"noeval-test\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Clear and load without eval tool
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + path.replace("\\", "\\\\") + "\" :eval false)", env);
+        AISession loadedSession = (AISession) loaded;
+        assertFalse("Loaded session should not have eval tool when :eval false", loadedSession.hasTool("eval"));
+    }
+
+    /**
+     * Test saving current session (without explicit session argument).
+     */
+    @Test
+    public void testAiSessionSaveCurrent() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionSaveCurrent: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-current-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and activate session
+        eval("(define sess (ai-session-create :name \"current-test\"))", env);
+        eval("(ai-session-activate sess)", env);
+        // Save current session (no session argument)
+        eval("(ai-session-save \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Verify file was created correctly
+        String content = Files.readString(tempFile.toPath());
+        assertTrue("Saved file should contain session name", content.contains("current-test"));
+    }
+
+    /**
+     * Test ai-session-restore convenience function (load + activate in one call).
+     */
+    @Test
+    public void testAiSessionRestore() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionRestore: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-restore-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session
+        eval("(define sess (ai-session-create :name \"restore-test\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Deactivate and clear
+        eval("(ai-session-deactivate)", env);
+        AISession.clearAllSessions();
+        // Use ai-session-restore (should load AND activate)
+        Object restored = eval("(ai-session-restore \"" + path.replace("\\", "\\\\") + "\")", env);
+        assertTrue("Restored object should be AISession", restored instanceof AISession);
+        // Verify it's the current session
+        Object current = eval("(ai-session-current)", env);
+        assertSame("ai-session-restore should activate the session", restored, current);
+        assertEquals("restore-test", ((AISession) current).getName());
+    }
+
+    /**
+     * Test ai-session-restore with name override option.
+     */
+    @Test
+    public void testAiSessionRestoreWithOptions() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionRestoreWithOptions: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-session-restore-opts-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and save session
+        eval("(define sess (ai-session-create :name \"original\"))", env);
+        eval("(ai-session-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Clear and restore with name override
+        eval("(ai-session-deactivate)", env);
+        AISession.clearAllSessions();
+        eval("(ai-session-restore \"" + path.replace("\\", "\\\\") + "\" :name \"renamed\")", env);
+        // Verify name was overridden
+        Object current = eval("(ai-session-current)", env);
+        assertEquals("renamed", ((AISession) current).getName());
     }
 }

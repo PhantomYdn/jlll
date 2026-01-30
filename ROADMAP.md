@@ -1668,18 +1668,37 @@ Keys can also be set programmatically to override environment variables.
 - Eval tool errors return error messages to LLM (allows retry), not exceptions
 - **Security note:** eval tool allows arbitrary code execution - security is user's responsibility
 
+### Session Persistence (Implemented)
+
+Save and restore AI sessions to/from JSON files:
+
+```lisp
+;; Save session to file (history, config, custom tools)
+(ai-session-save coder "coder-session.json")
+(ai-session-save coder "coder.json" :pretty true)  ; formatted output
+(ai-session-save "current.json")                    ; save current session
+
+;; Load session from file
+(define restored (ai-session-load "coder-session.json"))
+(ai-session-load "coder.json" :name "new-name")     ; override name
+(ai-session-load "coder.json" :activate true)       ; load and activate
+(ai-session-load "coder.json" :eval false)          ; don't add eval tool
+```
+
+**Session file format (JSON):**
+- Session identity (id, name)
+- Configuration (provider, model, system prompt, temperature, maxTokens)
+- Conversation history (user/AI messages)
+- Custom tools (with procedure source code)
+
+**Notes:**
+- Built-in eval tool is not saved (always recreated fresh on load)
+- Custom tools require `CompoundProcedure` (user-defined lambdas)
+- ID collision on load results in new ID with `-restored-N` suffix
+
 ### Future Enhancements
 
 These features may be added in future versions:
-
-**Session Persistence:**
-```lisp
-;; Save session to file (history, config, tools)
-(ai-session-save coder "coder-session.jlll")
-
-;; Load session from file
-(define restored (ai-session-load "coder-session.jlll"))
-```
 
 **Embeddings:**
 ```lisp
@@ -1731,6 +1750,9 @@ These features may be added in future versions:
 - [x] `ai-sessions` - List all sessions
 - [x] `ai-session-name` / `ai-session-id` - Get session identity
 - [x] `ai-session?` - Test if value is a session
+- [x] `ai-session-save` - Save session to JSON file (`:pretty` option)
+- [x] `ai-session-load` - Load session from JSON file (`:name`, `:activate`, `:eval` options)
+- [x] `ai-session-restore` - Load and activate session (convenience wrapper)
 
 **Core Operations:**
 - [x] `ai` - Chat using active session, returns lazy sequence (depends: Section 22)

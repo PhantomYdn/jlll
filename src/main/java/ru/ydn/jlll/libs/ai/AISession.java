@@ -22,6 +22,7 @@ import dev.langchain4j.model.googleai.GoogleAiGeminiStreamingChatModel;
 import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import ru.ydn.jlll.common.Environment;
+import ru.ydn.jlll.common.JlllException;
 
 /**
  * Represents an AI chat session with conversation memory and tools.
@@ -90,6 +91,47 @@ public class AISession implements Serializable
             Environment environment)
     {
         this.id = "sess-" + SESSION_COUNTER.incrementAndGet();
+        this.name = name != null ? name : this.id;
+        this.provider = provider;
+        this.modelName = modelName != null ? modelName : AIConfig.getInstance().getDefaultModel(provider);
+        this.systemPrompt = systemPrompt != null ? systemPrompt : getDefaultSystemPrompt();
+        this.environment = environment;
+        // Register in global registry
+        SESSIONS.put(this.id, this);
+    }
+
+    /**
+     * Creates a new AI session with a specific ID (for restoring saved sessions).
+     * If the ID collides with an existing session, a new unique ID is generated.
+     *
+     * @param requestedId
+     *            the requested session ID
+     * @param name
+     *            optional user-friendly name (null for auto-generated)
+     * @param provider
+     *            the AI provider to use
+     * @param modelName
+     *            the model name (null for provider default)
+     * @param systemPrompt
+     *            the system prompt (null for default JLLL prompt)
+     * @param environment
+     *            the JLLL environment for tool execution
+     */
+    public AISession(String requestedId, String name, AIConfig.Provider provider, String modelName, String systemPrompt,
+            Environment environment)
+    {
+        // Handle ID collision by generating a unique suffix
+        String actualId = requestedId;
+        if (SESSIONS.containsKey(requestedId))
+        {
+            int suffix = 1;
+            while (SESSIONS.containsKey(requestedId + "-restored-" + suffix))
+            {
+                suffix++;
+            }
+            actualId = requestedId + "-restored-" + suffix;
+        }
+        this.id = actualId;
         this.name = name != null ? name : this.id;
         this.provider = provider;
         this.modelName = modelName != null ? modelName : AIConfig.getInstance().getDefaultModel(provider);
@@ -533,5 +575,181 @@ public class AISession implements Serializable
     {
         return "AISession[id=" + id + ", name=" + name + ", provider=" + provider + ", model=" + modelName + ", tools="
                 + tools.size() + "]";
+    }
+
+    // ========== Serialization Methods ==========
+    /** Current serialization format version */
+    public static final int SERIALIZATION_VERSION = 1;
+
+    /**
+     * Converts this session to a serializable map for JSON persistence.
+     * The map can be written to JSON and later restored via {@link #fromSerializableMap}.
+     *
+     * <p>
+     * The built-in eval tool is excluded from serialization (it's always recreated on load).
+     * </p>
+     *
+     * @return a map containing session state
+     */
+    public Map<String, Object> toSerializableMap()
+    {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("version", SERIALIZATION_VERSION);
+        map.put("id", id);
+        map.put("name", name);
+        map.put("provider", provider.name());
+        map.put("modelName", modelName);
+        map.put("systemPrompt", systemPrompt);
+        map.put("temperature", temperature);
+        map.put("maxTokens", maxTokens);
+        // Serialize history
+        List<Map<String, Object>> historyList = new ArrayList<>();
+        for (ChatMessage msg : history)
+        {
+            Map<String, Object> msgMap = new LinkedHashMap<>();
+            msgMap.put("type", msg.type().name().toLowerCase());
+            if (msg instanceof UserMessage um)
+            {
+                msgMap.put("content", um.singleText());
+            }
+            else if (msg instanceof AiMessage am)
+            {
+                msgMap.put("content", am.text());
+            }
+            historyList.add(msgMap);
+        }
+        map.put("history", historyList);
+        // Serialize custom tools (exclude built-in eval tool)
+        List<Map<String, Object>> toolsList = new ArrayList<>();
+        for (AITool tool : tools.values())
+        {
+            if (!tool.isBuiltIn())
+            {
+                Map<String, Object> toolMap = tool.toSerializableMap();
+                if (toolMap != null)
+                {
+                    toolsList.add(toolMap);
+                }
+            }
+        }
+        map.put("tools", toolsList);
+        return map;
+    }
+
+    /**
+     * Creates an AISession from a serialized map (typically loaded from JSON).
+     *
+     * @param map
+     *            the serialized session data
+     * @param env
+     *            the environment for tool execution and procedure evaluation
+     * @param nameOverride
+     *            optional name to use instead of saved name (null to use saved name)
+     * @param addEvalTool
+     *            whether to add the built-in eval tool
+     * @return the restored session
+     * @throws JlllException
+     *             if the map is invalid or tools cannot be restored
+     */
+    @SuppressWarnings("unchecked")
+    public static AISession fromSerializableMap(Map<String, Object> map, Environment env, String nameOverride,
+            boolean addEvalTool) throws JlllException
+    {
+        // Validate version
+        Object versionObj = map.get("version");
+        int version = versionObj instanceof Number ? ((Number) versionObj).intValue() : 0;
+        if (version > SERIALIZATION_VERSION)
+        {
+            throw new JlllException("ai-session-load: unsupported session file version " + version + " (max supported: "
+                    + SERIALIZATION_VERSION + "). Please update JLLL.");
+        }
+        if (version < 1)
+        {
+            throw new JlllException("ai-session-load: invalid or missing version in session file");
+        }
+        // Extract basic fields
+        String savedId = (String) map.get("id");
+        String savedName = (String) map.get("name");
+        String providerStr = (String) map.get("provider");
+        String modelName = (String) map.get("modelName");
+        String systemPrompt = (String) map.get("systemPrompt");
+        // Parse provider
+        AIConfig.Provider provider;
+        try
+        {
+            provider = AIConfig.Provider.valueOf(providerStr);
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw new JlllException("ai-session-load: unknown provider '" + providerStr + "'. Valid providers: "
+                    + java.util.Arrays.toString(AIConfig.Provider.values()));
+        }
+        // Use name override if provided
+        String name = nameOverride != null ? nameOverride : savedName;
+        // Create session with requested ID (may be modified if collision)
+        AISession session = new AISession(savedId, name, provider, modelName, systemPrompt, env);
+        // Restore optional settings
+        Object tempObj = map.get("temperature");
+        if (tempObj instanceof Number)
+        {
+            session.setTemperature(((Number) tempObj).doubleValue());
+        }
+        Object maxTokensObj = map.get("maxTokens");
+        if (maxTokensObj instanceof Number)
+        {
+            session.setMaxTokens(((Number) maxTokensObj).intValue());
+        }
+        // Restore history
+        Object historyObj = map.get("history");
+        if (historyObj instanceof List)
+        {
+            for (Object item : (List<?>) historyObj)
+            {
+                if (item instanceof Map)
+                {
+                    Map<String, Object> msgMap = (Map<String, Object>) item;
+                    String type = (String) msgMap.get("type");
+                    String content = (String) msgMap.get("content");
+                    if ("user".equals(type) && content != null)
+                    {
+                        session.addUserMessage(content);
+                    }
+                    else if ("ai".equals(type) && content != null)
+                    {
+                        session.addAiMessage(content);
+                    }
+                }
+            }
+        }
+        // Add eval tool if requested (before custom tools so custom can override if needed)
+        if (addEvalTool)
+        {
+            session.addTool(AITool.createEvalTool(env));
+        }
+        // Restore custom tools
+        Object toolsObj = map.get("tools");
+        if (toolsObj instanceof List)
+        {
+            for (Object item : (List<?>) toolsObj)
+            {
+                if (item instanceof Map)
+                {
+                    try
+                    {
+                        AITool tool = AITool.fromSerializableMap((Map<String, Object>) item, env);
+                        if (tool != null)
+                        {
+                            session.addTool(tool);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        // Log warning but continue - don't fail entire load for one bad tool
+                        System.err.println("Warning: Could not restore tool: " + e.getMessage());
+                    }
+                }
+            }
+        }
+        return session;
     }
 }
