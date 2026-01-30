@@ -4,8 +4,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.JlllException;
 import ru.ydn.jlll.common.Null;
+import ru.ydn.jlll.common.Procedure;
 
 /**
  * Common utility methods for Java reflection and type handling.
@@ -52,6 +54,25 @@ public class CommonUtil
      */
     public static Object constactObject(Class<?> clss, Object[] constr) throws JlllException
     {
+        return constactObject(clss, constr, null);
+    }
+
+    /**
+     * Creates an object using reflection, finding a matching constructor.
+     * Supports SAM (functional interface) conversion when environment is provided.
+     *
+     * @param clss
+     *            the class to instantiate
+     * @param constr
+     *            constructor arguments
+     * @param env
+     *            the environment for SAM conversion (may be null)
+     * @return the new instance
+     * @throws JlllException
+     *             if no matching constructor or instantiation fails
+     */
+    public static Object constactObject(Class<?> clss, Object[] constr, Environment env) throws JlllException
+    {
         try
         {
             if (constr != null)
@@ -60,9 +81,9 @@ public class CommonUtil
                 for (int i = 0; i < cnst.length; i++)
                 {
                     Class<?>[] classes = cnst[i].getParameterTypes();
-                    if (matchClasses(classes, constr))
+                    if (matchClasses(classes, constr, env))
                     {
-                        Object[] convertedArgs = convertArgs(classes, constr);
+                        Object[] convertedArgs = convertArgs(classes, constr, env);
                         return cnst[i].newInstance(convertedArgs);
                     }
                 }
@@ -79,6 +100,10 @@ public class CommonUtil
             {
                 return clss.getDeclaredConstructor().newInstance();
             }
+        }
+        catch (JlllException e)
+        {
+            throw e;
         }
         catch (InstantiationException e)
         {
@@ -114,6 +139,31 @@ public class CommonUtil
      */
     public static Object invoke(Object object, String methodS, Object[] params) throws JlllException
     {
+        return invoke(object, methodS, params, null);
+    }
+
+    /**
+     * Invokes a method on an object using reflection, with SAM conversion support.
+     *
+     * <p>
+     * If environment is provided and a parameter is a JLLL Procedure where the Java method
+     * expects a functional interface, the procedure will be automatically converted.
+     * </p>
+     *
+     * @param object
+     *            the target object
+     * @param methodS
+     *            the method name
+     * @param params
+     *            method arguments
+     * @param env
+     *            the environment for SAM conversion (may be null)
+     * @return the method result
+     * @throws JlllException
+     *             if method not found or invocation fails
+     */
+    public static Object invoke(Object object, String methodS, Object[] params, Environment env) throws JlllException
+    {
         if (object == null)
             throw new JlllException("Object for invoke is null");
         if (methodS == null)
@@ -124,9 +174,9 @@ public class CommonUtil
             for (int i = 0; i < methods.length; i++)
             {
                 Class<?>[] classes = methods[i].getParameterTypes();
-                if (methodS.equals(methods[i].getName()) && matchClasses(classes, params))
+                if (methodS.equals(methods[i].getName()) && matchClasses(classes, params, env))
                 {
-                    Object[] convertedParams = convertArgs(classes, params);
+                    Object[] convertedParams = convertArgs(classes, params, env);
                     return methods[i].invoke(object, convertedParams);
                 }
             }
@@ -158,6 +208,27 @@ public class CommonUtil
      */
     public static Object invokeStatic(Class<?> clss, String methodS, Object[] params) throws JlllException
     {
+        return invokeStatic(clss, methodS, params, null);
+    }
+
+    /**
+     * Invokes a static method using reflection, with SAM conversion support.
+     *
+     * @param clss
+     *            the class containing the method
+     * @param methodS
+     *            the method name
+     * @param params
+     *            method arguments
+     * @param env
+     *            the environment for SAM conversion (may be null)
+     * @return the method result
+     * @throws JlllException
+     *             if method not found or invocation fails
+     */
+    public static Object invokeStatic(Class<?> clss, String methodS, Object[] params, Environment env)
+            throws JlllException
+    {
         if (clss == null)
             throw new JlllException("Object for invoke is null");
         if (methodS == null)
@@ -168,9 +239,9 @@ public class CommonUtil
             for (int i = 0; i < methods.length; i++)
             {
                 Class<?>[] classes = methods[i].getParameterTypes();
-                if (methodS.equals(methods[i].getName()) && matchClasses(classes, params))
+                if (methodS.equals(methods[i].getName()) && matchClasses(classes, params, env))
                 {
-                    Object[] convertedParams = convertArgs(classes, params);
+                    Object[] convertedParams = convertArgs(classes, params, env);
                     return methods[i].invoke(null, convertedParams);
                 }
             }
@@ -324,13 +395,30 @@ public class CommonUtil
      */
     public static boolean matchClasses(Class<?>[] classes, Object[] last)
     {
+        return matchClasses(classes, last, null);
+    }
+
+    /**
+     * Checks if objects can be passed as parameters to a method with given parameter types.
+     * Supports SAM (functional interface) conversion when environment is provided.
+     *
+     * @param classes
+     *            the method parameter types
+     * @param last
+     *            the actual argument objects
+     * @param env
+     *            the environment for SAM conversion (may be null)
+     * @return true if arguments match parameters
+     */
+    public static boolean matchClasses(Class<?>[] classes, Object[] last, Environment env)
+    {
         if (classes == null || classes.length == 0)
             return last == null || last.length == 0;
         else if (last == null || last.length != classes.length)
             return false;
         for (int i = 0; i < classes.length; i++)
         {
-            if (!isInstance(classes[i], last[i]))
+            if (!isInstance(classes[i], last[i], env))
                 return false;
         }
         return true;
@@ -348,12 +436,33 @@ public class CommonUtil
      */
     public static boolean isInstance(Class<?> clss, Object object)
     {
+        return isInstance(clss, object, null);
+    }
+
+    /**
+     * Checks if an object is assignable to a class (null-safe, handles primitives).
+     * Supports Java primitive widening conversions (JLS §5.1.2) for numeric types.
+     * Also supports SAM (functional interface) conversion when environment is provided.
+     *
+     * @param clss
+     *            the target class
+     * @param object
+     *            the object to check
+     * @param env
+     *            the environment for SAM conversion (may be null)
+     * @return true if object can be assigned to clss
+     */
+    public static boolean isInstance(Class<?> clss, Object object, Environment env)
+    {
         if (object == null || Null.NULL.equals(object))
             return true;
         if (clss.isAssignableFrom(object.getClass()))
             return true;
         // Check for numeric primitive widening
         if (object instanceof Number && canWidenNumeric(clss, object.getClass()))
+            return true;
+        // Check for SAM (functional interface) conversion: Procedure -> functional interface
+        if (env != null && object instanceof Procedure && SamConverter.isFunctionalInterface(clss))
             return true;
         try
         {
@@ -453,12 +562,50 @@ public class CommonUtil
      */
     private static Object[] convertArgs(Class<?>[] paramTypes, Object[] args)
     {
+        try
+        {
+            return convertArgs(paramTypes, args, null);
+        }
+        catch (JlllException e)
+        {
+            // Should never happen without environment (no SAM conversion)
+            throw new RuntimeException("Unexpected error in convertArgs", e);
+        }
+    }
+
+    /**
+     * Converts an array of arguments to match the expected parameter types.
+     * Handles numeric widening conversions and SAM (functional interface) conversion.
+     *
+     * @param paramTypes
+     *            the expected parameter types
+     * @param args
+     *            the argument values
+     * @param env
+     *            the environment for SAM conversion (may be null)
+     * @return array with converted arguments
+     * @throws JlllException
+     *             if SAM conversion fails
+     */
+    private static Object[] convertArgs(Class<?>[] paramTypes, Object[] args, Environment env) throws JlllException
+    {
         if (args == null || paramTypes == null)
             return args;
         Object[] result = new Object[args.length];
         for (int i = 0; i < args.length; i++)
         {
-            result[i] = convertNumericArg(paramTypes[i], args[i]);
+            Object arg = args[i];
+            Class<?> targetType = paramTypes[i];
+            // First try SAM conversion if applicable
+            if (env != null && arg instanceof Procedure && SamConverter.isFunctionalInterface(targetType))
+            {
+                result[i] = SamConverter.convert(targetType, (Procedure) arg, env);
+            }
+            else
+            {
+                // Fall back to numeric conversion
+                result[i] = convertNumericArg(targetType, arg);
+            }
         }
         return result;
     }

@@ -272,20 +272,102 @@ See [Special Forms](special-forms.md) for full documentation on `try`/`catch`/`f
     (read-loop)))
 ```
 
-### Using Java 8 Streams (if available)
+## Functional Interface Support (SAM Conversion)
+
+JLLL automatically converts procedures/lambdas to Java functional interfaces when needed.
+A **functional interface** (also called SAM - Single Abstract Method) is any Java interface
+with exactly one abstract method, such as `Runnable`, `Comparator`, `ActionListener`, `Consumer`, etc.
+
+### Automatic Conversion
+
+When you pass a JLLL lambda to a Java method or constructor that expects a functional interface,
+JLLL automatically wraps the lambda in an implementation of that interface:
 
 ```lisp
-(define list (new "java.util.ArrayList"))
+;; Thread constructor takes Runnable - lambda auto-converted
+(define t (new 'java.lang.Thread 
+  (lambda () (println "Hello from thread!"))))
+(invoke t "start")
+(invoke t "join")
+
+;; Collections.sort takes Comparator - lambda auto-converted
+(define nums (new 'java.util.ArrayList))
+(invoke nums "add" 3)
+(invoke nums "add" 1)
+(invoke nums "add" 2)
+(invoke-static 'java.util.Collections "sort" nums
+  (lambda (a b) (- a b)))  ; ascending order
+
+;; forEach takes Consumer - lambda auto-converted
+(invoke nums "forEach"
+  (lambda (x) (println "Value: " x)))
+```
+
+### Supported Interfaces
+
+Any interface with exactly one abstract method is supported, including:
+
+| Interface | Method | Common Use |
+|-----------|--------|------------|
+| `Runnable` | `run()` | Thread execution |
+| `Callable<V>` | `call()` | Async computations with return value |
+| `Comparator<T>` | `compare(a, b)` | Sorting, ordering |
+| `Consumer<T>` | `accept(t)` | forEach operations |
+| `Supplier<T>` | `get()` | Lazy value providers |
+| `Function<T,R>` | `apply(t)` | Transformations |
+| `Predicate<T>` | `test(t)` | Filtering, testing |
+| `ActionListener` | `actionPerformed(e)` | Swing event handling |
+
+### Event Handling Example
+
+```lisp
+;; Swing button with click handler
+(define frame (new 'javax.swing.JFrame "My App"))
+(define button (new 'javax.swing.JButton "Click Me"))
+
+;; Lambda auto-converted to ActionListener
+(invoke button "addActionListener"
+  (lambda (event)
+    (println "Button clicked!")
+    (println "Command: " (invoke event "getActionCommand"))))
+
+(invoke frame "add" button)
+(invoke frame "setSize" 300 200)
+(invoke frame "setVisible" true)
+```
+
+### How It Works
+
+1. When `invoke` or `new` encounters a JLLL procedure where Java expects a functional interface,
+   JLLL uses ByteBuddy to generate a wrapper class at runtime
+2. The wrapper implements the interface and delegates to the JLLL procedure
+3. Generated classes are cached by interface type for performance
+
+### Limitations
+
+- Only single-method interfaces are supported automatically
+- Multi-method interfaces (like `MouseListener` with multiple methods) require explicit implementation in Java
+- The lambda receives all Java method arguments as JLLL values
+
+### Using Java 8 Streams
+
+```lisp
+(define list (new 'java.util.ArrayList))
 (invoke list "add" 1)
 (invoke list "add" 2)
 (invoke list "add" 3)
 
+;; forEach with lambda Consumer
+(invoke list "forEach" (lambda (x) (println (* x x))))
+;; prints: 1, 4, 9
+
+;; Note: Stream intermediate operations (map, filter) require ToIntFunction etc.
+;; which are also auto-converted:
 (define stream (invoke list "stream"))
 (define sum (invoke 
-              (invoke stream "mapToInt" 
-                      (lambda (x) (* x x)))
+              (invoke stream "mapToInt" (lambda (x) x))
               "sum"))
-; Note: Lambda interop requires additional setup
+;; => 6
 ```
 
 ## Embedding JLLL in Java

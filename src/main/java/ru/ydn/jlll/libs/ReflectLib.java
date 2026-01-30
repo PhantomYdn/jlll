@@ -46,8 +46,14 @@ public class ReflectLib extends ReflectionLibrary
      * dependencies.
      * </p>
      *
+     * <p>
+     * If any parameter is a JLLL procedure and the corresponding Java constructor parameter type is a
+     * functional interface (SAM - Single Abstract Method), the procedure will be automatically
+     * converted to an implementation of that interface.
+     * </p>
+     *
      * @param env
-     *            the current environment (injected automatically)
+     *            the current environment (injected automatically, also used for SAM conversion)
      * @param clazz
      *            class name string or Class object
      * @param params
@@ -59,12 +65,20 @@ public class ReflectLib extends ReflectionLibrary
     @JlllName("new")
     public Object createObject(Environment env, Object clazz, Object... params) throws JlllException
     {
-        return CommonUtil.constactObject(toClass(env, clazz), params);
+        return CommonUtil.constactObject(toClass(env, clazz), params, env);
     }
 
     /**
      * Invokes an instance method. {@code (invoke obj "methodName" arg1 arg2)}.
      *
+     * <p>
+     * If any parameter is a JLLL procedure and the corresponding Java parameter type is a
+     * functional interface (SAM - Single Abstract Method), the procedure will be automatically
+     * converted to an implementation of that interface.
+     * </p>
+     *
+     * @param env
+     *            the current environment (injected automatically, used for SAM conversion)
      * @param obj
      *            the target object
      * @param method
@@ -76,9 +90,9 @@ public class ReflectLib extends ReflectionLibrary
      *             if invocation fails
      */
     @JlllName("invoke")
-    public Object invokeMethod(Object obj, String method, Object... params) throws JlllException
+    public Object invokeMethod(Environment env, Object obj, String method, Object... params) throws JlllException
     {
-        return CommonUtil.invoke(obj, method, params);
+        return CommonUtil.invoke(obj, method, params, env);
     }
 
     /**
@@ -104,7 +118,7 @@ public class ReflectLib extends ReflectionLibrary
     @JlllName("invoke-static")
     public Object invokeStatic(Environment env, Object clazz, String method, Object... params) throws JlllException
     {
-        return CommonUtil.invokeStatic(toClass(env, clazz), method, params);
+        return CommonUtil.invokeStatic(toClass(env, clazz), method, params, env);
     }
 
     /**

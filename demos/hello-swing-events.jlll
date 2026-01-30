@@ -1,0 +1,69 @@
+;; Swing GUI with Event Handlers Demo
+;; Demonstrates automatic functional interface conversion (SAM)
+;; Run: java -jar jlll-*-cli.jar demos/hello-swing-events.jlll
+
+;; Import classes
+(define JFrame (class "javax.swing.JFrame"))
+(define JButton (class "javax.swing.JButton"))
+(define JLabel (class "javax.swing.JLabel"))
+(define JPanel (class "javax.swing.JPanel"))
+(define BorderLayout (class "java.awt.BorderLayout"))
+(define FlowLayout (class "java.awt.FlowLayout"))
+
+;; Create main frame
+(define frame (new JFrame "JLLL Event Demo"))
+(invoke frame "setDefaultCloseOperation" (peek-static JFrame "EXIT_ON_CLOSE"))
+(invoke frame "setSize" 400 200)
+
+;; Counter state
+(define counter (atom 0))
+
+;; Create label to show count
+(define label (new JLabel "Count: 0"))
+
+;; Create buttons
+(define inc-button (new JButton "+1"))
+(define dec-button (new JButton "-1"))
+(define reset-button (new JButton "Reset"))
+
+;; Helper to update label
+(define (update-label)
+  (invoke label "setText" (concat "Count: " (to-string (deref counter)))))
+
+;; Add event handlers - lambdas auto-convert to ActionListener!
+(invoke inc-button "addActionListener"
+  (lambda (event)
+    (swap! counter (lambda (x) (+ x 1)))
+    (update-label)))
+
+(invoke dec-button "addActionListener"
+  (lambda (event)
+    (swap! counter (lambda (x) (- x 1)))
+    (update-label)))
+
+(invoke reset-button "addActionListener"
+  (lambda (event)
+    (reset! counter 0)
+    (update-label)))
+
+;; Layout
+(define button-panel (new JPanel))
+(invoke button-panel "setLayout" (new FlowLayout))
+(invoke button-panel "add" dec-button)
+(invoke button-panel "add" reset-button)
+(invoke button-panel "add" inc-button)
+
+(define content (invoke frame "getContentPane"))
+(invoke content "setLayout" (new BorderLayout))
+(invoke content "add" label (peek-static BorderLayout "CENTER"))
+(invoke content "add" button-panel (peek-static BorderLayout "SOUTH"))
+
+;; Show window
+(invoke frame "setLocationRelativeTo" null)
+(invoke frame "setVisible" true)
+
+(println "Window open! Click the buttons.")
+(println "Press Ctrl+C to exit.")
+
+;; Keep running
+(sleep 300000)  ; 5 minutes

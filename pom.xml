@@ -182,6 +182,13 @@
             <version>${langchain4j.version}</version>
         </dependency>
 
+        <!-- ByteBuddy for runtime class generation (SAM/functional interface conversion) -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.14.11</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
