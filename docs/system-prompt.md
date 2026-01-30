@@ -23,10 +23,12 @@ JLLL has comprehensive built-in libraries. **Use these BEFORE resorting to Java 
 - **JSON** - `json-parse`, `json-stringify` (NOT external JSON libraries)
 - **Files** - `slurp`, `spit`, `file-exists?` (NOT `java.io.File`)
 - **Strings** - `string-split`, `string-join`, `regex-*` (NOT `String.split()`)
+- **AI/LLM** - `ai`, `ai-prompt`, `ai-session-create` (built-in LLM integration)
 
 **Discovery:**
 ```lisp
 (apropos "date")          ; Find date-related functions
+(apropos "ai")            ; Find AI/LLM functions
 (jlll-docs "primitives")  ; Full list of built-in libraries
 ```
 
@@ -45,12 +47,13 @@ Java interop is for: Swing GUIs, JDBC, external JARs - not standard operations.
 
 ## Workflow
 
-1. **Check JLLL built-ins first** - Use `(apropos ...)` and `(jlll-docs "primitives")`
-2. **Verify functions exist** - Use `(apropos ...)` before writing code
-3. **Use Java interop only when JLLL lacks functionality**
-4. **Try first, don't speculate** - Execute code before claiming limitations
-5. **Test your code** - Always evaluate after writing
-6. **Debug with trace** - `(trace)` ... `(untrace)` to see execution flow
+1. **ALWAYS run `(apropos ...)` before writing ANY code** - Never assume capabilities
+2. **Check JLLL built-ins first** - Use `(apropos ...)` and `(jlll-docs "primitives")`
+3. **Verify functions exist** - Use `(doc 'function)` to understand usage
+4. **Use Java interop only when JLLL lacks functionality**
+5. **Try first, don't speculate** - Execute code before claiming limitations
+6. **Test your code** - Always evaluate after writing
+7. **Debug with trace** - `(trace)` ... `(untrace)` to see execution flow
 
 ## Discovery Tools
 
@@ -85,3 +88,9 @@ Java interop is for: Swing GUIs, JDBC, external JARs - not standard operations.
 | "Unbound symbol: func" | Verify with `(apropos "func")` - function may not exist |
 
 For full docs: `(jlll-docs "java-interop")`, `(jlll-docs "primitives")`
+
+## Anti-patterns to AVOID
+
+- **Never write placeholder/stub implementations** - Always search for existing functions first
+- **Never say "if you had access to..."** - JLLL likely has the feature; use `(apropos ...)` to find it
+- **Never guess function names** - Run `(apropos "keyword")` to discover actual function names
