@@ -45,19 +45,126 @@ public class ListLib implements Library
                 return ListUtil.listVector((Cons) vaCons.cdr());
             }
         };
+        new Primitive("make-vector", env, "Creates a vector of n elements. (make-vector 3) returns #(null null null). "
+                + "(make-vector 3 0) returns #(0 0 0).")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                int n = ((Number) values.get(0)).intValue();
+                Object fill = values.length() > 1 ? values.get(1) : null;
+                Object[] arr = new Object[n];
+                for (int i = 0; i < n; i++)
+                {
+                    arr[i] = fill;
+                }
+                return arr;
+            }
+        };
+        new Primitive("vector", env, "Creates a vector from arguments. (vector 1 2 3) returns #(1 2 3).")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                return ListUtil.listVector(values);
+            }
+        };
+        new Primitive("vector-length", env, "Returns the length of a vector. (vector-length #(1 2 3)) returns 3.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Object v = values.get(0);
+                if (v instanceof Object[])
+                {
+                    return ((Object[]) v).length;
+                }
+                else if (v instanceof Collection)
+                {
+                    return ((Collection<?>) v).size();
+                }
+                throw new JlllException("vector-length: expected vector, got " + v.getClass().getSimpleName());
+            }
+        };
+        new Primitive("vector-ref", env, "Returns element at index. (vector-ref #(a b c) 1) returns b.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Object v = values.get(0);
+                int idx = ((Number) values.get(1)).intValue();
+                if (v instanceof Object[])
+                {
+                    return ((Object[]) v)[idx];
+                }
+                else if (v instanceof List)
+                {
+                    return ((List<?>) v).get(idx);
+                }
+                throw new JlllException("vector-ref: expected vector, got " + v.getClass().getSimpleName());
+            }
+        };
+        new Primitive("vector-set!", env, "Sets element at index. (vector-set! vec 1 'x) modifies vec in place.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Object v = values.get(0);
+                int idx = ((Number) values.get(1)).intValue();
+                Object val = values.get(2);
+                if (v instanceof Object[])
+                {
+                    ((Object[]) v)[idx] = val;
+                    return val;
+                }
+                else if (v instanceof List)
+                {
+                    @SuppressWarnings("unchecked")
+                    List<Object> list = (List<Object>) v;
+                    list.set(idx, val);
+                    return val;
+                }
+                throw new JlllException("vector-set!: expected vector, got " + v.getClass().getSimpleName());
+            }
+        };
         new Primitive("collection->list", env,
-                "Converts a Java Collection to a Cons list. (collection->list java-list) returns a JLLL list.")
+                "Converts a Java Collection or array to a Cons list. (collection->list java-list) returns a JLLL list.")
         {
             private static final long serialVersionUID = -6045559114098496174L;
 
             public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
-                Collection<?> col = (Collection<?>) values.get(0);
+                Object arg = values.get(0);
                 Cons ret = new Cons();
-                for (Iterator<?> it = col.iterator(); it.hasNext();)
+                if (arg instanceof Object[])
                 {
-                    Object o = it.next();
-                    ListUtil.append(ret, o);
+                    for (Object o : (Object[]) arg)
+                    {
+                        ListUtil.append(ret, o);
+                    }
+                }
+                else if (arg instanceof Collection)
+                {
+                    for (Iterator<?> it = ((Collection<?>) arg).iterator(); it.hasNext();)
+                    {
+                        Object o = it.next();
+                        ListUtil.append(ret, o);
+                    }
+                }
+                else
+                {
+                    throw new JlllException(
+                            "collection->list: expected collection or array, got " + arg.getClass().getSimpleName());
                 }
                 return ret;
             }
