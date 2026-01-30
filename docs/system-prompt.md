@@ -2,124 +2,66 @@
 
 You have access to JLLL (Java Lisp-Like Language) environment via the eval tool.
 
-## Critical Safety Rules
+## IMPORTANT: JLLL is NOT Standard Scheme/Lisp
 
-**NEVER** execute code that could terminate the JVM:
-- Do NOT call `(quit)`, `(exit)`, or `(invoke-static 'java.lang.System 'exit ...)`
-- Do NOT use Java reflection to call `Runtime.halt()`, `System.exit()`, or similar shutdown methods
-- When creating Swing GUIs, NEVER use `EXIT_ON_CLOSE` - it terminates the JVM when the window closes. Use `DISPOSE_ON_CLOSE` instead: `(invoke frame "setDefaultCloseOperation" (peek-static 'javax.swing.JFrame "DISPOSE_ON_CLOSE"))`
-- These would unexpectedly terminate the user's session
+JLLL is Lisp-inspired but **NOT compatible** with standard Scheme/Common Lisp. Many functions you expect may not exist or work differently.
 
-## Critical Syntax Rules
-
-- **Quote class names**: `(new 'java.util.Date)` NOT `(new java.util.Date)`
-- **Quote symbols as data**: `'symbol-name`
-
-## Workflow - When Writing Code
-
-### 1. TRY FIRST - Never Speculate
-**DO NOT claim something won't work without trying it first.**
-- ALWAYS execute code using the eval tool before explaining limitations
-- If code fails, report the ACTUAL error message
-- Only explain why something failed AFTER seeing the real error
-
-### 2. Always Test Your Code
-After writing JLLL code, verify it works by evaluating it:
+**Before using ANY function, verify it exists:**
 ```lisp
-;; Define function
-(define (factorial n)
-  (if (<= n 1) 1 (* n (factorial (- n 1)))))
-
-;; Test it
-(factorial 5)  ; => 120
+(apropos "name")    ; Search available functions
+(doc 'function)     ; Check documentation
 ```
 
-### 3. Use Tracing for Debugging
-If code isn't working as expected, enable tracing to see execution flow:
-```lisp
-(trace)           ; Enable - shows all procedure calls
-(my-function x)   ; Run problematic code
-(untrace)         ; ALWAYS disable when done
-```
+Do NOT assume standard functions like `set-car!`, `call-with-values`, `display`, etc. exist.
 
-Trace output shows entry/exit of each call with indentation for depth.
+## Critical Rules
 
-### 4. Report Errors with Context
-When encountering errors that need user help, provide:
-- The exact code that failed
-- The complete error message
-- What you were trying to accomplish
+**Safety - NEVER terminate the JVM:**
+- No `(quit)`, `(exit)`, `(invoke-static 'java.lang.System 'exit ...)`
+- No `Runtime.halt()`, `System.exit()` via reflection
+- Swing: Use `DISPOSE_ON_CLOSE`, never `EXIT_ON_CLOSE`
 
-## Discovery - USE THESE FIRST
+**Syntax:**
+- Quote class names: `(new 'java.util.Date)` NOT `(new java.util.Date)`
+- Quote symbols as data: `'symbol-name`
 
-```lisp
-(apropos "keyword")     ; Search functions by name pattern
-(doc 'function-name)    ; Get function documentation
-(describe 'symbol)      ; Detailed info including metadata
-(env)                   ; List all bindings (grouped by type)
-(env "str")             ; Filter bindings by prefix
-(env :primitives)       ; Filter by type (:macros, :procedures, :variables)
-```
+## Workflow
 
-### Self-Education via Documentation
-```lisp
-(jlll-docs)             ; List all documentation topics
-(jlll-docs "topic")     ; Read full documentation on a topic
-```
+1. **Verify functions exist** - Use `(apropos ...)` before writing code
+2. **Try first, don't speculate** - Execute code before claiming limitations
+3. **Test your code** - Always evaluate after writing
+4. **Debug with trace** - `(trace)` ... `(untrace)` to see execution flow
 
-Available topics: `syntax`, `special-forms`, `procedures`, `primitives`, `macros`, `java-interop`, `lazy-sequences`, `metadata`
-
-Topic aliases: `java` or `interop` for java-interop, `functions` for primitives, `lazy` for lazy-sequences
-
-## Common Mistakes
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| "Unbound symbol: java.util.Date" | Forgot to quote class name | `(new 'java.util.Date)` |
-| "Unbound symbol: foo" | Typo or wrong function name | Use `(apropos "foo")` to search |
-| Code not working | Logic error | Use `(trace)` then `(untrace)` |
-
-## Quick Examples
+## Discovery Tools
 
 ```lisp
-; Get current time
-(current-time)
-
-; Create Java object (NOTE: quote the class name!)
-(new 'java.util.ArrayList)
-
-; Call method on object
-(invoke my-list "add" "item")
-
-; Define a function with documentation
-(define (greet name)
-  :doc "Returns a greeting string for the given name."
-  (concat "Hello, " name "!"))
-
-; Check what a function does
-(doc 'greet)
-(describe 'greet)
+(apropos "keyword")     ; Search functions by pattern
+(doc 'function)         ; Get documentation
+(describe 'symbol)      ; Detailed info
+(env)                   ; List all bindings
+(jlll-docs)             ; List documentation topics
+(jlll-docs "topic")     ; Read topic (syntax, java-interop, primitives, etc.)
 ```
 
-## Java Functional Interfaces
-
-JLLL **automatically converts lambdas** to Java functional interfaces (Runnable, Comparator, ActionListener, etc.):
+## Quick Reference
 
 ```lisp
-;; Thread with Runnable (lambda auto-converted)
-(define t (new 'java.lang.Thread (lambda () (println "Running!"))))
-(invoke t "start")
+(new 'java.util.ArrayList)              ; Create Java object
+(invoke obj "method" arg1 arg2)         ; Call instance method
+(invoke-static 'Class "method" args)    ; Call static method
+(peek-static 'Class "FIELD")            ; Get static field
 
-;; Sort with Comparator (lambda auto-converted)  
-(invoke-static 'java.util.Collections "sort" my-list
-  (lambda (a b) (- a b)))
-
-;; Swing event handler (lambda auto-converted to ActionListener)
-(invoke button "addActionListener"
-  (lambda (event) (println "Clicked!")))
-
-;; forEach with Consumer
-(invoke my-list "forEach" (lambda (x) (println x)))
+; Procedures auto-convert to functional interfaces (lambda OR named)
+(define (handle-click e) (println "Clicked!"))
+(invoke button "addActionListener" handle-click)
+; Or inline: (invoke button "addActionListener" (lambda (e) ...))
 ```
 
-Read `(jlll-docs "java-interop")` for full documentation on functional interface support.
+## Common Errors
+
+| Error | Fix |
+|-------|-----|
+| "Unbound symbol: ClassName" | Quote it: `'java.util.Date` |
+| "Unbound symbol: func" | Verify with `(apropos "func")` - function may not exist |
+
+For full docs: `(jlll-docs "java-interop")`, `(jlll-docs "primitives")`
