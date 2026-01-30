@@ -27,6 +27,7 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -104,8 +105,8 @@ public class AILib implements Library
         // ========== ai-session-create ==========
         new Primitive("ai-session-create", env,
                 "Creates a new AI session. Options: :name (string), :system (system prompt), "
-                        + ":model (model name), :tools (list of tools), :auto-save (file path for auto-saving). "
-                        + "Returns the session object.")
+                        + ":model (model name), :tools (list of tools), :auto-save (file path for auto-saving), "
+                        + ":trace (boolean, enable tool call tracing). " + "Returns the session object.")
         {
             private static final long serialVersionUID = 1L;
 
@@ -118,6 +119,7 @@ public class AILib implements Library
                 List<AITool> tools = new ArrayList<>();
                 boolean addEvalTool = true;
                 String autoSavePath = null;
+                boolean traceToolCalls = false;
                 // Parse keyword arguments
                 for (int i = 0; i < values.length(); i += 2)
                 {
@@ -155,6 +157,9 @@ public class AILib implements Library
                         case ":auto-save" :
                             autoSavePath = value.toString();
                             break;
+                        case ":trace" :
+                            traceToolCalls = Boolean.TRUE.equals(value);
+                            break;
                     }
                 }
                 // Detect provider
@@ -178,6 +183,11 @@ public class AILib implements Library
                     session.setAutoSavePath(autoSavePath);
                     // Perform initial save
                     session.performAutoSave(env);
+                }
+                // Enable tool tracing if requested
+                if (traceToolCalls)
+                {
+                    session.setTraceToolCalls(true);
                 }
                 return session;
             }
@@ -795,6 +805,89 @@ public class AILib implements Library
                 throw new JlllException("ai-session-auto-save: invalid arguments");
             }
         };
+        // ========== ai-session-trace ==========
+        new Primitive("ai-session-trace", env,
+                "Enables tool call tracing for a session. When enabled, tool calls and results "
+                        + "are printed to the console and stored in session history for persistence. "
+                        + "(ai-session-trace) enables for current session. "
+                        + "(ai-session-trace session) enables for specific session.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                AISession session;
+                if (values.length() == 0)
+                {
+                    session = getCurrentSession(env);
+                }
+                else if (values.get(0) instanceof AISession s)
+                {
+                    session = s;
+                }
+                else
+                {
+                    throw new JlllException("ai-session-trace: argument must be a session");
+                }
+                session.setTraceToolCalls(true);
+                return true;
+            }
+        };
+        // ========== ai-session-untrace ==========
+        new Primitive("ai-session-untrace", env,
+                "Disables tool call tracing for a session. " + "(ai-session-untrace) disables for current session. "
+                        + "(ai-session-untrace session) disables for specific session.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                AISession session;
+                if (values.length() == 0)
+                {
+                    session = getCurrentSession(env);
+                }
+                else if (values.get(0) instanceof AISession s)
+                {
+                    session = s;
+                }
+                else
+                {
+                    throw new JlllException("ai-session-untrace: argument must be a session");
+                }
+                session.setTraceToolCalls(false);
+                return false;
+            }
+        };
+        // ========== ai-session-trace? ==========
+        new Primitive("ai-session-trace?", env,
+                "Returns true if tool call tracing is enabled for a session. "
+                        + "(ai-session-trace?) checks current session. "
+                        + "(ai-session-trace? session) checks specific session.")
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object apply(Cons values, Environment env) throws JlllException
+            {
+                AISession session;
+                if (values.length() == 0)
+                {
+                    session = getCurrentSession(env);
+                }
+                else if (values.get(0) instanceof AISession s)
+                {
+                    session = s;
+                }
+                else
+                {
+                    throw new JlllException("ai-session-trace?: argument must be a session");
+                }
+                return session.isTraceToolCalls();
+            }
+        };
         // Load additional JLLL definitions (ai-session-restore, etc.)
         Jlll.eval("(load-system-script \"ai.jlll\")", env);
     }
@@ -950,12 +1043,25 @@ public class AILib implements Library
             AtomicReference<StringBuilder> fullResponse, List<ChatMessage> messages, List<ToolSpecification> toolSpecs,
             StreamingChatLanguageModel model, Double temperature)
     {
+        boolean tracing = session.isTraceToolCalls();
+        Console console = tracing ? KernelLib.getConsole(session.getEnvironment()) : null;
+        // If tracing, store the AI message with tool calls in history
+        if (tracing)
+        {
+            session.getHistory().add(aiMessage);
+        }
         // Execute each tool call
         List<ToolExecutionResultMessage> toolResults = new ArrayList<>();
         for (ToolExecutionRequest request : aiMessage.toolExecutionRequests())
         {
             String toolName = request.name();
             AITool tool = session.getTool(toolName);
+            // Trace tool call if enabled
+            if (tracing)
+            {
+                console.println("[TOOL CALL] " + toolName);
+                console.println("  Arguments: " + request.arguments());
+            }
             String result;
             if (tool != null)
             {
@@ -965,7 +1071,21 @@ public class AILib implements Library
             {
                 result = "Error: Unknown tool '" + toolName + "'";
             }
-            toolResults.add(ToolExecutionResultMessage.from(request, result));
+            // Trace tool result if enabled
+            if (tracing)
+            {
+                console.println("[TOOL RESULT] " + toolName);
+                // Truncate very long results for console output
+                String displayResult = result.length() > 500 ? result.substring(0, 500) + "..." : result;
+                console.println("  Result: " + displayResult);
+            }
+            ToolExecutionResultMessage resultMsg = ToolExecutionResultMessage.from(request, result);
+            toolResults.add(resultMsg);
+            // If tracing, store tool result in history
+            if (tracing)
+            {
+                session.getHistory().add(resultMsg);
+            }
         }
         // Add AI message and tool results to messages for next request
         List<ChatMessage> newMessages = new ArrayList<>(messages);

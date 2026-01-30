@@ -14,10 +14,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
@@ -77,6 +79,8 @@ public class AISession implements Serializable
     private transient Environment environment;
     /** Path for auto-saving session after each interaction (null = disabled) */
     private String autoSavePath;
+    /** Whether to trace tool calls (console output + persistence in history) */
+    private boolean traceToolCalls = false;
 
     /**
      * Creates a new AI session.
@@ -554,6 +558,32 @@ public class AISession implements Serializable
     {
         this.autoSavePath = path;
     }
+    // ========== Tool Tracing Methods ==========
+
+    /**
+     * Checks if tool call tracing is enabled for this session.
+     * When enabled, tool calls and results are printed to the console
+     * and stored in the session history for persistence.
+     *
+     * @return true if tracing is enabled
+     */
+    public boolean isTraceToolCalls()
+    {
+        return traceToolCalls;
+    }
+
+    /**
+     * Enables or disables tool call tracing for this session.
+     * When enabled, tool calls and results are printed to the console
+     * and stored in the session history for persistence.
+     *
+     * @param trace
+     *            true to enable tracing, false to disable
+     */
+    public void setTraceToolCalls(boolean trace)
+    {
+        this.traceToolCalls = trace;
+    }
 
     /**
      * Performs an auto-save if auto-save is enabled.
@@ -678,10 +708,32 @@ public class AISession implements Serializable
             else if (msg instanceof AiMessage am)
             {
                 msgMap.put("content", am.text());
+                // Serialize tool calls if present
+                if (am.hasToolExecutionRequests())
+                {
+                    List<Map<String, Object>> toolCalls = new ArrayList<>();
+                    for (ToolExecutionRequest req : am.toolExecutionRequests())
+                    {
+                        Map<String, Object> tc = new LinkedHashMap<>();
+                        tc.put("id", req.id());
+                        tc.put("name", req.name());
+                        tc.put("arguments", req.arguments());
+                        toolCalls.add(tc);
+                    }
+                    msgMap.put("toolCalls", toolCalls);
+                }
+            }
+            else if (msg instanceof ToolExecutionResultMessage trm)
+            {
+                msgMap.put("toolCallId", trm.id());
+                msgMap.put("toolName", trm.toolName());
+                msgMap.put("content", trm.text());
             }
             historyList.add(msgMap);
         }
         map.put("history", historyList);
+        // Save tracing setting
+        map.put("traceToolCalls", traceToolCalls);
         // Serialize custom tools (exclude built-in eval tool)
         List<Map<String, Object>> toolsList = new ArrayList<>();
         for (AITool tool : tools.values())
@@ -767,6 +819,12 @@ public class AISession implements Serializable
         {
             session.setMaxTokens(((Number) maxTokensObj).intValue());
         }
+        // Restore traceToolCalls setting
+        Object traceObj = map.get("traceToolCalls");
+        if (traceObj instanceof Boolean)
+        {
+            session.setTraceToolCalls((Boolean) traceObj);
+        }
         // Restore history
         Object historyObj = map.get("history");
         if (historyObj instanceof List)
@@ -782,9 +840,43 @@ public class AISession implements Serializable
                     {
                         session.addUserMessage(content);
                     }
-                    else if ("ai".equals(type) && content != null)
+                    else if ("ai".equals(type))
                     {
-                        session.addAiMessage(content);
+                        // Check if this AI message has tool calls
+                        Object toolCallsObj = msgMap.get("toolCalls");
+                        if (toolCallsObj instanceof List && !((List<?>) toolCallsObj).isEmpty())
+                        {
+                            // Restore AI message with tool execution requests
+                            List<ToolExecutionRequest> requests = new ArrayList<>();
+                            for (Object tcItem : (List<?>) toolCallsObj)
+                            {
+                                if (tcItem instanceof Map)
+                                {
+                                    Map<String, Object> tcMap = (Map<String, Object>) tcItem;
+                                    String tcId = (String) tcMap.get("id");
+                                    String tcName = (String) tcMap.get("name");
+                                    String tcArgs = (String) tcMap.get("arguments");
+                                    requests.add(ToolExecutionRequest.builder().id(tcId).name(tcName).arguments(tcArgs)
+                                            .build());
+                                }
+                            }
+                            AiMessage aiMsg = AiMessage.builder().text(content).toolExecutionRequests(requests).build();
+                            session.history.add(aiMsg);
+                        }
+                        else if (content != null)
+                        {
+                            session.addAiMessage(content);
+                        }
+                    }
+                    else if ("tool_execution_result".equals(type))
+                    {
+                        // Restore tool execution result message
+                        String toolCallId = (String) msgMap.get("toolCallId");
+                        String toolName = (String) msgMap.get("toolName");
+                        ToolExecutionResultMessage trm = ToolExecutionResultMessage.from(
+                                ToolExecutionRequest.builder().id(toolCallId).name(toolName).arguments("").build(),
+                                content != null ? content : "");
+                        session.history.add(trm);
                     }
                 }
             }
