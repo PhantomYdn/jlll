@@ -105,7 +105,8 @@ public class AILib implements Library
         // ========== ai-session-create ==========
         new Primitive("ai-session-create", env,
                 "Creates a new AI session. Options: :name (string), :system (system prompt), "
-                        + ":model (model name), :tools (list of tools), :auto-save (file path for auto-saving), "
+                        + ":model (model name), :tier (\"best\", \"balanced\", \"fast\"), "
+                        + ":tools (list of tools), :auto-save (file path for auto-saving), "
                         + ":trace (boolean, enable tool call tracing). " + "Returns the session object.")
         {
             private static final long serialVersionUID = 1L;
@@ -116,6 +117,7 @@ public class AILib implements Library
                 String name = null;
                 String systemPrompt = null;
                 String modelName = null;
+                AIConfig.ModelTier tier = null;
                 List<AITool> tools = new ArrayList<>();
                 boolean addEvalTool = true;
                 String autoSavePath = null;
@@ -138,6 +140,16 @@ public class AILib implements Library
                             break;
                         case ":model" :
                             modelName = value.toString();
+                            break;
+                        case ":tier" :
+                            try
+                            {
+                                tier = AIConfig.ModelTier.fromString(value.toString());
+                            }
+                            catch (IllegalArgumentException e)
+                            {
+                                throw new JlllException("ai-session-create: " + e.getMessage());
+                            }
                             break;
                         case ":tools" :
                             if (value instanceof Cons toolList)
@@ -165,6 +177,11 @@ public class AILib implements Library
                 // Detect provider
                 AIConfig config = AIConfig.getInstance();
                 AIConfig.Provider provider = config.detectProvider();
+                // Resolve model from tier if not explicitly specified
+                if (modelName == null && tier != null)
+                {
+                    modelName = config.getModel(provider, tier);
+                }
                 // Create session
                 AISession session = new AISession(name, provider, modelName, systemPrompt, env);
                 // Add eval tool by default
@@ -503,7 +520,7 @@ public class AILib implements Library
         };
         // ========== ai-configure ==========
         new Primitive("ai-configure", env, "Configures AI settings. (ai-configure :openai-api-key \"sk-...\") or "
-                + "(ai-configure :default-model \"gpt-4\")")
+                + "(ai-configure :default-model \"gpt-4\") or (ai-configure :default-tier \"fast\")")
         {
             private static final long serialVersionUID = 15L;
 
@@ -534,6 +551,16 @@ public class AILib implements Library
                         case ":default-model" :
                             config.setDefaultModel(value.toString());
                             break;
+                        case ":default-tier" :
+                            try
+                            {
+                                config.setDefaultTier(AIConfig.ModelTier.fromString(value.toString()));
+                            }
+                            catch (IllegalArgumentException e)
+                            {
+                                throw new JlllException("ai-configure: " + e.getMessage());
+                            }
+                            break;
                         case ":default-temperature" :
                             config.setDefaultTemperature(((Number) value).doubleValue());
                             break;
@@ -556,6 +583,30 @@ public class AILib implements Library
                 for (Map.Entry<String, Object> entry : config.entrySet())
                 {
                     result.put(Symbol.intern(entry.getKey()), entry.getValue());
+                }
+                return result;
+            }
+        };
+        // ========== ai-models ==========
+        new Primitive("ai-models", env,
+                "Returns all model configurations as a nested hash-map of provider -> tier -> model. (ai-models)")
+        {
+            private static final long serialVersionUID = 22L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                Map<String, Map<String, String>> modelsMap = AIConfig.getInstance().getModelsMap();
+                // Convert to JLLL hash-map with symbol keys
+                Map<Object, Object> result = new LinkedHashMap<>();
+                for (Map.Entry<String, Map<String, String>> providerEntry : modelsMap.entrySet())
+                {
+                    Map<Object, Object> tierMap = new LinkedHashMap<>();
+                    for (Map.Entry<String, String> tierEntry : providerEntry.getValue().entrySet())
+                    {
+                        tierMap.put(Symbol.intern(tierEntry.getKey()), tierEntry.getValue());
+                    }
+                    result.put(Symbol.intern(providerEntry.getKey()), tierMap);
                 }
                 return result;
             }

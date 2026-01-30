@@ -71,6 +71,68 @@ public class AILibTestCase
         Map<?, ?> config = (Map<?, ?>) eval("(ai-config)", env);
         assertEquals("test-model", config.get(ru.ydn.jlll.common.Symbol.intern("default-model-override")));
     }
+
+    @Test
+    public void testAiConfigDefaultTier() throws Exception
+    {
+        // Check default tier is balanced
+        Map<?, ?> config = (Map<?, ?>) eval("(ai-config)", env);
+        assertEquals("balanced", config.get(Symbol.intern("default-tier")));
+    }
+
+    @Test
+    public void testAiConfigureDefaultTier() throws Exception
+    {
+        // Set default tier to fast
+        eval("(ai-configure :default-tier \"fast\")", env);
+        Map<?, ?> config = (Map<?, ?>) eval("(ai-config)", env);
+        assertEquals("fast", config.get(Symbol.intern("default-tier")));
+        // Reset
+        eval("(ai-configure :default-tier \"balanced\")", env);
+    }
+
+    @Test
+    public void testAiConfigAvailableTiers() throws Exception
+    {
+        Map<?, ?> config = (Map<?, ?>) eval("(ai-config)", env);
+        Object tiers = config.get(Symbol.intern("available-tiers"));
+        assertTrue("available-tiers should be a list", tiers instanceof java.util.List);
+        @SuppressWarnings("unchecked")
+        java.util.List<String> tierList = (java.util.List<String>) tiers;
+        assertTrue("Should have best tier", tierList.contains("best"));
+        assertTrue("Should have balanced tier", tierList.contains("balanced"));
+        assertTrue("Should have fast tier", tierList.contains("fast"));
+    }
+
+    @Test
+    public void testAiModels() throws Exception
+    {
+        Object result = eval("(ai-models)", env);
+        assertTrue("ai-models should return a Map", result instanceof Map);
+        @SuppressWarnings("unchecked")
+        Map<Object, Object> models = (Map<Object, Object>) result;
+        // Check anthropic provider exists
+        Object anthropic = models.get(Symbol.intern("anthropic"));
+        assertTrue("anthropic should be a Map", anthropic instanceof Map);
+        @SuppressWarnings("unchecked")
+        Map<Object, Object> anthropicTiers = (Map<Object, Object>) anthropic;
+        // Check tiers exist
+        assertNotNull("anthropic should have best tier", anthropicTiers.get(Symbol.intern("best")));
+        assertNotNull("anthropic should have balanced tier", anthropicTiers.get(Symbol.intern("balanced")));
+        assertNotNull("anthropic should have fast tier", anthropicTiers.get(Symbol.intern("fast")));
+    }
+
+    @Test
+    public void testAiConfigProviderPriority() throws Exception
+    {
+        Map<?, ?> config = (Map<?, ?>) eval("(ai-config)", env);
+        Object priority = config.get(Symbol.intern("provider-priority"));
+        assertTrue("provider-priority should be a list", priority instanceof java.util.List);
+        @SuppressWarnings("unchecked")
+        java.util.List<String> priorityList = (java.util.List<String>) priority;
+        // Anthropic should be first
+        assertEquals("anthropic", priorityList.get(0));
+    }
     // ========== Session Management Tests ==========
 
     @Test
@@ -93,6 +155,57 @@ public class AILibTestCase
         assertTrue("Result should be an AISession", session instanceof AISession);
         AISession aiSession = (AISession) session;
         assertEquals("test-session", aiSession.getName());
+    }
+
+    @Test
+    public void testAiSessionCreateWithTier() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionCreateWithTier: No AI provider configured");
+            return;
+        }
+        // Create session with fast tier
+        Object session = eval("(ai-session-create :name \"tier-test\" :tier \"fast\")", env);
+        assertNotNull("ai-session-create should return a session", session);
+        assertTrue("Result should be an AISession", session instanceof AISession);
+        AISession aiSession = (AISession) session;
+        // Model name should be the fast tier model for the detected provider
+        String modelName = aiSession.getModelName();
+        assertNotNull("Model name should not be null", modelName);
+        System.out.println("Session with fast tier created with model: " + modelName);
+    }
+
+    @Test
+    public void testAiSessionCreateWithBestTier() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionCreateWithBestTier: No AI provider configured");
+            return;
+        }
+        // Create session with best tier
+        Object session = eval("(ai-session-create :name \"best-tier-test\" :tier \"best\")", env);
+        assertNotNull("ai-session-create should return a session", session);
+        AISession aiSession = (AISession) session;
+        String modelName = aiSession.getModelName();
+        assertNotNull("Model name should not be null", modelName);
+        System.out.println("Session with best tier created with model: " + modelName);
+    }
+
+    @Test
+    public void testAiSessionCreateModelOverridesTier() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionCreateModelOverridesTier: No AI provider configured");
+            return;
+        }
+        // When both :model and :tier are specified, :model takes precedence
+        Object session = eval("(ai-session-create :name \"override-test\" :tier \"fast\" :model \"custom-model\")",
+                env);
+        AISession aiSession = (AISession) session;
+        assertEquals("custom-model", aiSession.getModelName());
     }
 
     @Test

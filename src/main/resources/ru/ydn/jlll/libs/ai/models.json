@@ -1,0 +1,38 @@
+{
+  "defaultTier": "balanced",
+  "providerPriority": ["anthropic", "openai", "google", "ollama"],
+  "providers": {
+    "anthropic": {
+      "envVar": "ANTHROPIC_API_KEY",
+      "tiers": {
+        "best": "claude-opus-4-5",
+        "balanced": "claude-sonnet-4-5",
+        "fast": "claude-haiku-4-5"
+      }
+    },
+    "openai": {
+      "envVar": "OPENAI_API_KEY",
+      "tiers": {
+        "best": "o1",
+        "balanced": "gpt-4o",
+        "fast": "gpt-4o-mini"
+      }
+    },
+    "google": {
+      "envVar": "GOOGLE_AI_API_KEY",
+      "tiers": {
+        "best": "gemini-1.5-pro",
+        "balanced": "gemini-1.5-pro",
+        "fast": "gemini-1.5-flash"
+      }
+    },
+    "ollama": {
+      "envVar": "OLLAMA_BASE_URL",
+      "tiers": {
+        "best": "llama3.2",
+        "balanced": "llama3.2",
+        "fast": "llama3.2"
+      }
+    }
+  }
+}

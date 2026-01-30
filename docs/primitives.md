@@ -1029,10 +1029,53 @@ Atoms provide thread-safe mutable references with atomic updates.
 LLM integration using LangChain4j. Provides session-based AI interactions with conversation memory, streaming responses, and tool calling.
 
 **Configuration:** API keys are read from environment variables:
+- `ANTHROPIC_API_KEY` - Anthropic (Claude) - **default provider**
 - `OPENAI_API_KEY` - OpenAI (GPT-4, GPT-4o, etc.)
-- `ANTHROPIC_API_KEY` - Anthropic (Claude)
 - `GOOGLE_AI_API_KEY` - Google AI (Gemini)
 - `OLLAMA_BASE_URL` - Ollama (local models)
+
+### Model Tiers
+
+Models are organized into three capability tiers (best → fast):
+
+| Tier | Description | Anthropic | OpenAI | Google | Ollama |
+|------|-------------|-----------|--------|--------|--------|
+| `best` | Most capable, highest cost | claude-opus-4-5 | o1 | gemini-1.5-pro | llama3.2 |
+| `balanced` | Good balance (default) | claude-sonnet-4-5 | gpt-4o | gemini-1.5-pro | llama3.2 |
+| `fast` | Fastest, lowest cost | claude-haiku-4-5 | gpt-4o-mini | gemini-1.5-flash | llama3.2 |
+
+**Default:** `balanced` tier is used when no model is specified.
+
+**Model Configuration:**
+- Configuration is stored in `models.json` (bundled resource)
+- Can be overridden by user config files (see below)
+- Provider priority: Anthropic → OpenAI → Google → Ollama
+
+### Custom Model Configuration
+
+You can override the default model configuration by creating a `models.json` file:
+
+**Override Priority (highest → lowest):**
+1. `JLLL_AI_MODELS_PATH` environment variable (explicit path)
+2. `./models.json` (local project directory)
+3. `~/.jlll/models.json` (user home directory)
+4. Bundled resource (default)
+
+**Example `~/.jlll/models.json`:**
+```json
+{
+  "defaultTier": "fast",
+  "providers": {
+    "anthropic": {
+      "tiers": {
+        "balanced": "claude-sonnet-4-0"
+      }
+    }
+  }
+}
+```
+
+Configs are merged, so you only need to specify what you want to change.
 
 ### Session Management
 
@@ -1050,7 +1093,8 @@ LLM integration using LangChain4j. Provides session-based AI interactions with c
 **Session Options:**
 - `:name "name"` - Session name (auto-generated if omitted)
 - `:system "prompt"` - Custom system message (default: loaded from `docs/system-prompt.md`)
-- `:model "gpt-4o"` - Model override
+- `:tier "best"` - Model tier ("best", "balanced", "fast")
+- `:model "gpt-4o"` - Explicit model override (takes precedence over tier)
 - `:tools (list tool1 tool2)` - Additional tools
 - `:eval true/false` - Enable/disable eval tool (default: true)
 
@@ -1137,23 +1181,39 @@ By default, sessions include an `eval` tool that allows the LLM to execute JLLL 
 
 | Primitive | Description | Example |
 |-----------|-------------|---------|
-| `ai-configure` | Set configuration options | `(ai-configure :default-model "gpt-4")` |
+| `ai-configure` | Set configuration options | `(ai-configure :default-tier "fast")` |
 | `ai-config` | Get current configuration | `(ai-config)` => hash-map |
+| `ai-models` | Get all model configurations | `(ai-models)` => nested hash-map |
 
 **Configuration Options:**
 - `:openai-api-key` - Set OpenAI API key
 - `:anthropic-api-key` - Set Anthropic API key
 - `:google-ai-api-key` - Set Google AI API key
 - `:ollama-base-url` - Set Ollama base URL
-- `:default-model` - Override default model
+- `:default-tier` - Set default model tier ("best", "balanced", "fast")
+- `:default-model` - Override default model (explicit model name)
 
 ### Examples
 
 ```lisp
-;; Simple conversation
+;; Simple conversation (uses default "balanced" tier)
 (ai-session-create :name "assistant")
 (ai-session-activate (car (ai-sessions)))
 (println (string-join (realize (ai "What is 2+2?")) ""))
+
+;; Use "best" tier for complex reasoning tasks
+(ai-session-create :name "expert" :tier "best")
+
+;; Use "fast" tier for quick, simple tasks
+(ai-session-create :name "quick" :tier "fast")
+
+;; Change default tier globally
+(ai-configure :default-tier "fast")
+
+;; View all available models
+(ai-models)
+;; => {:anthropic {:best "claude-opus-4-5" :balanced "claude-sonnet-4-5" :fast "claude-haiku-4-5"}
+;;     :openai {:best "o1" :balanced "gpt-4o" :fast "gpt-4o-mini"} ...}
 
 ;; With system prompt
 (define coder (ai-session-create 
