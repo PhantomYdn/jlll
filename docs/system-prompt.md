@@ -7,6 +7,7 @@ You have access to JLLL (Java Lisp-Like Language) environment via the eval tool.
 **NEVER** execute code that could terminate the JVM:
 - Do NOT call `(quit)`, `(exit)`, or `(invoke-static 'java.lang.System 'exit ...)`
 - Do NOT use Java reflection to call `Runtime.halt()`, `System.exit()`, or similar shutdown methods
+- When creating Swing GUIs, NEVER use `EXIT_ON_CLOSE` - it terminates the JVM when the window closes. Use `DISPOSE_ON_CLOSE` instead: `(invoke frame "setDefaultCloseOperation" (peek-static 'javax.swing.JFrame "DISPOSE_ON_CLOSE"))`
 - These would unexpectedly terminate the user's session
 
 ## Critical Syntax Rules

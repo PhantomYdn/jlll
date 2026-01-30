@@ -12,7 +12,7 @@
 
 ;; Create main frame
 (define frame (new JFrame "JLLL Event Demo"))
-(invoke frame "setDefaultCloseOperation" (peek-static JFrame "EXIT_ON_CLOSE"))
+(invoke frame "setDefaultCloseOperation" (peek-static JFrame "DISPOSE_ON_CLOSE"))
 (invoke frame "setSize" 400 200)
 
 ;; Counter state

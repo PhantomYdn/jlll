@@ -26,7 +26,7 @@
 
 ;; Create Frame
 (define frame (new JFrame "JLLL Tic-Tac-Toe - You vs AI"))
-(invoke frame "setDefaultCloseOperation" (peek-static JFrame "EXIT_ON_CLOSE"))
+(invoke frame "setDefaultCloseOperation" (peek-static JFrame "DISPOSE_ON_CLOSE"))
 (invoke frame "setSize" 400 500)
 
 ;; Main panel
