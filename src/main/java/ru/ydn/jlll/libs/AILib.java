@@ -177,17 +177,17 @@ public class AILib implements Library
                 {
                     session.addTool(tool);
                 }
+                // Enable tool tracing if requested (must be set before auto-save!)
+                if (traceToolCalls)
+                {
+                    session.setTraceToolCalls(true);
+                }
                 // Set auto-save path if provided
                 if (autoSavePath != null)
                 {
                     session.setAutoSavePath(autoSavePath);
                     // Perform initial save
                     session.performAutoSave(env);
-                }
-                // Enable tool tracing if requested
-                if (traceToolCalls)
-                {
-                    session.setTraceToolCalls(true);
                 }
                 return session;
             }
@@ -762,6 +762,12 @@ public class AILib implements Library
                         AISession session = getCurrentSession(env);
                         session.setAutoSavePath(null);
                         return Null.NULL;
+                    }
+                    else if (Boolean.TRUE.equals(first))
+                    {
+                        // Invalid: true is not a valid path
+                        throw new JlllException("ai-session-auto-save: must provide a file path string, not true. "
+                                + "Use (ai-session-auto-save \"path.json\") to enable auto-save.");
                     }
                     else
                     {
