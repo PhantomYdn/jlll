@@ -1683,6 +1683,12 @@ Save and restore AI sessions to/from JSON files:
 (ai-session-load "coder.json" :name "new-name")     ; override name
 (ai-session-load "coder.json" :activate true)       ; load and activate
 (ai-session-load "coder.json" :eval false)          ; don't add eval tool
+
+;; Auto-save: automatically save session after each AI interaction
+(ai-session-create :name "coder" :auto-save ".jlll/coder.json")
+(ai-session-auto-save ".jlll/session.json")         ; enable on current session
+(ai-session-auto-save false)                         ; disable auto-save
+(ai-session-auto-save)                               ; query auto-save path or false
 ```
 
 **Session file format (JSON):**
@@ -1690,11 +1696,15 @@ Save and restore AI sessions to/from JSON files:
 - Configuration (provider, model, system prompt, temperature, maxTokens)
 - Conversation history (user/AI messages)
 - Custom tools (with procedure source code)
+- Auto-save path (if enabled)
 
 **Notes:**
 - Built-in eval tool is not saved (always recreated fresh on load)
 - Custom tools require `CompoundProcedure` (user-defined lambdas)
 - ID collision on load results in new ID with `-restored-N` suffix
+- `ai-session-save` auto-creates parent directories if needed
+- Auto-save is triggered after each AI response completes
+- Auto-save errors print warnings but don't interrupt the conversation
 
 ### Future Enhancements
 
@@ -1743,16 +1753,17 @@ These features may be added in future versions:
 ### Checklist
 
 **Session Management:**
-- [x] `ai-session-create` - Create session (`:name`, `:system`, `:model`, `:tools`, `:eval`)
+- [x] `ai-session-create` - Create session (`:name`, `:system`, `:model`, `:tools`, `:eval`, `:auto-save`)
 - [x] `ai-session-activate` - Make session active for current environment
 - [x] `ai-session-deactivate` - Deactivate current session
 - [x] `ai-session-current` - Get active session or nil
 - [x] `ai-sessions` - List all sessions
 - [x] `ai-session-name` / `ai-session-id` - Get session identity
 - [x] `ai-session?` - Test if value is a session
-- [x] `ai-session-save` - Save session to JSON file (`:pretty` option)
+- [x] `ai-session-save` - Save session to JSON file (`:pretty` option, auto-creates directories)
 - [x] `ai-session-load` - Load session from JSON file (`:name`, `:activate`, `:eval` options)
 - [x] `ai-session-restore` - Load and activate session (convenience wrapper)
+- [x] `ai-session-auto-save` - Enable/disable/query auto-save for a session
 
 **Core Operations:**
 - [x] `ai` - Chat using active session, returns lazy sequence (depends: Section 22)

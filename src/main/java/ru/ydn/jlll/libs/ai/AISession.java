@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -72,6 +75,8 @@ public class AISession implements Serializable
     private Integer maxTokens;
     /** Reference to the environment where this session was created */
     private transient Environment environment;
+    /** Path for auto-saving session after each interaction (null = disabled) */
+    private String autoSavePath;
 
     /**
      * Creates a new AI session.
@@ -526,6 +531,64 @@ public class AISession implements Serializable
             tool.setEnvironment(environment);
         }
     }
+    // ========== Auto-Save Methods ==========
+
+    /**
+     * Gets the auto-save path for this session.
+     *
+     * @return the auto-save path, or null if auto-save is disabled
+     */
+    public String getAutoSavePath()
+    {
+        return autoSavePath;
+    }
+
+    /**
+     * Sets the auto-save path for this session.
+     * When set, the session will be automatically saved to this path after each AI interaction.
+     *
+     * @param path
+     *            the file path for auto-save, or null to disable
+     */
+    public void setAutoSavePath(String path)
+    {
+        this.autoSavePath = path;
+    }
+
+    /**
+     * Performs an auto-save if auto-save is enabled.
+     * This should be called after each AI interaction completes.
+     * Errors are printed as warnings but do not throw exceptions.
+     *
+     * @param env
+     *            the environment for file operations
+     */
+    public void performAutoSave(Environment env)
+    {
+        if (autoSavePath == null || autoSavePath.isEmpty())
+        {
+            return;
+        }
+        try
+        {
+            // Create parent directories if needed
+            Path filePath = Paths.get(autoSavePath);
+            Path parent = filePath.getParent();
+            if (parent != null && !Files.exists(parent))
+            {
+                Files.createDirectories(parent);
+            }
+            // Serialize and save
+            Map<String, Object> sessionMap = toSerializableMap();
+            String json = new com.google.gson.Gson().toJson(sessionMap);
+            // Use Jlll.invokeProcedure to call spit
+            ru.ydn.jlll.common.Jlll.invokeProcedure("spit", env, autoSavePath, json);
+        }
+        catch (Exception e)
+        {
+            System.err.println("Warning: Auto-save failed for session " + name + ": " + e.getMessage());
+        }
+    }
     // ========== Static Registry Methods ==========
 
     /**
@@ -633,6 +696,11 @@ public class AISession implements Serializable
             }
         }
         map.put("tools", toolsList);
+        // Save auto-save path if set
+        if (autoSavePath != null)
+        {
+            map.put("autoSavePath", autoSavePath);
+        }
         return map;
     }
 
@@ -749,6 +817,12 @@ public class AISession implements Serializable
                     }
                 }
             }
+        }
+        // Restore auto-save path if present
+        Object autoSaveObj = map.get("autoSavePath");
+        if (autoSaveObj instanceof String)
+        {
+            session.setAutoSavePath((String) autoSaveObj);
         }
         return session;
     }

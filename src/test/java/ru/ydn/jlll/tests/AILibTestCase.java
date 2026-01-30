@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static ru.ydn.jlll.common.Jlll.eval;
@@ -931,5 +932,198 @@ public class AILibTestCase
         // Verify name was overridden
         Object current = eval("(ai-session-current)", env);
         assertEquals("renamed", ((AISession) current).getName());
+    }
+    // ========== Directory Creation Tests ==========
+
+    /**
+     * Test that ai-session-save creates parent directories automatically.
+     */
+    @Test
+    public void testAiSessionSaveCreatesDirectories() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionSaveCreatesDirectories: No AI provider configured");
+            return;
+        }
+        // Create a temp directory and define a nested path
+        File tempDir = Files.createTempDirectory("jlll-session-dirs-").toFile();
+        tempDir.deleteOnExit();
+        String nestedPath = tempDir.getAbsolutePath() + "/subdir1/subdir2/session.json";
+        // Create and save session - should create directories
+        eval("(define sess (ai-session-create :name \"dir-test\"))", env);
+        eval("(ai-session-save sess \"" + nestedPath.replace("\\", "\\\\") + "\")", env);
+        // Verify file was created
+        File savedFile = new File(nestedPath);
+        assertTrue("Session file should exist", savedFile.exists());
+        // Clean up
+        savedFile.delete();
+        new File(tempDir.getAbsolutePath() + "/subdir1/subdir2").delete();
+        new File(tempDir.getAbsolutePath() + "/subdir1").delete();
+    }
+    // ========== Auto-Save Tests ==========
+
+    /**
+     * Test enabling auto-save on current session.
+     */
+    @Test
+    public void testAiSessionAutoSaveEnable() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionAutoSaveEnable: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-autosave-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create and activate session
+        eval("(define sess (ai-session-create :name \"autosave-test\"))", env);
+        eval("(ai-session-activate sess)", env);
+        // Enable auto-save
+        Object result = eval("(ai-session-auto-save \"" + path.replace("\\", "\\\\") + "\")", env);
+        assertEquals("Should return the path", path, result);
+        // Verify auto-save is enabled
+        AISession session = (AISession) eval("(ai-session-current)", env);
+        assertEquals("Auto-save path should be set", path, session.getAutoSavePath());
+        // Verify initial save was performed
+        String content = Files.readString(tempFile.toPath());
+        assertTrue("File should contain session data", content.contains("autosave-test"));
+    }
+
+    /**
+     * Test disabling auto-save.
+     */
+    @Test
+    public void testAiSessionAutoSaveDisable() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionAutoSaveDisable: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-autosave-disable-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create session with auto-save enabled
+        eval("(define sess (ai-session-create :name \"disable-test\" :auto-save \"" + path.replace("\\", "\\\\")
+                + "\"))", env);
+        eval("(ai-session-activate sess)", env);
+        // Disable auto-save
+        eval("(ai-session-auto-save false)", env);
+        // Verify auto-save is disabled
+        AISession session = (AISession) eval("(ai-session-current)", env);
+        assertNull("Auto-save path should be null", session.getAutoSavePath());
+    }
+
+    /**
+     * Test querying auto-save status.
+     */
+    @Test
+    public void testAiSessionAutoSaveQuery() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionAutoSaveQuery: No AI provider configured");
+            return;
+        }
+        // Create session without auto-save
+        eval("(define sess (ai-session-create :name \"query-test\"))", env);
+        eval("(ai-session-activate sess)", env);
+        // Query should return false
+        Object result = eval("(ai-session-auto-save)", env);
+        assertEquals("Should return false when disabled", Boolean.FALSE, result);
+        // Enable auto-save
+        File tempFile = File.createTempFile("jlll-autosave-query-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        eval("(ai-session-auto-save \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Query should return path
+        result = eval("(ai-session-auto-save)", env);
+        assertEquals("Should return path when enabled", path, result);
+    }
+
+    /**
+     * Test creating session with :auto-save option.
+     */
+    @Test
+    public void testAiSessionCreateWithAutoSave() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionCreateWithAutoSave: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-create-autosave-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create session with auto-save
+        eval("(define sess (ai-session-create :name \"create-autosave\" :auto-save \"" + path.replace("\\", "\\\\")
+                + "\"))", env);
+        // Verify auto-save is enabled
+        AISession session = (AISession) eval("sess", env);
+        assertEquals("Auto-save path should be set", path, session.getAutoSavePath());
+        // Verify initial save was performed
+        String content = Files.readString(tempFile.toPath());
+        assertTrue("File should contain session data", content.contains("create-autosave"));
+    }
+
+    /**
+     * Test that auto-save path persists through save/load cycle.
+     */
+    @Test
+    public void testAiSessionAutoSavePersists() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionAutoSavePersists: No AI provider configured");
+            return;
+        }
+        File autoSaveFile = File.createTempFile("jlll-autosave-persist-", ".json");
+        autoSaveFile.deleteOnExit();
+        String autoSavePath = autoSaveFile.getAbsolutePath();
+        File manualSaveFile = File.createTempFile("jlll-manual-save-", ".json");
+        manualSaveFile.deleteOnExit();
+        String manualSavePath = manualSaveFile.getAbsolutePath();
+        // Create session with auto-save
+        eval("(define sess (ai-session-create :name \"persist-test\" :auto-save \"" + autoSavePath.replace("\\", "\\\\")
+                + "\"))", env);
+        // Manually save to different file
+        eval("(ai-session-save sess \"" + manualSavePath.replace("\\", "\\\\") + "\")", env);
+        // Clear and load from manual save
+        AISession.clearAllSessions();
+        Object loaded = eval("(ai-session-load \"" + manualSavePath.replace("\\", "\\\\") + "\")", env);
+        AISession loadedSession = (AISession) loaded;
+        // Verify auto-save path was restored
+        assertEquals("Auto-save path should be restored", autoSavePath, loadedSession.getAutoSavePath());
+    }
+
+    /**
+     * Test auto-save with specific session argument.
+     */
+    @Test
+    public void testAiSessionAutoSaveWithSession() throws Exception
+    {
+        if (!hasProvider)
+        {
+            System.out.println("Skipping testAiSessionAutoSaveWithSession: No AI provider configured");
+            return;
+        }
+        File tempFile = File.createTempFile("jlll-autosave-session-", ".json");
+        tempFile.deleteOnExit();
+        String path = tempFile.getAbsolutePath();
+        // Create session (not activated)
+        eval("(define sess (ai-session-create :name \"session-arg-test\"))", env);
+        // Enable auto-save on specific session
+        eval("(ai-session-auto-save sess \"" + path.replace("\\", "\\\\") + "\")", env);
+        // Verify auto-save is enabled
+        AISession session = (AISession) eval("sess", env);
+        assertEquals("Auto-save path should be set", path, session.getAutoSavePath());
+        // Query specific session
+        Object result = eval("(ai-session-auto-save sess)", env);
+        assertEquals("Should return path", path, result);
+        // Disable on specific session
+        eval("(ai-session-auto-save sess false)", env);
+        assertNull("Auto-save should be disabled", session.getAutoSavePath());
     }
 }

@@ -1,5 +1,9 @@
 package ru.ydn.jlll.libs;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,7 +104,8 @@ public class AILib implements Library
         // ========== ai-session-create ==========
         new Primitive("ai-session-create", env,
                 "Creates a new AI session. Options: :name (string), :system (system prompt), "
-                        + ":model (model name), :tools (list of tools). Returns the session object.")
+                        + ":model (model name), :tools (list of tools), :auto-save (file path for auto-saving). "
+                        + "Returns the session object.")
         {
             private static final long serialVersionUID = 1L;
 
@@ -112,6 +117,7 @@ public class AILib implements Library
                 String modelName = null;
                 List<AITool> tools = new ArrayList<>();
                 boolean addEvalTool = true;
+                String autoSavePath = null;
                 // Parse keyword arguments
                 for (int i = 0; i < values.length(); i += 2)
                 {
@@ -146,6 +152,9 @@ public class AILib implements Library
                         case ":eval" :
                             addEvalTool = Boolean.TRUE.equals(value);
                             break;
+                        case ":auto-save" :
+                            autoSavePath = value.toString();
+                            break;
                     }
                 }
                 // Detect provider
@@ -162,6 +171,13 @@ public class AILib implements Library
                 for (AITool tool : tools)
                 {
                     session.addTool(tool);
+                }
+                // Set auto-save path if provided
+                if (autoSavePath != null)
+                {
+                    session.setAutoSavePath(autoSavePath);
+                    // Perform initial save
+                    session.performAutoSave(env);
                 }
                 return session;
             }
@@ -607,6 +623,21 @@ public class AILib implements Library
                         pretty = Boolean.TRUE.equals(value);
                     }
                 }
+                // Create parent directories if needed
+                Path filePath = Paths.get(path);
+                Path parent = filePath.getParent();
+                if (parent != null && !Files.exists(parent))
+                {
+                    try
+                    {
+                        Files.createDirectories(parent);
+                    }
+                    catch (IOException e)
+                    {
+                        throw new JlllException(
+                                "ai-session-save: failed to create directory " + parent + ": " + e.getMessage());
+                    }
+                }
                 // Serialize session to JSON
                 Map<String, Object> sessionMap = session.toSerializableMap();
                 String json = pretty ? GSON_PRETTY.toJson(sessionMap) : GSON.toJson(sessionMap);
@@ -682,6 +713,86 @@ public class AILib implements Library
                     env.setBinding(AI_SESSION_SYMBOL, session);
                 }
                 return session;
+            }
+        };
+        // ========== ai-session-auto-save ==========
+        new Primitive("ai-session-auto-save", env,
+                "Enables, disables, or queries auto-save for an AI session. "
+                        + "(ai-session-auto-save \"path.json\") enables auto-save on current session. "
+                        + "(ai-session-auto-save session \"path.json\") enables on specific session. "
+                        + "(ai-session-auto-save false) disables auto-save. "
+                        + "(ai-session-auto-save) returns current auto-save path or false.")
+        {
+            private static final long serialVersionUID = 21L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                int len = values.length();
+                // No args: query current session
+                if (len == 0)
+                {
+                    AISession session = getCurrentSession(env);
+                    String path = session.getAutoSavePath();
+                    return path != null ? path : Boolean.FALSE;
+                }
+                Object first = values.get(0);
+                // One arg: session (query), path (enable on current), or false (disable on current)
+                if (len == 1)
+                {
+                    if (first instanceof AISession session)
+                    {
+                        // Query specific session
+                        String path = session.getAutoSavePath();
+                        return path != null ? path : Boolean.FALSE;
+                    }
+                    else if (Boolean.FALSE.equals(first))
+                    {
+                        // Disable on current session
+                        AISession session = getCurrentSession(env);
+                        session.setAutoSavePath(null);
+                        return Null.NULL;
+                    }
+                    else
+                    {
+                        // Enable on current session with path
+                        AISession session = getCurrentSession(env);
+                        String path = first.toString();
+                        session.setAutoSavePath(path);
+                        // Perform initial save
+                        session.performAutoSave(env);
+                        return path;
+                    }
+                }
+                // Two args: (session, path) or (session, false)
+                if (len >= 2)
+                {
+                    Object second = values.get(1);
+                    if (first instanceof AISession session)
+                    {
+                        if (Boolean.FALSE.equals(second))
+                        {
+                            // Disable on specific session
+                            session.setAutoSavePath(null);
+                            return Null.NULL;
+                        }
+                        else
+                        {
+                            // Enable on specific session
+                            String path = second.toString();
+                            session.setAutoSavePath(path);
+                            // Perform initial save
+                            session.performAutoSave(env);
+                            return path;
+                        }
+                    }
+                    else
+                    {
+                        throw new JlllException(
+                                "ai-session-auto-save: first argument must be a session when two arguments are provided");
+                    }
+                }
+                throw new JlllException("ai-session-auto-save: invalid arguments");
             }
         };
         // Load additional JLLL definitions (ai-session-restore, etc.)
@@ -815,6 +926,8 @@ public class AILib implements Library
                 {
                     // Add AI response to history
                     session.addAiMessage(aiMessage);
+                    // Trigger auto-save if enabled
+                    session.performAutoSave(session.getEnvironment());
                     completed.set(true);
                     tokenQueue.offer(END_OF_STREAM);
                 }
@@ -891,6 +1004,8 @@ public class AILib implements Library
                 {
                     // Add final AI response to history (skip intermediate tool messages)
                     session.addAiMessage(finalMessage);
+                    // Trigger auto-save if enabled
+                    session.performAutoSave(session.getEnvironment());
                     tokenQueue.offer(END_OF_STREAM);
                 }
             }
