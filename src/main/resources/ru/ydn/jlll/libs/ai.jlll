@@ -50,10 +50,25 @@
               (jlll-docs topic :return true)
               (jlll-docs :return true)))))
 
+(define *ai-tool-bash*
+  :doc "AI tool for executing shell commands."
+  (ai-tool "bash"
+    :description "Execute shell commands. Returns hash-map with :stdout (string), :stderr (string), and :exit-code (integer, 0 = success). Use for file operations, git commands, build tasks, running tests, etc. Timeout is 120 seconds by default."
+    :parameters '(("command" "string" "Shell command to execute" true)
+                  ("cwd" "string" "Working directory path (optional)" false)
+                  ("timeout" "integer" "Timeout in milliseconds (optional, default 120000)" false))
+    :fn (lambda (command (cwd false) (timeout false))
+          (cond
+            ((and cwd timeout) (bash command :cwd cwd :timeout timeout))
+            (cwd (bash command :cwd cwd))
+            (timeout (bash command :timeout timeout))
+            (else (bash command))))))
+
 (define (ai-add-builtin-tools session)
-  :doc "Adds built-in discovery tools (apropos, describe, env, jlll-docs) to an AI session. Called automatically when creating sessions with :eval true."
+  :doc "Adds built-in discovery tools (apropos, describe, env, jlll-docs, bash) to an AI session. Called automatically when creating sessions with :eval true."
   (ai-tool-add session *ai-tool-apropos*)
   (ai-tool-add session *ai-tool-describe*)
   (ai-tool-add session *ai-tool-env*)
   (ai-tool-add session *ai-tool-jlll-docs*)
+  (ai-tool-add session *ai-tool-bash*)
   session)

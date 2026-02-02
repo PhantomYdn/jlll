@@ -1606,3 +1606,72 @@ Mutable hash-based sets with O(1) membership testing. Backed by `LinkedHashSet` 
 ;; Convert to list for iteration
 (for-each println (set->list s))
 ```
+
+## Shell Library
+
+Execute shell commands and capture output. See [shell.md](shell.md) for comprehensive documentation.
+
+### Command Execution
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `bash` | Execute command, return hash-map | `(bash "ls -la")` => `{:stdout "..." :stderr "" :exit-code 0}` |
+| `shell` | Alias for `bash` | `(shell "echo test")` |
+| `shell-stdout` | Return only stdout | `(shell-stdout "pwd")` => `"/home/user\n"` |
+| `shell-ok?` | Test if command succeeded | `(shell-ok? "test -f file")` => `true` |
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `:timeout` | Integer | 120000 | Timeout in milliseconds |
+| `:cwd` | String | current dir | Working directory |
+| `:input` | String/Reader | null | Data to pipe to stdin |
+| `:env` | Hash-map | null | Additional environment variables |
+
+### Return Value
+
+The `bash` function returns a hash-map with:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `:stdout` | String | Standard output |
+| `:stderr` | String | Standard error |
+| `:exit-code` | Integer | Exit code (0 = success, -1 = timeout) |
+
+### Examples
+
+```lisp
+;; Basic usage
+(bash "echo hello")
+;; => {:stdout "hello\n" :stderr "" :exit-code 0}
+
+;; Check command success
+(if (shell-ok? "git status")
+    (println "Git repository")
+    (println "Not a git repository"))
+
+;; Get just stdout
+(shell-stdout "date")
+;; => "Mon Feb  3 14:30:00 PST 2025\n"
+
+;; With working directory
+(bash "npm test" :cwd "/path/to/project")
+
+;; With timeout
+(bash "long-running-command" :timeout 60000)
+
+;; With stdin input
+(bash "wc -l" :input "line1\nline2\nline3")
+;; => {:stdout "       3" :stderr "" :exit-code 0}
+
+;; With environment variables
+(bash "echo $MY_VAR" :env (hash-map "MY_VAR" "hello"))
+;; => {:stdout "hello\n" :stderr "" :exit-code 0}
+
+;; Combined options
+(bash "npm test" 
+  :cwd "/project" 
+  :timeout 60000 
+  :env (hash-map "NODE_ENV" "test"))
+```

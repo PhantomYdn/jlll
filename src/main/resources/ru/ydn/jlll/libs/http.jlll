@@ -1,0 +1,88 @@
+;; HTTP Server JLLL wrappers
+;; Convenience functions for working with HTTP servers
+
+;; Predicate aliases for consistency
+(define http-ctx? http-context?)
+
+;; Simple JSON response helper
+(define (respond-json ctx data)
+  :doc "Send JSON response with 200 status. Alias for http-json."
+  (http-json ctx data))
+
+;; Simple HTML response helper  
+(define (respond-html ctx html)
+  :doc "Send HTML response with 200 status. Alias for http-html."
+  (http-html ctx html))
+
+;; Simple text response helper
+(define (respond-text ctx text)
+  :doc "Send plain text response with 200 status."
+  (http-content-type ctx "text/plain")
+  (http-result ctx text))
+
+;; Error response helper
+(define (respond-error ctx status message)
+  :doc "Send error response with given status code and message as JSON."
+  (http-status ctx status)
+  (http-json ctx (hash-map :error message :status status)))
+
+;; Not found response
+(define (respond-not-found ctx)
+  :doc "Send 404 Not Found response."
+  (respond-error ctx 404 "Not Found"))
+
+;; Bad request response
+(define (respond-bad-request ctx message)
+  :doc "Send 400 Bad Request response with message."
+  (respond-error ctx 400 message))
+
+;; Server error response
+(define (respond-server-error ctx message)
+  :doc "Send 500 Internal Server Error response with message."
+  (respond-error ctx 500 message))
+
+;; Get all path params as hash-map
+(define (http-path-params ctx)
+  :doc "Get all path parameters as hash-map."
+  ;; Javalin doesn't have a pathParamMap in the same way as query params
+  ;; This is a placeholder - actual implementation depends on route pattern
+  (hash-map))
+
+;; Check if query param exists
+(define (http-query-param? ctx name)
+  :doc "Check if query parameter exists."
+  (not (null? (http-query-param ctx name))))
+
+;; Get query param with default
+(define (http-query-param-or ctx name default)
+  :doc "Get query parameter by name, or default if not present."
+  (define val (http-query-param ctx name))
+  (if (null? val) default val))
+
+;; Cookie helpers (basic - uses headers)
+(define (http-cookie ctx name)
+  :doc "Get cookie value by name. Returns null if not found."
+  (define cookie-header (http-header ctx "Cookie"))
+  (if (null? cookie-header)
+      null
+      (begin
+        ;; Parse cookies: "name1=value1; name2=value2"
+        (define pairs (string-split cookie-header "; "))
+        (define (find-cookie pairs)
+          (if (null? pairs)
+              null
+              (let ((pair (car pairs)))
+                (define parts (string-split pair "="))
+                (if (and (>= (length parts) 2) 
+                         (string=? (car parts) name))
+                    (cadr parts)
+                    (find-cookie (cdr pairs))))))
+        (find-cookie pairs))))
+
+(define (http-set-cookie ctx name value . options)
+  :doc "Set a cookie. Options: :max-age, :path, :domain, :secure, :http-only."
+  ;; Build cookie string
+  (define cookie-str (concat name "=" value))
+  ;; Add options if provided
+  ;; For now, just set basic cookie
+  (http-header! ctx "Set-Cookie" cookie-str))

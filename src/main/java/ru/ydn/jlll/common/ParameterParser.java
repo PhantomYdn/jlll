@@ -279,4 +279,56 @@ public class ParameterParser
     {
         return extraction.keywords.containsKey(Symbol.intern(name));
     }
+
+    /**
+     * Gets a long integer keyword argument from an extraction result.
+     *
+     * @param extraction
+     *            the keyword extraction result
+     * @param name
+     *            the keyword name (without colon prefix)
+     * @param defaultValue
+     *            value to return if keyword is not present
+     * @return the long value or defaultValue
+     */
+    public static long getLong(KeywordExtraction extraction, String name, long defaultValue)
+    {
+        Symbol key = Symbol.intern(name);
+        Object value = extraction.keywords.get(key);
+        if (value == null)
+        {
+            return defaultValue;
+        }
+        if (value instanceof Number)
+        {
+            return ((Number) value).longValue();
+        }
+        // Try parsing string
+        try
+        {
+            return Long.parseLong(value.toString());
+        }
+        catch (NumberFormatException e)
+        {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Gets a generic object keyword argument from an extraction result.
+     *
+     * @param extraction
+     *            the keyword extraction result
+     * @param name
+     *            the keyword name (without colon prefix)
+     * @param defaultValue
+     *            value to return if keyword is not present
+     * @return the value or defaultValue
+     */
+    public static Object getObject(KeywordExtraction extraction, String name, Object defaultValue)
+    {
+        Symbol key = Symbol.intern(name);
+        Object value = extraction.keywords.get(key);
+        return value != null ? value : defaultValue;
+    }
 }

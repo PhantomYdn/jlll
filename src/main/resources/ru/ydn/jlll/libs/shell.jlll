@@ -1,0 +1,13 @@
+;;; shell.jlll - Shell execution utilities
+;;; Provides aliases and convenience wrappers for the bash primitive.
+
+(define shell bash)
+  :doc "Alias for bash. Execute shell command and return hash-map with :stdout, :stderr, :exit-code."
+
+(define (shell-stdout command . options)
+  :doc "Execute shell command and return only stdout. Applies any keyword options to bash."
+  (hash-ref (apply bash (cons command options)) :stdout))
+
+(define (shell-ok? command . options)
+  :doc "Execute shell command and return true if exit code is 0."
+  (zero? (hash-ref (apply bash (cons command options)) :exit-code)))

@@ -2206,14 +2206,14 @@ execution. Security is the user's responsibility. Document risks clearly.
 
 ### Checklist
 
-- [ ] `bash` - Execute shell command, return structured result
-- [ ] `:timeout` - Configurable timeout with process termination
-- [ ] `:cwd` - Working directory support
-- [ ] `:input` - Stdin from string or port
-- [ ] `:env` - Additional environment variables
-- [ ] AI tool registration in `ai.jlll`
-- [ ] Create `ShellLib.java`
-- [ ] Document in `docs/shell.md`
+- [x] `bash` - Execute shell command, return structured result
+- [x] `:timeout` - Configurable timeout with process termination
+- [x] `:cwd` - Working directory support
+- [x] `:input` - Stdin from string or port
+- [x] `:env` - Additional environment variables
+- [x] AI tool registration in `ai.jlll`
+- [x] Create `ShellLib.java`
+- [x] Document in `docs/shell.md`
 
 ---
 
@@ -2225,33 +2225,36 @@ lightweight, modern implementation with an imperative routing API.
 ### Core API
 
 ```lisp
-;; Create and configure server
-(define server (http-server :port 8080))
+;; Create server instance
+(define server (http-server))
 
 ;; Route handlers - Javalin style
 (http-get server "/hello" 
-  (lambda (ctx) "Hello, World!"))
+  (lambda (ctx) (http-result ctx "Hello, World!")))
 
 (http-post server "/api/users" 
   (lambda (ctx)
-    (define body (http-body ctx))
+    (define body (http-body-json ctx))
     (define user (create-user body))
     (http-json ctx user)))
 
-(http-put server "/api/users/:id"
+(http-put server "/api/users/{id}"
   (lambda (ctx)
     (define id (http-path-param ctx "id"))
-    (define body (http-body ctx))
+    (define body (http-body-json ctx))
     (update-user id body)))
 
-(http-delete server "/api/users/:id"
+(http-delete server "/api/users/{id}"
   (lambda (ctx)
     (define id (http-path-param ctx "id"))
     (delete-user id)
     (http-status ctx 204)))
 
-;; Start and stop
-(http-start server)
+;; Start with port (and optional host)
+(http-start server :port 8080)
+;; (http-start server :port 8080 :host "127.0.0.1")
+
+;; Stop server
 (http-stop server)
 ```
 
@@ -2266,26 +2269,25 @@ lightweight, modern implementation with an imperative routing API.
 (http-head server path handler)
 (http-options server path handler)
 
-;; Match any method
-(http-any server path handler)
-
 ;; Before/after filters
-(http-before server path handler)  ; runs before route handlers
-(http-after server path handler)   ; runs after route handlers
+(http-before server handler)        ; runs before all route handlers
+(http-before server path handler)   ; runs before matching routes
+(http-after server handler)         ; runs after all route handlers
+(http-after server path handler)    ; runs after matching routes
 ```
 
 ### Path Parameters
 
 ```lisp
-;; Named parameters with :name syntax
-(http-get server "/user/:id" 
+;; Named parameters with {name} syntax
+(http-get server "/user/{id}" 
   (lambda (ctx)
     (http-path-param ctx "id")))
 
-;; Wildcard parameters
+;; Wildcard paths
 (http-get server "/files/*" 
   (lambda (ctx)
-    (http-path-param ctx "splat")))  ; everything after /files/
+    (http-path ctx)))  ; returns full path like "/files/docs/readme.txt"
 ```
 
 ### Context Accessors
@@ -2319,13 +2321,7 @@ lightweight, modern implementation with an imperative routing API.
 ;; Serve static files from directory
 (http-static server "/assets" "./public/")
 
-;; Serve single file
-(http-static-file server "/favicon.ico" "./public/favicon.ico")
-
-;; With options
-(http-static server "/docs" "./documentation/"
-  :index "index.html"           ; default index file
-  :cache-time 3600)             ; cache control in seconds
+;; Example: /assets/style.css serves ./public/style.css
 ```
 
 ### Error Handling
@@ -2351,16 +2347,20 @@ lightweight, modern implementation with an imperative routing API.
 ### Server Configuration
 
 ```lisp
-(http-server 
-  :port 8080                    ; default: 8080
-  :host "0.0.0.0"              ; default: "0.0.0.0" (all interfaces)
-  :context-path "/api")         ; optional base path for all routes
+;; Create server (optional context-path for all routes)
+(http-server)                         ; basic server
+(http-server :context-path "/api")    ; with base path prefix
+
+;; Start with port and host options
+(http-start server :port 8080)                          ; default host 0.0.0.0
+(http-start server :port 8080 :host "127.0.0.1")       ; localhost only
 ```
 
 ### Example: REST API
 
 ```lisp
-(define server (http-server :port 3000))
+;; Create server
+(define server (http-server))
 
 ;; In-memory data store
 (define users (atom (hash-map)))
@@ -2372,7 +2372,7 @@ lightweight, modern implementation with an imperative routing API.
     (http-json ctx (hash-values (deref users)))))
 
 ;; Get user by ID
-(http-get server "/users/:id"
+(http-get server "/users/{id}"
   (lambda (ctx)
     (define id (http-path-param ctx "id"))
     (define user (hash-ref (deref users) id))
@@ -2392,7 +2392,8 @@ lightweight, modern implementation with an imperative routing API.
     (http-status ctx 201)
     (http-json ctx user)))
 
-(http-start server)
+;; Start server
+(http-start server :port 3000)
 (println "Server running on http://localhost:3000")
 ```
 
@@ -2416,18 +2417,20 @@ These features may be added later:
 
 ### Checklist
 
-- [ ] Add Javalin dependency to `pom.xml`
-- [ ] Create `HttpLib.java` with server primitives
-- [ ] `http-server` - Create server instance
-- [ ] `http-start` / `http-stop` - Lifecycle management
-- [ ] `http-get/post/put/delete/patch` - Route registration
-- [ ] `http-before` / `http-after` - Filters
-- [ ] Context accessors for request data
-- [ ] Response helpers (json, html, status, redirect)
-- [ ] `http-static` - Static file serving
-- [ ] `http-error` - Custom error handlers
-- [ ] `http-exception` - Exception handler
-- [ ] Document in `docs/web-server.md`
+- [x] Add Javalin dependency to `pom.xml`
+- [x] Create `HttpLib.java` with server primitives
+- [x] `http-server` - Create server instance
+- [x] `http-start` / `http-stop` - Lifecycle management
+- [x] `http-get/post/put/delete/patch` - Route registration
+- [x] `http-before` / `http-after` - Filters
+- [x] Context accessors for request data
+- [x] Response helpers (json, html, status, redirect)
+- [x] `http-static` - Static file serving
+- [x] `http-error` - Custom error handlers
+- [x] `http-exception` - Exception handler
+- [x] `http-sse` - Server-Sent Events endpoint
+- [x] `sse-send` / `sse-close` / `sse-keep-alive` - SSE operations
+- [x] Document in `docs/web-server.md`
 
 ---
 
