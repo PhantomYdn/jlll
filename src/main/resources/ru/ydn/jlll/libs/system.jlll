@@ -1,0 +1,22 @@
+;; System library JLLL wrappers
+;; Simple functions that wrap get-property for common system properties
+
+(define (user-name)
+  :doc "Returns the current user's name."
+  (get-property "user.name"))
+
+(define (user-home)
+  :doc "Returns the current user's home directory path."
+  (get-property "user.home"))
+
+(define (os-name)
+  :doc "Returns the operating system name (e.g., \"Mac OS X\", \"Linux\", \"Windows 10\")."
+  (get-property "os.name"))
+
+(define (os-arch)
+  :doc "Returns the operating system architecture (e.g., \"aarch64\", \"amd64\", \"x86_64\")."
+  (get-property "os.arch"))
+
+(define (java-version)
+  :doc "Returns the Java version string (e.g., \"17.0.1\", \"21\")."
+  (get-property "java.version"))

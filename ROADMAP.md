@@ -1191,7 +1191,7 @@ For debugging AI interactions, a traceability option can echo this output to the
 
 ---
 
-## 19. Environment and System (Nice to Have)
+## 19. Environment and System (Implemented)
 
 Access to environment variables, system properties, and system information.
 
@@ -1239,20 +1239,22 @@ Access to environment variables, system properties, and system information.
 
 ### Checklist
 
-- [ ] `getenv` - Get environment variable
-- [ ] `getenv-all` - All environment variables as hash-map
-- [ ] `get-property` - Get Java system property
-- [ ] `set-property!` - Set Java system property
-- [ ] `hostname` - Machine hostname
-- [ ] `user-name` / `user-home` - User info
-- [ ] `os-name` / `os-arch` - OS info
-- [ ] `java-version` - Java version string
-- [ ] `gc` - Trigger garbage collection
-- [ ] `memory-used` / `memory-free` / `memory-total` - Memory info
+- [x] `getenv` - Get environment variable
+- [x] `getenv-all` - All environment variables as hash-map
+- [x] `get-property` - Get Java system property
+- [x] `set-property!` - Set Java system property
+- [x] `hostname` - Machine hostname
+- [x] `user-name` / `user-home` - User info
+- [x] `os-name` / `os-arch` - OS info
+- [x] `java-version` - Java version string
+- [x] `gc` - Trigger garbage collection
+- [x] `memory-used` / `memory-free` / `memory-total` - Memory info
+- [x] `memory-max` - Maximum heap size (bonus)
+- [x] `available-processors` - Number of CPUs (bonus)
 
 ---
 
-## 20. Formatted Output (Nice to Have)
+## 20. Formatted Output (Implemented)
 
 Printf-style formatting and Scheme-standard output procedures.
 
@@ -1307,17 +1309,17 @@ Printf-style formatting and Scheme-standard output procedures.
 
 ### Checklist
 
-- [ ] `format` - Format string with directives
-- [ ] `printf` - Format and print to stdout
-- [ ] `fprintf` - Format and print to port
-- [ ] `display` - Write object for humans (no string quotes)
-- [ ] `write` - Write object for machine (readable representation)
-- [ ] Basic directives: `~a`, `~s`, `~d`, `~f`, `~%`, `~~`
-- [ ] Width/padding support
+- [x] `format` - Format string with directives
+- [x] `printf` - Format and print to stdout
+- [x] `fprintf` - Format and print to port
+- [x] `display` - Write object for humans (no string quotes)
+- [x] `write` - Write object for machine (readable representation)
+- [x] Basic directives: `~a`, `~s`, `~d`, `~f`, `~%`, `~~`
+- [ ] Width/padding support (future enhancement)
 
 ---
 
-## 21. Sets (Nice to Have)
+## 21. Sets (Implemented)
 
 Hash-based set data structure for efficient membership testing and set operations.
 
@@ -1371,16 +1373,17 @@ Hash-based set data structure for efficient membership testing and set operation
 
 ### Checklist
 
-- [ ] `make-set` / `set` - Create sets
-- [ ] `list->set` / `set->list` - Conversions
-- [ ] `set?` - Test if value is set
-- [ ] `set-empty?` - Test for empty set
-- [ ] `set-contains?` - Membership test
-- [ ] `set-count` - Number of elements
-- [ ] `set-add!` / `set-remove!` / `set-clear!` - Mutation
-- [ ] `set-union` / `set-intersection` / `set-difference` - Set operations
-- [ ] `set-subset?` / `set-superset?` / `set-equal?` - Set predicates
-- [ ] `set-for-each` / `set-map` / `set-filter` - Iteration
+- [x] `make-set` / `set` - Create sets
+- [x] `list->set` / `set->list` - Conversions
+- [x] `set?` - Test if value is set
+- [x] `set-empty?` - Test for empty set
+- [x] `set-contains?` - Membership test
+- [x] `set-count` - Number of elements
+- [x] `set-add!` / `set-remove!` / `set-clear!` - Mutation
+- [x] `set-union` / `set-intersection` / `set-difference` - Set operations
+- [x] `set-symmetric-difference` - Elements in exactly one set
+- [x] `set-subset?` / `set-superset?` / `set-disjoint?` / `set-equal?` - Set predicates
+- [x] `set-for-each` / `set-map` / `set-filter` - Iteration
 
 ---
 

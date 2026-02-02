@@ -76,6 +76,7 @@ Before committing or ending a session:
 ## Lessons Learned
 
 - When modifying output format of a function, search for tests that assert on that output — tests often encode specific format expectations
+- JLLL converts Java null to `Null.NULL` — tests should check for both `result == null` and `Cons.isNull()` when expecting null returns
 
 ## Design Conventions
 

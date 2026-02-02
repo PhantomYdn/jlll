@@ -1,0 +1,11 @@
+;; Format library JLLL wrappers
+;; Simple functions for formatted output
+
+(define (printf fmt . args)
+  :doc "Formats and prints to stdout. (printf \"Hello ~a!~%\" \"World\") prints 'Hello World!' with newline."
+  (print (apply format (cons fmt args))))
+
+(define (fprintf port fmt . args)
+  :doc "Formats and writes to a port. (fprintf port \"Value: ~d\" 42) writes to the specified output port."
+  (invoke port "write" (apply format (cons fmt args)))
+  (invoke port "flush"))

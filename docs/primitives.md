@@ -1396,3 +1396,213 @@ Database operations (when enabled with `-Ddburl=...`).
 |-----------|-------------|---------|
 | `sql-query` | Execute SELECT | `(sql-query "SELECT * FROM users")` |
 | `sql-update` | Execute INSERT/UPDATE/DELETE | `(sql-update "INSERT INTO users VALUES (?)" name)` |
+
+## System Library
+
+Access to environment variables, system properties, and system information.
+
+### Environment Variables
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `getenv` | Get environment variable | `(getenv "HOME")` => `"/home/user"` |
+| `getenv` | Get with default | `(getenv "MISSING" "default")` => `"default"` |
+| `getenv-all` | All env vars as hash-map | `(getenv-all)` => `{"PATH" "..." ...}` |
+
+### System Properties
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `get-property` | Get Java system property | `(get-property "java.version")` => `"17.0.1"` |
+| `get-property` | Get with default | `(get-property "missing" "default")` |
+| `set-property!` | Set Java system property | `(set-property! "my.prop" "value")` |
+
+### System Information
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `hostname` | Machine hostname | `(hostname)` => `"mycomputer.local"` |
+| `user-name` | Current user's name | `(user-name)` => `"alice"` |
+| `user-home` | User's home directory | `(user-home)` => `"/home/alice"` |
+| `os-name` | Operating system name | `(os-name)` => `"Mac OS X"` |
+| `os-arch` | OS architecture | `(os-arch)` => `"aarch64"` |
+| `java-version` | Java version string | `(java-version)` => `"17.0.1"` |
+
+### Memory and CPU
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `gc` | Trigger garbage collection | `(gc)` |
+| `memory-used` | Used memory in bytes | `(memory-used)` => `123456789` |
+| `memory-free` | Free memory in bytes | `(memory-free)` => `987654321` |
+| `memory-total` | Total heap size | `(memory-total)` => `1111111110` |
+| `memory-max` | Maximum heap size | `(memory-max)` => `2147483648` |
+| `available-processors` | Number of CPUs | `(available-processors)` => `8` |
+
+### Examples
+
+```lisp
+;; Get environment variable
+(getenv "HOME")                        ; => "/home/alice"
+(getenv "MISSING" "not-set")           ; => "not-set"
+
+;; Check Java version
+(println "Running on Java " (java-version))
+
+;; System information
+(println "User: " (user-name) " on " (os-name) " " (os-arch))
+
+;; Memory usage
+(define mb (/ (memory-used) 1048576))
+(println "Memory used: " mb "MB")
+
+;; Force garbage collection
+(gc)
+```
+
+## Format Library
+
+Formatted output with SRFI-28 / Common Lisp style directives.
+
+### Formatting
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `format` | Format string with directives | `(format "Hello ~a!" "World")` => `"Hello World!"` |
+| `printf` | Format and print to stdout | `(printf "Value: ~d~%" 42)` |
+| `fprintf` | Format and print to port | `(fprintf port "~a" value)` |
+
+### Format Directives
+
+| Directive | Description | Example |
+|-----------|-------------|---------|
+| `~a` | Aesthetic (human-readable, no quotes) | `(format "~a" "hello")` => `"hello"` |
+| `~s` | Standard (machine-readable, with quotes) | `(format "~s" "hello")` => `"\"hello\""` |
+| `~d` | Decimal integer | `(format "~d" 42)` => `"42"` |
+| `~f` | Floating point | `(format "~f" 3.14)` => `"3.14"` |
+| `~%` | Newline | `(format "line1~%line2")` => `"line1\nline2"` |
+| `~~` | Literal tilde | `(format "100~~")` => `"100~"` |
+
+### Output Procedures
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `display` | Write for humans (no quotes on strings) | `(display "hello")` prints: `hello` |
+| `write` | Write for machine (with quotes on strings) | `(write "hello")` prints: `"hello"` |
+
+### Examples
+
+```lisp
+;; Basic formatting
+(format "Hello ~a!" "World")           ; => "Hello World!"
+(format "~a + ~a = ~a" 1 2 3)          ; => "1 + 2 = 3"
+
+;; Multiple lines
+(format "Line 1~%Line 2~%Line 3")
+
+;; Quoting strings
+(format "~a vs ~s" "hello" "hello")    ; => "hello vs \"hello\""
+
+;; Numbers
+(format "Int: ~d, Float: ~f" 42 3.14)  ; => "Int: 42, Float: 3.14"
+
+;; Print with newline
+(printf "Result: ~a~%" result)
+
+;; Display vs write
+(display "hello")                       ; prints: hello
+(write "hello")                         ; prints: "hello"
+(display '(1 2 3))                      ; prints: (1 2 3)
+```
+
+## Set Library
+
+Mutable hash-based sets with O(1) membership testing. Backed by `LinkedHashSet` to preserve insertion order.
+
+### Creation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `make-set` | Create empty set | `(make-set)` |
+| `set` | Create set from elements | `(set 1 2 3)` |
+| `list->set` | Convert list to set | `(list->set '(1 2 2 3))` => set with 1, 2, 3 |
+
+### Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `set?` | Test if value is set | `(set? s)` => `true` |
+| `set-empty?` | Test if set is empty | `(set-empty? s)` => `false` |
+| `set-contains?` | Test membership | `(set-contains? s 2)` => `true` |
+
+### Access
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `set-count` | Number of elements | `(set-count s)` => `3` |
+| `set->list` | Convert set to list | `(set->list s)` => `(1 2 3)` |
+
+### Mutation
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `set-add!` | Add element | `(set-add! s 4)` => set (returns set) |
+| `set-remove!` | Remove element | `(set-remove! s 2)` => set |
+| `set-clear!` | Remove all elements | `(set-clear! s)` => empty set |
+
+### Set Operations
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `set-union` | Elements in either set | `(set-union s1 s2)` |
+| `set-intersection` | Elements in both sets | `(set-intersection s1 s2)` |
+| `set-difference` | Elements in s1 not in s2 | `(set-difference s1 s2)` |
+| `set-symmetric-difference` | Elements in exactly one | `(set-symmetric-difference s1 s2)` |
+
+### Set Predicates
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `set-subset?` | Is s1 subset of s2? | `(set-subset? s1 s2)` => `true` |
+| `set-superset?` | Is s1 superset of s2? | `(set-superset? s1 s2)` => `false` |
+| `set-disjoint?` | No common elements? | `(set-disjoint? s1 s2)` => `true` |
+| `set-equal?` | Same elements? | `(set-equal? s1 s2)` => `true` |
+
+### Iteration
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `set-for-each` | Apply proc for side effects | `(set-for-each println s)` |
+| `set-map` | Transform elements | `(set-map square s)` |
+| `set-filter` | Filter elements | `(set-filter positive? s)` |
+
+### Examples
+
+```lisp
+;; Create and populate
+(define s (set 1 2 3))
+(set-add! s 4)
+(set-contains? s 2)                    ; => true
+
+;; From list (deduplicates)
+(define s2 (list->set '(1 1 2 2 3)))   ; set with 1, 2, 3
+
+;; Set operations
+(define evens (set 2 4 6))
+(define odds (set 1 3 5))
+(set-union evens odds)                 ; set with 1-6
+(set-disjoint? evens odds)             ; => true
+
+;; Subset testing
+(define small (set 1 2))
+(define large (set 1 2 3 4))
+(set-subset? small large)              ; => true
+(set-superset? large small)            ; => true
+
+;; Transform and filter
+(set-map (lambda (x) (* x 2)) (set 1 2 3))  ; set with 2, 4, 6
+(set-filter even? (set 1 2 3 4 5))          ; set with 2, 4
+
+;; Convert to list for iteration
+(for-each println (set->list s))
+```

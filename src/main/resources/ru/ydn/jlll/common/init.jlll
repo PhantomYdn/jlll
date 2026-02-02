@@ -32,6 +32,12 @@
 
 (load-lib "ru.ydn.jlll.libs.DebugLib")
 
+(load-lib "ru.ydn.jlll.libs.SystemLib")
+
+(load-lib "ru.ydn.jlll.libs.FormatLib")
+
+(load-lib "ru.ydn.jlll.libs.SetLib")
+
 ;; AI session placeholder - null means no active session
 ;; This is set by ai-session-activate or auto-created by ai-prompt
 (define *ai-session* null)
