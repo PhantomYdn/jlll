@@ -22,9 +22,11 @@ import ru.ydn.jlll.common.JlllException;
  * Provides a modern CLI with proper argument parsing, help, and version support.
  */
 @Command(name = "jlll", mixinStandardHelpOptions = true, versionProvider = JlllCli.VersionProvider.class, description = "JLLL - Java Lisp Like Language interpreter", footer =
-{"", "Examples:", "  jlll                        Start interactive REPL",
-        "  jlll script.jlll            Execute script file", "  jlll -e '(+ 1 2 3)'         Evaluate expression",
-        "  jlll -e '(+ 1 2)' file.jlll Evaluate expr, then run file"})
+{"", "Examples:", "  jlll                        Start interactive REPL (loads ~/.jlllrc)",
+        "  jlll script.jlll            Execute script file (no init file)",
+        "  jlll -i script.jlll         Execute script, then REPL (loads init)",
+        "  jlll -e '(+ 1 2 3)'         Evaluate expression", "  jlll --rc custom.jlll       Use custom init file",
+        "  jlll --no-rc                Skip loading init file"})
 public class JlllCli implements Callable<Integer>
 {
     @Option(names =
@@ -39,6 +41,12 @@ public class JlllCli implements Callable<Integer>
     @Option(names =
     {"-q", "--quiet"}, description = "Suppress startup banner in REPL")
     private boolean quiet;
+    @Option(names =
+    {"--rc"}, description = "Specify alternate init file (default: ~/.jlllrc)", paramLabel = "FILE")
+    private String rcFile;
+    @Option(names =
+    {"--no-rc"}, description = "Skip loading init file")
+    private boolean noRc;
     @Parameters(paramLabel = "FILE", description = "Script file(s) to execute")
     private List<File> files;
     private Environment env;
@@ -114,12 +122,105 @@ public class JlllCli implements Callable<Integer>
         // Start REPL if no work done or --interactive flag
         if (!hasWork || forceInteractive)
         {
+            // Load init file before starting REPL (unless --no-rc)
+            if (!noRc)
+            {
+                if (!loadInitFile())
+                {
+                    return 1;
+                }
+            }
             JlllRepl repl = new JlllRepl(env);
             repl.setColorEnabled(!noColor);
             repl.setQuiet(quiet);
             return repl.run();
         }
         return 0;
+    }
+
+    /**
+     * Expands ~ to user home directory in a path string.
+     *
+     * @param path
+     *            the path that may start with ~
+     * @return the expanded path
+     */
+    private String expandTilde(String path)
+    {
+        if (path.startsWith("~"))
+        {
+            String home = System.getProperty("user.home");
+            if (path.equals("~"))
+            {
+                return home;
+            }
+            if (path.startsWith("~/") || path.startsWith("~" + File.separator))
+            {
+                return home + path.substring(1);
+            }
+        }
+        return path;
+    }
+
+    /**
+     * Loads the init file (~/.jlllrc or custom path specified by --rc).
+     * If --rc is specified, the file must exist. If using default ~/.jlllrc,
+     * missing file is silently ignored.
+     *
+     * @return true if successful or default file doesn't exist, false on error
+     */
+    private boolean loadInitFile()
+    {
+        File initFile;
+        boolean isExplicit = (rcFile != null);
+        if (isExplicit)
+        {
+            String expandedPath = expandTilde(rcFile);
+            initFile = new File(expandedPath);
+        }
+        else
+        {
+            String home = System.getProperty("user.home");
+            initFile = new File(home, ".jlllrc");
+        }
+        // Check if file exists
+        if (!initFile.exists())
+        {
+            if (isExplicit)
+            {
+                // Explicit --rc file must exist
+                System.err.println("Error: Init file not found: " + initFile.getAbsolutePath());
+                return false;
+            }
+            // Default file missing is OK
+            return true;
+        }
+        // Check if file is readable
+        if (!initFile.canRead())
+        {
+            System.err.println("Error: Cannot read init file: " + initFile.getAbsolutePath());
+            return false;
+        }
+        // Load the init file
+        try (FileReader reader = new FileReader(initFile))
+        {
+            Jlll.eval(reader, env);
+            return true;
+        }
+        catch (JlllException e)
+        {
+            System.err.println("Error in init file " + initFile.getAbsolutePath() + ": " + e.getMessage());
+            if (e.getCause() != null)
+            {
+                System.err.println("Caused by: " + e.getCause().getMessage());
+            }
+            return false;
+        }
+        catch (IOException e)
+        {
+            System.err.println("Error reading init file " + initFile.getAbsolutePath() + ": " + e.getMessage());
+            return false;
+        }
     }
 
     /**

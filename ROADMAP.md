@@ -2045,7 +2045,7 @@ For interfaces with multiple abstract methods (like `MouseListener`, `DocumentLi
 
 ---
 
-## 26. Init File (~/.jlllrc) (Important)
+## 26. Init File (~/.jlllrc) (Implemented)
 
 Auto-execute JLLL code at startup, similar to `.bashrc` for bash or `.zshrc` for zsh.
 Allows users to customize their JLLL environment with aliases, utility functions,
@@ -2108,11 +2108,13 @@ jlll -i script.jlll
 
 ### Checklist
 
-- [ ] Add `--rc` option to `JlllCli.java`
-- [ ] Load `~/.jlllrc` automatically in REPL mode
-- [ ] Skip init file when running scripts (unless `-i` flag)
-- [ ] Clear error messages on init file failure
-- [ ] Document in `docs/init-file.md`
+- [x] Add `--rc` option to `JlllCli.java`
+- [x] Add `--no-rc` option to skip init file loading
+- [x] Load `~/.jlllrc` automatically in REPL mode
+- [x] Skip init file when running scripts (unless `-i` flag)
+- [x] Clear error messages on init file failure
+- [x] Support `~` expansion in paths
+- [x] Document in `docs/init-file.md`
 
 ---
 

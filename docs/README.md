@@ -28,6 +28,7 @@ JLLL is **not** Scheme, Clojure, or Common Lisp. While it shares Lisp syntax fun
 - **[Java Interop](java-interop.md)** - Calling Java from JLLL
 - **[Dynamic Classpath](dynamic-classpath.md)** - Loading Maven dependencies at runtime
 - **[Lazy Sequences](lazy-sequences.md)** - Working with lazy evaluation and infinite sequences
+- **[Init File](init-file.md)** - Customizing JLLL startup with ~/.jlllrc
 
 ## Quick Start
 
