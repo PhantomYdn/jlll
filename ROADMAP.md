@@ -1832,6 +1832,9 @@ These features may be added in future versions:
 - `SetLib.java` - Set data structure
 - `LazyLib.java` - Lazy sequences and streams
 - `AILib.java` - AI/LLM integration (requires langchain4j dependency)
+- `ShellLib.java` - Shell command execution (bash function)
+- `HttpLib.java` - HTTP server primitives (requires Javalin dependency)
+- `WebConsoleLib.java` - Web console REPL server
 
 **Testing:**
 - Add tests in `JLLLTestCase.java` for Java primitives
@@ -1862,8 +1865,13 @@ or implement sections in the order listed.
 | 22. AI Integration | 15. JSON Support | Tool arguments, LLM responses |
 | 22. AI Integration | 21. Lazy Sequences | Streaming responses |
 | 22. AI Integration | 7. File I/O | Document loading (RAG) |
+| 26. Init File | - | None (CLI enhancement) |
+| 27. Shell Execution | 12. Hash Maps | Return structured results |
+| 28. Web Server | 12. Hash Maps | Request context, JSON responses |
+| 28. Web Server | 15. JSON Support | JSON body parsing/rendering |
+| 29. Web Console | 28. Web Server | Reuses HTTP infrastructure |
 
-**Dependency-free sections:** 14, 17, 18, 19, 20 can be implemented independently.
+**Dependency-free sections:** 14, 17, 18, 19, 20, 26 can be implemented independently.
 
 **Recommended implementation order for Phase 2:**
 1. Regular expressions (14) - no dependencies
@@ -1873,6 +1881,12 @@ or implement sections in the order listed.
 5. Lazy sequences (21) - needs control flow (done)
 6. AI integration (22) - needs JSON, lazy sequences, concurrency (all done or above)
 7. Debugging tools (17), Environment (18), Formatted output (19) - anytime
+
+**Recommended implementation order for Phase 3 (new sections):**
+1. Init file (26) - CLI only, no library dependencies
+2. Shell execution (27) - needs hash maps (done)
+3. Web server (28) - needs hash maps (done), JSON (done), adds Javalin dependency
+4. Web console (29) - depends on web server (28)
 
 ### Scheme Compatibility Notes
 
@@ -2025,6 +2039,537 @@ For interfaces with multiple abstract methods (like `MouseListener`, `DocumentLi
 - [x] SAM/Functional interface auto-conversion (ByteBuddy)
 - [ ] `proxy` - Explicit multi-method interface implementation
 - [ ] Support for implementing multiple interfaces in single proxy
+
+---
+
+## 26. Init File (~/.jlllrc) (Important)
+
+Auto-execute JLLL code at startup, similar to `.bashrc` for bash or `.zshrc` for zsh.
+Allows users to customize their JLLL environment with aliases, utility functions,
+library imports, and preferences.
+
+### Behavior
+
+- **Default location:** `~/.jlllrc` (single file in user's home directory)
+- **Error handling:** Fail hard - exit with error code if init file fails to parse/execute
+- **When loaded:** REPL mode only (not when running scripts via `jlll script.jlll`)
+- **Interactive mode:** `-i` flag also loads init file after script execution
+
+### CLI Options
+
+```bash
+# Normal REPL - loads ~/.jlllrc if it exists
+jlll
+
+# Specify alternate init file
+jlll --rc /path/to/custom-init.jlll
+
+# Run script (does NOT load init file)
+jlll script.jlll
+
+# Run script then enter REPL (loads init file)
+jlll -i script.jlll
+```
+
+### Example Init File
+
+```lisp
+;; ~/.jlllrc - JLLL initialization file
+
+;; Load frequently used libraries
+(require "~/jlll-libs/utils.jlll")
+
+;; Custom aliases
+(define ll (lambda () (bash "ls -la")))
+(define pwd (lambda () (hash-ref (bash "pwd") :stdout)))
+
+;; Configure AI session defaults
+(ai-configure :default-model "gpt-4o")
+
+;; Set up commonly used AI session
+(define coder (ai-session-create 
+  :name "coder"
+  :system "You are a helpful coding assistant"))
+
+;; Print welcome message
+(println "JLLL initialized. Type (help) for assistance.")
+```
+
+### Implementation Notes
+
+- Check for `~/.jlllrc` existence before attempting to load
+- Use `System.getProperty("user.home")` for home directory
+- Evaluate in the same environment that will be used for REPL
+- On error, print clear message with file path and line number, then exit with code 1
+- `--rc` flag should accept absolute or relative paths
+
+### Checklist
+
+- [ ] Add `--rc` option to `JlllCli.java`
+- [ ] Load `~/.jlllrc` automatically in REPL mode
+- [ ] Skip init file when running scripts (unless `-i` flag)
+- [ ] Clear error messages on init file failure
+- [ ] Document in `docs/init-file.md`
+
+---
+
+## 27. Shell Execution (Important)
+
+Execute shell commands from JLLL and capture output. Essential for system integration,
+build automation, and scripting tasks.
+
+### Proposed Implementation
+
+```lisp
+;; Basic usage - returns structured result
+(bash "ls -la")
+;; => {:stdout "total 48\ndrwxr-xr-x..." :stderr "" :exit-code 0}
+
+;; With timeout (milliseconds, default 120000 = 2 minutes)
+(bash "long-running-command" :timeout 60000)
+
+;; With working directory
+(bash "npm test" :cwd "/path/to/project")
+
+;; With stdin input (string)
+(bash "wc -l" :input "line1\nline2\nline3")
+;; => {:stdout "       3" :stderr "" :exit-code 0}
+
+;; With stdin from port
+(define in (open-input-file "data.txt"))
+(bash "sort" :input in)
+
+;; Combined options
+(bash "grep -c pattern" :cwd "/tmp" :timeout 5000 :input search-text)
+
+;; Check exit code
+(if (zero? (hash-ref (bash "test -f file.txt") :exit-code))
+    (println "File exists")
+    (println "File not found"))
+
+;; Pipe pattern (multiple commands)
+(bash "cat file.txt | grep pattern | wc -l")
+
+;; Environment variables
+(bash "echo $MY_VAR" :env (hash-map "MY_VAR" "hello"))
+```
+
+### Return Value
+
+The `bash` function returns a hash-map with three keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `:stdout` | String | Standard output (may be empty) |
+| `:stderr` | String | Standard error (may be empty) |
+| `:exit-code` | Integer | Exit code (0 = success) |
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| command | String | (required) | Shell command to execute |
+| `:timeout` | Integer | 120000 | Timeout in milliseconds |
+| `:cwd` | String | current dir | Working directory |
+| `:input` | String/Port | null | Data to pipe to stdin |
+| `:env` | Hash-map | null | Additional environment variables |
+
+### AI Tool Integration
+
+The `bash` function is exposed as an AI tool for LLM use:
+
+```lisp
+;; Tool is automatically available in AI sessions
+(ai-session-create :name "system-admin")
+
+;; AI can now execute shell commands
+(ai "List all running Java processes")
+;; AI uses bash tool: (bash "ps aux | grep java")
+```
+
+**Security note:** Like the `eval` tool, the `bash` tool allows arbitrary command
+execution. Security is the user's responsibility. Document risks clearly.
+
+### Implementation Notes
+
+- Use `ProcessBuilder` for command execution
+- Shell is determined by OS: `/bin/sh -c` on Unix, `cmd /c` on Windows
+- Capture both stdout and stderr in separate streams
+- Handle timeout with `Process.waitFor(timeout, TimeUnit.MILLISECONDS)`
+- On timeout, destroy process and return exit code -1 with stderr message
+- For `:input`, support both String and InputStream (from ports)
+
+### Checklist
+
+- [ ] `bash` - Execute shell command, return structured result
+- [ ] `:timeout` - Configurable timeout with process termination
+- [ ] `:cwd` - Working directory support
+- [ ] `:input` - Stdin from string or port
+- [ ] `:env` - Additional environment variables
+- [ ] AI tool registration in `ai.jlll`
+- [ ] Create `ShellLib.java`
+- [ ] Document in `docs/shell.md`
+
+---
+
+## 28. Web Server (Important)
+
+Embedded HTTP server for exposing web endpoints from JLLL. Uses Javalin for a
+lightweight, modern implementation with an imperative routing API.
+
+### Core API
+
+```lisp
+;; Create and configure server
+(define server (http-server :port 8080))
+
+;; Route handlers - Javalin style
+(http-get server "/hello" 
+  (lambda (ctx) "Hello, World!"))
+
+(http-post server "/api/users" 
+  (lambda (ctx)
+    (define body (http-body ctx))
+    (define user (create-user body))
+    (http-json ctx user)))
+
+(http-put server "/api/users/:id"
+  (lambda (ctx)
+    (define id (http-path-param ctx "id"))
+    (define body (http-body ctx))
+    (update-user id body)))
+
+(http-delete server "/api/users/:id"
+  (lambda (ctx)
+    (define id (http-path-param ctx "id"))
+    (delete-user id)
+    (http-status ctx 204)))
+
+;; Start and stop
+(http-start server)
+(http-stop server)
+```
+
+### Route Methods
+
+```lisp
+(http-get server path handler)
+(http-post server path handler)
+(http-put server path handler)
+(http-delete server path handler)
+(http-patch server path handler)
+(http-head server path handler)
+(http-options server path handler)
+
+;; Match any method
+(http-any server path handler)
+
+;; Before/after filters
+(http-before server path handler)  ; runs before route handlers
+(http-after server path handler)   ; runs after route handlers
+```
+
+### Path Parameters
+
+```lisp
+;; Named parameters with :name syntax
+(http-get server "/user/:id" 
+  (lambda (ctx)
+    (http-path-param ctx "id")))
+
+;; Wildcard parameters
+(http-get server "/files/*" 
+  (lambda (ctx)
+    (http-path-param ctx "splat")))  ; everything after /files/
+```
+
+### Context Accessors
+
+```lisp
+;; Request information
+(http-method ctx)              ; => :get, :post, etc.
+(http-path ctx)                ; => "/api/users/123"
+(http-path-param ctx "id")     ; => "123"
+(http-query-param ctx "q")     ; => query string value or null
+(http-query-params ctx)        ; => hash-map of all query params
+(http-header ctx "Accept")     ; => header value or null
+(http-headers ctx)             ; => hash-map of all headers
+(http-body ctx)                ; => request body as string
+(http-body-json ctx)           ; => parsed JSON body as hash-map
+(http-remote-addr ctx)         ; => client IP address
+
+;; Response helpers
+(http-result ctx data)         ; set response body (string)
+(http-json ctx data)           ; set JSON response with Content-Type
+(http-html ctx html)           ; set HTML response with Content-Type
+(http-status ctx 404)          ; set HTTP status code
+(http-header! ctx "X-Custom" "value")  ; set response header
+(http-redirect ctx "/login")   ; redirect (302)
+(http-redirect ctx "/new" 301) ; redirect with custom status
+```
+
+### Static Files
+
+```lisp
+;; Serve static files from directory
+(http-static server "/assets" "./public/")
+
+;; Serve single file
+(http-static-file server "/favicon.ico" "./public/favicon.ico")
+
+;; With options
+(http-static server "/docs" "./documentation/"
+  :index "index.html"           ; default index file
+  :cache-time 3600)             ; cache control in seconds
+```
+
+### Error Handling
+
+```lisp
+;; Custom error handlers
+(http-error server 404 
+  (lambda (ctx)
+    (http-json ctx (hash-map :error "Not found"))))
+
+(http-error server 500
+  (lambda (ctx)
+    (http-json ctx (hash-map :error "Internal server error"))))
+
+;; Exception handler
+(http-exception server
+  (lambda (ctx exception)
+    (println "Error: " (invoke exception "getMessage"))
+    (http-status ctx 500)
+    (http-json ctx (hash-map :error "Something went wrong"))))
+```
+
+### Server Configuration
+
+```lisp
+(http-server 
+  :port 8080                    ; default: 8080
+  :host "0.0.0.0"              ; default: "0.0.0.0" (all interfaces)
+  :context-path "/api")         ; optional base path for all routes
+```
+
+### Example: REST API
+
+```lisp
+(define server (http-server :port 3000))
+
+;; In-memory data store
+(define users (atom (hash-map)))
+(define next-id (atom 1))
+
+;; List all users
+(http-get server "/users"
+  (lambda (ctx)
+    (http-json ctx (hash-values (deref users)))))
+
+;; Get user by ID
+(http-get server "/users/:id"
+  (lambda (ctx)
+    (define id (http-path-param ctx "id"))
+    (define user (hash-ref (deref users) id))
+    (if user
+        (http-json ctx user)
+        (begin
+          (http-status ctx 404)
+          (http-json ctx (hash-map :error "User not found"))))))
+
+;; Create user
+(http-post server "/users"
+  (lambda (ctx)
+    (define body (http-body-json ctx))
+    (define id (to-string (swap! next-id (lambda (n) (+ n 1)))))
+    (define user (hash-merge body (hash-map :id id)))
+    (swap! users (lambda (u) (hash-set! u id user)))
+    (http-status ctx 201)
+    (http-json ctx user)))
+
+(http-start server)
+(println "Server running on http://localhost:3000")
+```
+
+### Future Enhancements
+
+These features may be added later:
+
+- **WebSocket support:** Bidirectional communication
+- **Sessions:** Cookie-based session management
+- **CORS middleware:** Cross-origin resource sharing
+- **SSL/TLS:** HTTPS support
+- **Request validation:** Schema-based body validation
+
+### Implementation Notes
+
+- Uses Javalin 6.x embedded in the JAR
+- Each `http-server` creates a Javalin instance
+- Handlers are JLLL lambdas wrapped in Java handlers
+- Context is a thin wrapper around Javalin's `Context`
+- Thread-safe: Javalin handles concurrency
+
+### Checklist
+
+- [ ] Add Javalin dependency to `pom.xml`
+- [ ] Create `HttpLib.java` with server primitives
+- [ ] `http-server` - Create server instance
+- [ ] `http-start` / `http-stop` - Lifecycle management
+- [ ] `http-get/post/put/delete/patch` - Route registration
+- [ ] `http-before` / `http-after` - Filters
+- [ ] Context accessors for request data
+- [ ] Response helpers (json, html, status, redirect)
+- [ ] `http-static` - Static file serving
+- [ ] `http-error` - Custom error handlers
+- [ ] `http-exception` - Exception handler
+- [ ] Document in `docs/web-server.md`
+
+---
+
+## 29. Web Console (Nice to Have)
+
+Browser-based REPL for JLLL. Provides a rich interactive environment accessible
+from any web browser, useful for remote development, demonstrations, and
+environments where terminal access is limited.
+
+### Starting the Web Console
+
+**CLI:**
+```bash
+# Start web console on default port (8080)
+java -jar jlll-cli.jar web
+
+# Custom port
+java -jar jlll-cli.jar web --port 3000
+
+# Allow external connections (dangerous - use with caution!)
+java -jar jlll-cli.jar web --bind 0.0.0.0
+```
+
+**From JLLL:**
+```lisp
+;; Start web console
+(web-console)                    ; default port 8080
+
+;; Custom port
+(web-console :port 3000)
+
+;; Get web console status
+(web-console :status)            ; => {:running true :port 8080 :url "http://localhost:8080"}
+
+;; Stop web console
+(web-console :stop)
+```
+
+### Security
+
+- **Localhost only by default:** Binds to `127.0.0.1`
+- **Explicit opt-in for external access:** Requires `--bind 0.0.0.0` flag
+- **Warning on startup:** Display security warning when external binding enabled
+- **No authentication in v1:** Future enhancement
+
+```
+⚠️  WARNING: Web console bound to 0.0.0.0
+    Anyone with network access can execute code!
+    Use only in trusted networks or behind a firewall.
+```
+
+### Web UI Features
+
+The browser interface provides a rich REPL experience:
+
+- **Syntax highlighting:** CodeMirror-based editor with JLLL mode
+- **Auto-complete:** Symbol completion from current environment
+- **Command history:** Up/down arrows to navigate previous commands
+- **Multi-line input:** Shift+Enter for continuation
+- **Output formatting:**
+  - Results in green
+  - Errors in red
+  - Printed output in default color
+- **Mobile-friendly:** Responsive design for tablets/phones
+
+### Communication Protocol
+
+Uses **Server-Sent Events (SSE)** for server-to-client streaming:
+
+```
+Client                          Server
+  |                               |
+  |-- POST /eval {"code":"..."}-->|
+  |                               |
+  |<-- SSE: {type:"output"} ------|  (printed output)
+  |<-- SSE: {type:"output"} ------|  (more output)
+  |<-- SSE: {type:"result"} ------|  (final result)
+  |<-- SSE: {type:"done"} --------|  (stream complete)
+```
+
+**Event types:**
+- `output` - Printed output (from `println`, `print`, etc.)
+- `result` - Evaluation result
+- `error` - Error message
+- `done` - Stream complete
+
+### API Endpoints
+
+```
+GET  /                  - Web UI (HTML page)
+POST /eval              - Evaluate code, returns SSE stream
+GET  /complete?prefix=  - Auto-complete suggestions
+GET  /history           - Get command history
+POST /interrupt         - Interrupt running evaluation
+GET  /status            - Server status
+```
+
+### Example Session
+
+```
+JLLL Web Console - http://localhost:8080
+
+> (+ 1 2 3)
+6
+
+> (define (fib n)
+    (if (<= n 1)
+        n
+        (+ (fib (- n 1)) (fib (- n 2)))))
+fib
+
+> (map fib (range 10))
+(0 1 1 2 3 5 8 13 21 34)
+
+> (println "Hello")
+Hello
+null
+```
+
+### Implementation Notes
+
+- Reuses web server infrastructure (Section 28)
+- Evaluation runs in isolated environment per session
+- Output captured via `CapturingConsole` and streamed via SSE
+- History stored in browser localStorage
+- CodeMirror for syntax highlighting (bundled, no CDN dependency)
+
+### Future Enhancements
+
+- **Authentication:** Token or password protection
+- **Multiple sessions:** Support concurrent users with isolated environments
+- **Notebook mode:** Save/load evaluation history as notebooks
+- **File browser:** Navigate and edit files in the project
+- **WebSocket upgrade:** For bidirectional communication
+
+### Checklist
+
+- [ ] Add `web` subcommand to CLI
+- [ ] `--port` option for custom port
+- [ ] `--bind` option for external access
+- [ ] Create `WebConsoleLib.java`
+- [ ] `web-console` function for starting from JLLL
+- [ ] SSE streaming for evaluation output
+- [ ] HTML/CSS/JS for web UI
+- [ ] CodeMirror integration for syntax highlighting
+- [ ] Auto-complete endpoint
+- [ ] Document in `docs/web-console.md`
 
 ---
 
