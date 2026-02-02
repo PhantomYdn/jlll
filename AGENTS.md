@@ -103,6 +103,12 @@ Primitives that normally print output to the console can support a `:return true
 2. Check `ParameterParser.getBoolean(extraction, "return", false)`
 3. If true, return appropriate data structure instead of printing
 
+### AI Prompt Style
+
+When writing system prompts for JLLL AI sessions:
+- Prefer positive framing ("use eval interactively") over negative prohibitions ("never do X in one call")
+- Guide toward good patterns rather than listing anti-patterns
+
 ### AI Tools Architecture
 
 AI tools that wrap existing primitives are defined in JLLL (`ai.jlll`) rather than Java:

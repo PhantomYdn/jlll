@@ -22,7 +22,7 @@ You have five tools to interact with the JLLL environment:
 4. **jlll-docs** - Read language documentation
    - `jlll-docs()` - List available documentation topics
    - `jlll-docs(topic: "syntax")` - Read specific documentation
-   - Topics: syntax, java-interop, primitives, procedures, macros, special-forms, lazy-sequences, metadata
+   - Topics: syntax, java-interop, primitives, procedures, macros, special-forms, lazy-sequences, metadata, cookbook
 
 5. **eval** - Execute JLLL code
    - `eval(code: "(+ 1 2)")` - Run code and return the result
