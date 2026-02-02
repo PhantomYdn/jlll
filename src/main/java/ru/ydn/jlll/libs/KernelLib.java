@@ -1682,26 +1682,36 @@ public class KernelLib implements Library
                 TOPICS.put("lazy-sequences", "Lazy evaluation and streams");
                 TOPICS.put("metadata", "Documentation and metadata on bindings");
                 TOPICS.put("system-prompt", "AI assistant system prompt");
+                TOPICS.put("cookbook", "Common patterns and recipes");
             }
 
             @Override
             public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
+                // Extract keyword arguments (e.g., :return true)
+                ParameterParser.KeywordExtraction extraction = ParameterParser.extractKeywords(values);
+                boolean returnData = ParameterParser.getBoolean(extraction, "return", false);
                 Console console = getConsole(env);
-                if (values.length() == 0)
+                if (extraction.positional.isEmpty())
                 {
                     // List available topics
-                    return listTopics(console);
+                    return listTopics(console, returnData);
                 }
-                String topic = values.get(0).toString();
+                String topic = extraction.positional.get(0).toString();
                 // Resolve alias
                 topic = ALIASES.getOrDefault(topic.toLowerCase(), topic);
                 // Load and display documentation
-                return showDocumentation(topic, console);
+                return showDocumentation(topic, console, returnData);
             }
 
-            private Object listTopics(Console console)
+            private Object listTopics(Console console, boolean returnData)
             {
+                if (returnData)
+                {
+                    // Return list of topic names
+                    Object[] topicNames = TOPICS.keySet().toArray();
+                    return Cons.list(topicNames);
+                }
                 console.println();
                 console.printHeader("Available Documentation Topics");
                 console.printFaint("──────────────────────────────────────────────────");
@@ -1723,7 +1733,7 @@ public class KernelLib implements Library
                 return Null.NULL; // Side-effect only, no return value
             }
 
-            private Object showDocumentation(String topic, Console console) throws JlllException
+            private Object showDocumentation(String topic, Console console, boolean returnData) throws JlllException
             {
                 String resourcePath = "docs/" + topic + ".md";
                 try (InputStream is = KernelLib.class.getClassLoader().getResourceAsStream(resourcePath))
@@ -1734,6 +1744,11 @@ public class KernelLib implements Library
                                 + ". Use (jlll-docs) to list available topics.");
                     }
                     String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    if (returnData)
+                    {
+                        // Return raw markdown content as string
+                        return content;
+                    }
                     // Render with console formatting if supported
                     if (console.supportsColor())
                     {
@@ -2461,14 +2476,40 @@ public class KernelLib implements Library
             @Override
             public Object applyEvaluated(Cons values, Environment env) throws JlllException
             {
+                // Manually extract :return keyword argument
+                // (can't use extractKeywords directly because :primitives/:macros etc. are type
+                // filters, not keyword-value pairs)
+                boolean returnData = false;
+                List<Object> positional = new ArrayList<>();
+                if (values != null && !values.isNull())
+                {
+                    java.util.Iterator<?> it = values.iterator();
+                    while (it.hasNext())
+                    {
+                        Object arg = it.next();
+                        if (arg instanceof Keyword kw && kw.getName().equals("return"))
+                        {
+                            if (!it.hasNext())
+                            {
+                                throw new JlllException("Missing value for keyword :return");
+                            }
+                            Object val = it.next();
+                            returnData = Boolean.TRUE.equals(val) || "true".equalsIgnoreCase(val.toString());
+                        }
+                        else
+                        {
+                            positional.add(arg);
+                        }
+                    }
+                }
                 Console console = getConsole(env);
                 Map<Symbol, Object> bindings = env.getAllBindings();
                 String prefixFilter = null;
                 String typeFilter = null;
-                // Parse arguments
-                if (values.length() > 0)
+                // Parse positional arguments
+                if (!positional.isEmpty())
                 {
-                    Object arg = values.get(0);
+                    Object arg = positional.get(0);
                     if (arg instanceof String)
                     {
                         prefixFilter = (String) arg;
@@ -2519,6 +2560,11 @@ public class KernelLib implements Library
                         variablesList.add(entry);
                     }
                 }
+                // If :return true, return data structure instead of printing
+                if (returnData)
+                {
+                    return buildEnvReturnData(primitivesList, macrosList, proceduresList, variablesList, typeFilter);
+                }
                 // Print header
                 console.println();
                 int total = primitivesList.size() + macrosList.size() + proceduresList.size() + variablesList.size();
@@ -2562,6 +2608,42 @@ public class KernelLib implements Library
                 console.println();
                 console.flush();
                 return Null.NULL;
+            }
+
+            private Object buildEnvReturnData(List<Map.Entry<Symbol, Object>> primitivesList,
+                    List<Map.Entry<Symbol, Object>> macrosList, List<Map.Entry<Symbol, Object>> proceduresList,
+                    List<Map.Entry<Symbol, Object>> variablesList, String typeFilter) throws JlllException
+            {
+                // Helper to convert list of entries to sorted list of symbol names
+                java.util.function.Function<List<Map.Entry<Symbol, Object>>, Cons> toSymbolList = entries ->
+                {
+                    entries.sort((a, b) -> a.getKey().getName().compareTo(b.getKey().getName()));
+                    if (entries.isEmpty())
+                    {
+                        return Null.NULL;
+                    }
+                    Object[] names = entries.stream().map(e -> e.getKey().getName()).toArray();
+                    return Cons.list(names);
+                };
+                // If type filter specified, return flat list of that type
+                if (typeFilter != null)
+                {
+                    return switch (typeFilter)
+                    {
+                        case "primitives" -> toSymbolList.apply(primitivesList);
+                        case "macros" -> toSymbolList.apply(macrosList);
+                        case "procedures" -> toSymbolList.apply(proceduresList);
+                        case "variables" -> toSymbolList.apply(variablesList);
+                        default -> Null.NULL;
+                    };
+                }
+                // Return hash-map with all categories
+                java.util.Map<Object, Object> result = new java.util.LinkedHashMap<>();
+                result.put(Keyword.intern("primitives"), toSymbolList.apply(primitivesList));
+                result.put(Keyword.intern("macros"), toSymbolList.apply(macrosList));
+                result.put(Keyword.intern("procedures"), toSymbolList.apply(proceduresList));
+                result.put(Keyword.intern("variables"), toSymbolList.apply(variablesList));
+                return result;
             }
 
             private void printGroup(Console console, Environment env, String groupName,

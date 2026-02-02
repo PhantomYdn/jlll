@@ -215,22 +215,36 @@ public class AISession implements Serializable
                 var openaiBuilder = OpenAiStreamingChatModel.builder().apiKey(apiKey).modelName(modelName);
                 if (temperature != null)
                     openaiBuilder.temperature(temperature);
-                if (maxTokens != null)
-                    openaiBuilder.maxTokens(maxTokens);
+                // Always set maxTokens - use session value or config hierarchy
+                openaiBuilder.maxTokens(maxTokens != null ? maxTokens : config.getMaxOutputTokens(provider));
+                if (traceToolCalls)
+                {
+                    openaiBuilder.logRequests(true);
+                    openaiBuilder.logResponses(true);
+                }
                 return openaiBuilder.build();
             case ANTHROPIC :
                 var anthropicBuilder = AnthropicStreamingChatModel.builder().apiKey(apiKey).modelName(modelName);
                 if (temperature != null)
                     anthropicBuilder.temperature(temperature);
-                if (maxTokens != null)
-                    anthropicBuilder.maxTokens(maxTokens);
+                // Always set maxTokens - use session value or config hierarchy
+                anthropicBuilder.maxTokens(maxTokens != null ? maxTokens : config.getMaxOutputTokens(provider));
+                if (traceToolCalls)
+                {
+                    anthropicBuilder.logRequests(true);
+                    anthropicBuilder.logResponses(true);
+                }
                 return anthropicBuilder.build();
             case GOOGLE_AI :
                 var geminiBuilder = GoogleAiGeminiStreamingChatModel.builder().apiKey(apiKey).modelName(modelName);
                 if (temperature != null)
                     geminiBuilder.temperature(temperature);
-                if (maxTokens != null)
-                    geminiBuilder.maxOutputTokens(maxTokens);
+                // Always set maxOutputTokens - use session value or config hierarchy
+                geminiBuilder.maxOutputTokens(maxTokens != null ? maxTokens : config.getMaxOutputTokens(provider));
+                if (traceToolCalls)
+                {
+                    geminiBuilder.logRequestsAndResponses(true);
+                }
                 return geminiBuilder.build();
             case OLLAMA :
                 // For Ollama, the "API key" is actually the base URL
@@ -242,6 +256,13 @@ public class AISession implements Serializable
                 var ollamaBuilder = OllamaStreamingChatModel.builder().baseUrl(baseUrl).modelName(modelName);
                 if (temperature != null)
                     ollamaBuilder.temperature(temperature);
+                // Note: Ollama streaming model builder may not have maxTokens setter
+                // The config value is still used for consistency
+                if (traceToolCalls)
+                {
+                    ollamaBuilder.logRequests(true);
+                    ollamaBuilder.logResponses(true);
+                }
                 return ollamaBuilder.build();
             default :
                 throw new IllegalStateException("Unknown provider: " + provider);

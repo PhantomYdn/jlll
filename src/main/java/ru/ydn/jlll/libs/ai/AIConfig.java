@@ -170,6 +170,7 @@ public class AIConfig
     {
         private final String envVar;
         private final Map<ModelTier, String> tiers;
+        private final Integer maxOutputTokens;
 
         /**
          * Creates a new provider configuration.
@@ -178,11 +179,27 @@ public class AIConfig
          *            the environment variable for the API key
          * @param tiers
          *            the tier-to-model mappings
+         * @param maxOutputTokens
+         *            the max output tokens override for this provider, or null to use global default
          */
-        public ProviderConfig(String envVar, Map<ModelTier, String> tiers)
+        public ProviderConfig(String envVar, Map<ModelTier, String> tiers, Integer maxOutputTokens)
         {
             this.envVar = envVar;
             this.tiers = Collections.unmodifiableMap(new EnumMap<>(tiers));
+            this.maxOutputTokens = maxOutputTokens;
+        }
+
+        /**
+         * Creates a new provider configuration without max output tokens override.
+         *
+         * @param envVar
+         *            the environment variable for the API key
+         * @param tiers
+         *            the tier-to-model mappings
+         */
+        public ProviderConfig(String envVar, Map<ModelTier, String> tiers)
+        {
+            this(envVar, tiers, null);
         }
 
         /**
@@ -216,6 +233,16 @@ public class AIConfig
         {
             return tiers;
         }
+
+        /**
+         * Gets the max output tokens override for this provider.
+         *
+         * @return the max output tokens, or null to use global default
+         */
+        public Integer getMaxOutputTokens()
+        {
+            return maxOutputTokens;
+        }
     }
     // Instance fields
 
@@ -231,6 +258,8 @@ public class AIConfig
     private volatile String defaultModelOverride = null;
     /** Default temperature for AI requests */
     private volatile Double defaultTemperature = null;
+    /** Default max output tokens for AI responses */
+    private volatile Integer defaultMaxOutputTokens = 16384;
     /** Sources that were loaded (for debugging) */
     private volatile List<String> loadedSources = new ArrayList<>();
 
@@ -379,6 +408,11 @@ public class AIConfig
                 System.err.println("Warning: Invalid defaultTier in config: " + e.getMessage());
             }
         }
+        // Load default max output tokens
+        if (json.has("defaultMaxOutputTokens"))
+        {
+            this.defaultMaxOutputTokens = json.get("defaultMaxOutputTokens").getAsInt();
+        }
         // Load provider priority (replaces if specified)
         if (json.has("providerPriority"))
         {
@@ -437,9 +471,20 @@ public class AIConfig
                             }
                         }
                     }
+                    // Load max output tokens (optional per-provider override)
+                    Integer maxOutputTokens = null;
+                    if (providerJson.has("maxOutputTokens"))
+                    {
+                        maxOutputTokens = providerJson.get("maxOutputTokens").getAsInt();
+                    }
+                    // Preserve existing maxOutputTokens if merging and not overridden
+                    if (existing != null && maxOutputTokens == null)
+                    {
+                        maxOutputTokens = existing.getMaxOutputTokens();
+                    }
                     if (envVar != null && !tiers.isEmpty())
                     {
-                        configs.put(provider, new ProviderConfig(envVar, tiers));
+                        configs.put(provider, new ProviderConfig(envVar, tiers, maxOutputTokens));
                     }
                 }
                 catch (IllegalArgumentException e)
@@ -722,6 +767,46 @@ public class AIConfig
     public void setDefaultTemperature(Double temperature)
     {
         this.defaultTemperature = temperature;
+    }
+    // ========== Max Output Tokens ==========
+
+    /**
+     * Gets the max output tokens for a provider.
+     * Priority: provider override → global default.
+     *
+     * @param provider
+     *            the provider
+     * @return the max output tokens to use
+     */
+    public Integer getMaxOutputTokens(Provider provider)
+    {
+        ProviderConfig config = providerConfigs.get(provider);
+        if (config != null && config.getMaxOutputTokens() != null)
+        {
+            return config.getMaxOutputTokens();
+        }
+        return defaultMaxOutputTokens;
+    }
+
+    /**
+     * Gets the global default max output tokens.
+     *
+     * @return the default max output tokens
+     */
+    public Integer getDefaultMaxOutputTokens()
+    {
+        return defaultMaxOutputTokens;
+    }
+
+    /**
+     * Sets the global default max output tokens.
+     *
+     * @param maxOutputTokens
+     *            the max output tokens, or null to reset to default (16384)
+     */
+    public void setDefaultMaxOutputTokens(Integer maxOutputTokens)
+    {
+        this.defaultMaxOutputTokens = maxOutputTokens != null ? maxOutputTokens : 16384;
     }
     // ========== Introspection ==========
 

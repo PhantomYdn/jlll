@@ -1,9 +1,11 @@
 {
   "defaultTier": "balanced",
+  "defaultMaxOutputTokens": 16384,
   "providerPriority": ["anthropic", "openai", "google", "ollama"],
   "providers": {
     "anthropic": {
       "envVar": "ANTHROPIC_API_KEY",
+      "maxOutputTokens": 64000,
       "tiers": {
         "best": "claude-opus-4-5",
         "balanced": "claude-sonnet-4-5",
@@ -20,6 +22,7 @@
     },
     "google": {
       "envVar": "GOOGLE_AI_API_KEY",
+      "maxOutputTokens": 8192,
       "tiers": {
         "best": "gemini-1.5-pro",
         "balanced": "gemini-1.5-pro",
@@ -28,6 +31,7 @@
     },
     "ollama": {
       "envVar": "OLLAMA_BASE_URL",
+      "maxOutputTokens": 4096,
       "tiers": {
         "best": "llama3.2",
         "balanced": "llama3.2",

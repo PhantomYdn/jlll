@@ -10,4 +10,8 @@
   :doc "Converts a string to a symbol."
   (invoke-static 'ru.ydn.jlll.common.Symbol 'intern str))
 
+(define (to-keyword str)
+  :doc "Converts a string to a keyword."
+  (invoke-static 'ru.ydn.jlll.common.Keyword 'intern str))
+
 (define jlll-convertors '())

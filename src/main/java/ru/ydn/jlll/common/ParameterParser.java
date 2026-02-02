@@ -216,4 +216,67 @@ public class ParameterParser
         }
         return new KeywordExtraction(positional, keywords);
     }
+
+    /**
+     * Gets a boolean keyword argument from an extraction result.
+     *
+     * @param extraction
+     *            the keyword extraction result
+     * @param name
+     *            the keyword name (without colon prefix)
+     * @param defaultValue
+     *            value to return if keyword is not present
+     * @return the boolean value or defaultValue
+     */
+    public static boolean getBoolean(KeywordExtraction extraction, String name, boolean defaultValue)
+    {
+        Symbol key = Symbol.intern(name);
+        Object value = extraction.keywords.get(key);
+        if (value == null)
+        {
+            return defaultValue;
+        }
+        if (value instanceof Boolean)
+        {
+            return (Boolean) value;
+        }
+        // Handle truthy values
+        return Boolean.TRUE.equals(value) || "true".equalsIgnoreCase(value.toString());
+    }
+
+    /**
+     * Gets a string keyword argument from an extraction result.
+     *
+     * @param extraction
+     *            the keyword extraction result
+     * @param name
+     *            the keyword name (without colon prefix)
+     * @param defaultValue
+     *            value to return if keyword is not present
+     * @return the string value or defaultValue
+     */
+    public static String getString(KeywordExtraction extraction, String name, String defaultValue)
+    {
+        Symbol key = Symbol.intern(name);
+        Object value = extraction.keywords.get(key);
+        if (value == null)
+        {
+            return defaultValue;
+        }
+        return value.toString();
+    }
+
+    /**
+     * Checks if a keyword argument is present in an extraction result.
+     *
+     * @param extraction
+     *            the keyword extraction result
+     * @param name
+     *            the keyword name (without colon prefix)
+     * @return true if the keyword is present
+     */
+    public static boolean hasKeyword(KeywordExtraction extraction, String name)
+    {
+        return extraction.keywords.containsKey(Symbol.intern(name));
+    }
 }

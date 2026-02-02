@@ -77,6 +77,43 @@ Before committing or ending a session:
 
 - When modifying output format of a function, search for tests that assert on that output — tests often encode specific format expectations
 
+## Design Conventions
+
+### The `:return true` Pattern
+
+Primitives that normally print output to the console can support a `:return true` keyword argument to return data programmatically instead. This enables both interactive and programmatic use:
+
+```lisp
+; Interactive use (prints to console)
+(env "hash")
+(jlll-docs "syntax")
+
+; Programmatic use (returns data structure)
+(env "hash" :return true)        ; Returns hash-map or list
+(jlll-docs "syntax" :return true) ; Returns markdown string
+```
+
+**When to use this pattern:**
+- The function has console-oriented output useful for human interaction
+- The same data would be useful programmatically (e.g., for AI tools)
+- Adding `:return true` doesn't complicate the implementation significantly
+
+**Implementation:**
+1. Use `ParameterParser.extractKeywords(values)` to parse arguments
+2. Check `ParameterParser.getBoolean(extraction, "return", false)`
+3. If true, return appropriate data structure instead of printing
+
+### AI Tools Architecture
+
+AI tools that wrap existing primitives are defined in JLLL (`ai.jlll`) rather than Java:
+
+- **Discovery tools** (`apropos`, `describe`, `env`, `jlll-docs`) - wrap primitives with `:return true`
+- **Eval tool** - stays in Java (needs direct Environment access)
+
+Tools are registered via `ai-add-builtin-tools` function called from `ai-session-create`.
+
+See `src/main/resources/ru/ydn/jlll/libs/ai.jlll` for tool definitions.
+
 ## Project Structure
 
 ```

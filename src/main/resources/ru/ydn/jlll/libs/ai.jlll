@@ -6,3 +6,54 @@
   (if name
       (ai-session-load path :activate true :name name :eval eval)
       (ai-session-load path :activate true :eval eval)))
+
+;;; ========== Built-in AI Tools ==========
+;;; These tools wrap existing JLLL primitives for AI consumption.
+;;; They use :return true to get data structures instead of printing.
+
+(define *ai-tool-apropos*
+  :doc "AI tool for searching symbols by pattern."
+  (ai-tool "apropos"
+    :description "Search for symbols matching a pattern. Returns a list of matching symbol names. Use this to discover functions and variables."
+    :parameters '(("pattern" "string" "Pattern to search for (case-insensitive substring match)" true))
+    :fn (lambda (pattern) (apropos pattern))))
+
+(define *ai-tool-describe*
+  :doc "AI tool for getting documentation on a symbol."
+  (ai-tool "describe"
+    :description "Get detailed documentation for a symbol including type and description. Use after 'apropos' or 'env' to understand how to use a specific function."
+    :parameters '(("symbol" "string" "Symbol name to describe (e.g., 'filter', 'hash-map')" true))
+    :fn (lambda (name) (describe (to-symbol name)))))
+
+(define *ai-tool-env*
+  :doc "AI tool for listing environment bindings."
+  (ai-tool "env"
+    :description "List environment symbols. Returns categorized data structure with primitives, procedures, macros, and variables. Optionally filter by pattern (string) or by type (keyword like :primitives, :procedures, :macros, :variables)."
+    :parameters '(("filter" "string" "Optional: pattern to filter by name, OR type keyword (primitives/procedures/macros/variables)" false))
+    :fn (lambda (filter)
+          (if filter
+              (if (or (equal? filter "primitives")
+                      (equal? filter "procedures")
+                      (equal? filter "macros")
+                      (equal? filter "variables"))
+                  (env (to-keyword filter) :return true)
+                  (env filter :return true))
+              (env :return true)))))
+
+(define *ai-tool-jlll-docs*
+  :doc "AI tool for reading JLLL documentation."
+  (ai-tool "jlll-docs"
+    :description "Read JLLL documentation. Without topic, returns list of available topics. With topic, returns markdown content. Topics include: syntax, java-interop, primitives, procedures, macros, special-forms, lazy-sequences, metadata, system-prompt."
+    :parameters '(("topic" "string" "Documentation topic (optional). Use without topic first to see available topics." false))
+    :fn (lambda (topic)
+          (if topic
+              (jlll-docs topic :return true)
+              (jlll-docs :return true)))))
+
+(define (ai-add-builtin-tools session)
+  :doc "Adds built-in discovery tools (apropos, describe, env, jlll-docs) to an AI session. Called automatically when creating sessions with :eval true."
+  (ai-tool-add session *ai-tool-apropos*)
+  (ai-tool-add session *ai-tool-describe*)
+  (ai-tool-add session *ai-tool-env*)
+  (ai-tool-add session *ai-tool-jlll-docs*)
+  session)

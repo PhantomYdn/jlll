@@ -1238,6 +1238,17 @@ By default, sessions include an `eval` tool that allows the LLM to execute JLLL 
 (ai-clear)
 ```
 
+### Best Practices
+
+**Prefer JLLL built-ins over system commands:**
+- Use `slurp`/`spit` for file I/O instead of shell redirection
+- Use `open-browser` instead of system `open` command
+- Build content as JLLL strings, not shell command output
+
+**Code transparency:**
+- Show the JLLL code being executed when practical
+- Let users see patterns for reproducibility and learning
+
 ## Debugging and Development Tools
 
 Utilities for debugging, testing, and functional programming.

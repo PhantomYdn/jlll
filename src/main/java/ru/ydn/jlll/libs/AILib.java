@@ -100,6 +100,14 @@ public class AILib implements Library
         }
     }
 
+    /**
+     * Outputs debug message to stderr when tracing is enabled.
+     */
+    private static void debugLog(String message)
+    {
+        System.err.println(message);
+    }
+
     /** {@inheritDoc} */
     @Override
     public void load(Environment env) throws JlllException
@@ -186,10 +194,25 @@ public class AILib implements Library
                 }
                 // Create session
                 AISession session = new AISession(name, provider, modelName, systemPrompt, env);
-                // Add eval tool by default
+                // Add built-in tools by default
                 if (addEvalTool)
                 {
+                    // Add eval tool (Java-based, needs direct env access)
                     session.addTool(AITool.createEvalTool(env));
+                    // Add JLLL-defined discovery tools (apropos, describe, env, jlll-docs)
+                    Symbol addToolsFn = Symbol.intern("ai-add-builtin-tools");
+                    Object fn = env.lookup(addToolsFn);
+                    if (fn instanceof Procedure proc)
+                    {
+                        try
+                        {
+                            proc.applyEvaluated(Cons.list(session), env);
+                        }
+                        catch (JlllException e)
+                        {
+                            System.err.println("[WARN] Failed to add built-in tools: " + e.getMessage());
+                        }
+                    }
                 }
                 // Add custom tools
                 for (AITool tool : tools)
@@ -1043,6 +1066,18 @@ public class AILib implements Library
             requestBuilder.toolSpecifications(toolSpecs);
         }
         // Note: temperature is set at model level, not request level in langchain4j
+        // Debug logging before request
+        boolean tracing = session.isTraceToolCalls();
+        if (tracing)
+        {
+            debugLog("[DEBUG] Sending initial AI request:");
+            debugLog("  messageCount: " + messages.size());
+            debugLog("  toolSpecCount: " + toolSpecs.size());
+            for (ToolSpecification spec : toolSpecs)
+            {
+                debugLog("  - tool: " + spec.name());
+            }
+        }
         // Start streaming request
         model.chat(requestBuilder.build(), new StreamingChatResponseHandler()
         {
@@ -1059,35 +1094,87 @@ public class AILib implements Library
             @Override
             public void onCompleteResponse(ChatResponse completeResponse)
             {
-                AiMessage aiMessage = completeResponse.aiMessage();
-                aiMessageRef.set(aiMessage);
-                // Check for tool calls
-                if (aiMessage.hasToolExecutionRequests())
+                try
                 {
-                    try
+                    AiMessage aiMessage = completeResponse.aiMessage();
+                    aiMessageRef.set(aiMessage);
+                    // Debug logging
+                    if (tracing)
                     {
-                        handleToolCalls(session, aiMessage, tokenQueue, fullResponse, messages, toolSpecs, model,
-                                temperature, 0);
+                        debugLog("[DEBUG] Initial response received:");
+                        debugLog("  finishReason: " + completeResponse.finishReason());
+                        debugLog("  metadata: " + completeResponse.metadata());
+                        debugLog("  hasToolCalls: " + aiMessage.hasToolExecutionRequests());
+                        debugLog("  textLength: " + (aiMessage.text() != null ? aiMessage.text().length() : 0));
+                        if (aiMessage.hasToolExecutionRequests())
+                        {
+                            debugLog("  toolCallCount: " + aiMessage.toolExecutionRequests().size());
+                            for (var req : aiMessage.toolExecutionRequests())
+                            {
+                                debugLog("  - toolCall: " + req.name() + " id=" + req.id());
+                            }
+                        }
+                        else
+                        {
+                            // Log the actual text when there are no tool calls (might reveal why)
+                            String text = aiMessage.text();
+                            if (text != null && text.length() > 200)
+                            {
+                                debugLog("  text (truncated): " + text.substring(0, 200) + "...");
+                            }
+                            else
+                            {
+                                debugLog("  text: " + text);
+                            }
+                        }
                     }
-                    catch (Exception e)
+                    // Check for tool calls
+                    if (aiMessage.hasToolExecutionRequests())
                     {
-                        tokenQueue.offer(new StreamError(e));
+                        try
+                        {
+                            handleToolCalls(session, aiMessage, tokenQueue, fullResponse, messages, toolSpecs, model,
+                                    temperature, 0, tracing);
+                        }
+                        catch (Exception e)
+                        {
+                            if (tracing)
+                            {
+                                debugLog("[DEBUG] Exception in handleToolCalls: " + e.getMessage());
+                                e.printStackTrace(System.err);
+                            }
+                            tokenQueue.offer(new StreamError(e));
+                        }
+                    }
+                    else
+                    {
+                        // Add AI response to history
+                        session.addAiMessage(aiMessage);
+                        // Trigger auto-save if enabled
+                        session.performAutoSave(session.getEnvironment());
+                        completed.set(true);
+                        tokenQueue.offer(END_OF_STREAM);
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    // Add AI response to history
-                    session.addAiMessage(aiMessage);
-                    // Trigger auto-save if enabled
-                    session.performAutoSave(session.getEnvironment());
-                    completed.set(true);
-                    tokenQueue.offer(END_OF_STREAM);
+                    if (tracing)
+                    {
+                        debugLog("[DEBUG] Exception in initial onCompleteResponse: " + e.getMessage());
+                        e.printStackTrace(System.err);
+                    }
+                    tokenQueue.offer(new StreamError(e));
                 }
             }
 
             @Override
             public void onError(Throwable error)
             {
+                if (tracing)
+                {
+                    debugLog("[DEBUG] Streaming error in initial request: " + error.getMessage());
+                    error.printStackTrace(System.err);
+                }
                 tokenQueue.offer(new StreamError(error));
             }
         });
@@ -1100,10 +1187,12 @@ public class AILib implements Library
      *
      * @param depth
      *            current recursion depth for tool calls (starts at 0)
+     * @param tracing
+     *            whether debug tracing is enabled
      */
     private void handleToolCalls(AISession session, AiMessage aiMessage, BlockingQueue<Object> tokenQueue,
             AtomicReference<StringBuilder> fullResponse, List<ChatMessage> messages, List<ToolSpecification> toolSpecs,
-            StreamingChatModel model, Double temperature, int depth)
+            StreamingChatModel model, Double temperature, int depth, boolean tracing)
     {
         // Check for maximum tool call depth to prevent infinite loops
         if (depth >= MAX_TOOL_CALL_DEPTH)
@@ -1113,11 +1202,14 @@ public class AILib implements Library
                     + "This usually indicates repeated failures or an infinite loop. "
                     + "Please try a simpler request or break it into smaller steps.";
             errorConsole.println("[ERROR] " + errorMsg);
+            if (tracing)
+            {
+                debugLog("[DEBUG] Max tool call depth exceeded at depth " + depth);
+            }
             tokenQueue.offer(errorMsg);
             tokenQueue.offer(END_OF_STREAM);
             return;
         }
-        boolean tracing = session.isTraceToolCalls();
         Console console = tracing ? KernelLib.getConsole(session.getEnvironment()) : null;
         // If tracing, store the AI message with tool calls in history
         if (tracing)
@@ -1171,6 +1263,25 @@ public class AILib implements Library
         {
             requestBuilder.toolSpecifications(toolSpecs);
         }
+        // Debug logging before continuation request
+        if (tracing)
+        {
+            debugLog("[DEBUG] Sending continuation request (after tool results):");
+            debugLog("  depth: " + depth);
+            debugLog("  messageCount: " + newMessages.size());
+            debugLog("  toolResultCount: " + toolResults.size());
+            for (ToolExecutionResultMessage resultMsg : toolResults)
+            {
+                String text = resultMsg.text();
+                String displayText = (text != null && text.length() > 100) ? text.substring(0, 100) + "..." : text;
+                debugLog("  - toolResult[" + resultMsg.toolName() + "]: " + displayText);
+            }
+            debugLog("  toolSpecCount: " + toolSpecs.size());
+            for (ToolSpecification spec : toolSpecs)
+            {
+                debugLog("  - tool: " + spec.name());
+            }
+        }
         // Note: temperature is set at model level, not request level
         model.chat(requestBuilder.build(), new StreamingChatResponseHandler()
         {
@@ -1187,26 +1298,74 @@ public class AILib implements Library
             @Override
             public void onCompleteResponse(ChatResponse completeResponse)
             {
-                AiMessage finalMessage = completeResponse.aiMessage();
-                // Check for more tool calls (recursive)
-                if (finalMessage.hasToolExecutionRequests())
+                try
                 {
-                    handleToolCalls(session, finalMessage, tokenQueue, fullResponse, newMessages, toolSpecs, model,
-                            temperature, depth + 1);
+                    AiMessage finalMessage = completeResponse.aiMessage();
+                    // Debug logging for continuation response
+                    if (tracing)
+                    {
+                        debugLog("[DEBUG] Continuation response received (depth=" + depth + "):");
+                        debugLog("  finishReason: " + completeResponse.finishReason());
+                        debugLog("  metadata: " + completeResponse.metadata());
+                        debugLog("  hasToolCalls: " + finalMessage.hasToolExecutionRequests());
+                        debugLog("  textLength: " + (finalMessage.text() != null ? finalMessage.text().length() : 0));
+                        if (finalMessage.hasToolExecutionRequests())
+                        {
+                            debugLog("  toolCallCount: " + finalMessage.toolExecutionRequests().size());
+                            for (var req : finalMessage.toolExecutionRequests())
+                            {
+                                debugLog("  - toolCall: " + req.name() + " id=" + req.id());
+                            }
+                        }
+                        else
+                        {
+                            // Log actual text when no tool calls - this is key for debugging!
+                            String text = finalMessage.text();
+                            if (text != null && text.length() > 200)
+                            {
+                                debugLog("  text (truncated): " + text.substring(0, 200) + "...");
+                            }
+                            else
+                            {
+                                debugLog("  text: " + text);
+                            }
+                        }
+                    }
+                    // Check for more tool calls (recursive)
+                    if (finalMessage.hasToolExecutionRequests())
+                    {
+                        handleToolCalls(session, finalMessage, tokenQueue, fullResponse, newMessages, toolSpecs, model,
+                                temperature, depth + 1, tracing);
+                    }
+                    else
+                    {
+                        // Add final AI response to history (skip intermediate tool messages)
+                        session.addAiMessage(finalMessage);
+                        // Trigger auto-save if enabled
+                        session.performAutoSave(session.getEnvironment());
+                        tokenQueue.offer(END_OF_STREAM);
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    // Add final AI response to history (skip intermediate tool messages)
-                    session.addAiMessage(finalMessage);
-                    // Trigger auto-save if enabled
-                    session.performAutoSave(session.getEnvironment());
-                    tokenQueue.offer(END_OF_STREAM);
+                    if (tracing)
+                    {
+                        debugLog("[DEBUG] Exception in continuation onCompleteResponse (depth=" + depth + "): "
+                                + e.getMessage());
+                        e.printStackTrace(System.err);
+                    }
+                    tokenQueue.offer(new StreamError(e));
                 }
             }
 
             @Override
             public void onError(Throwable error)
             {
+                if (tracing)
+                {
+                    debugLog("[DEBUG] Streaming error in continuation (depth=" + depth + "): " + error.getMessage());
+                    error.printStackTrace(System.err);
+                }
                 tokenQueue.offer(new StreamError(error));
             }
         });
