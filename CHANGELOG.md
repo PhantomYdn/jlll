@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5] - 2026-02-03
+
+### Added
+
+- **Shell Execution Library**: Execute shell commands from JLLL
+  - `bash` function returns structured result with `:stdout`, `:stderr`, `:exit-code`
+  - Options: `:timeout`, `:cwd`, `:input`, `:env`
+  - Helper functions: `shell-ok?`, `shell-stdout`
+  - AI tool integration for LLM-assisted administration
+- **Embedded HTTP Server**: Lightweight web server using Javalin
+  - Route handlers: `http-get`, `http-post`, `http-put`, `http-delete`, `http-patch`
+  - Request helpers: `http-body-json`, `http-path-param`, `http-query-param`
+  - Response helpers: `http-json`, `http-html`, `http-redirect`, `http-status`
+  - Static file serving with `http-static`
+  - Server-Sent Events (SSE) with `http-sse`, `sse-send`, `sse-close`
+  - Before/after filters, error and exception handlers
+- **Init File Support**: `~/.jlllrc` loaded automatically at REPL startup
+  - `--rc path` option to specify custom init file
+  - `--no-rc` option to skip init file loading
+- **System Library**: System and environment access
+  - `hostname`, `user-name`, `user-home`, `os-name`, `os-arch`, `java-version`
+  - `getenv`, `getenv-all`, `get-property`, `set-property!`
+  - `memory-used`, `memory-free`, `memory-total`, `memory-max`
+  - `available-processors`, `gc`, `sleep`, `exit`
+- **Format Library**: Common Lisp / SRFI-28 style formatted output
+  - `format`, `printf`, `fprintf`
+  - Directives: `~a`, `~s`, `~d`, `~x`, `~b`, `~o`, `~f`, `~%`, `~~`
+- **Set Library**: Efficient set data structure
+  - `set`, `make-set`, `list->set`, `set->list`
+  - `set-contains?`, `set-add!`, `set-remove!`, `set-clear!`
+  - `set-union`, `set-intersection`, `set-difference`, `set-symmetric-difference`
+  - `set-subset?`, `set-superset?`, `set-equal?`, `set-disjoint?`
+  - `set-map`, `set-filter`, `set-for-each`
+- **Documentation**: Added `CHANGELOG.md`, `docs/ai.md`, reorganized `docs/README.md`
+
+### Changed
+
+- AI library now includes `bash` as a built-in tool for LLM shell execution
+
 ## [2.4] - 2026-02-02
 
 ### Added
@@ -135,7 +174,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This is a major version bump due to the Java version requirement change. Projects using Java 8-16 should continue using v1.x.
 
-[Unreleased]: https://github.com/PhantomYdn/jlll/compare/v2.4...HEAD
+[Unreleased]: https://github.com/PhantomYdn/jlll/compare/v2.5...HEAD
+[2.5]: https://github.com/PhantomYdn/jlll/compare/v2.4...v2.5
 [2.4]: https://github.com/PhantomYdn/jlll/compare/v2.3...v2.4
 [2.3]: https://github.com/PhantomYdn/jlll/compare/v2.2.0...v2.3
 [2.2.0]: https://github.com/PhantomYdn/jlll/compare/v2.1.0...v2.2.0
