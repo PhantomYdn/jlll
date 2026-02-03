@@ -1886,9 +1886,9 @@ or implement sections in the order listed.
 7. Debugging tools (17), Environment (18), Formatted output (19) - anytime
 
 **Recommended implementation order for Phase 3 (new sections):**
-1. Init file (26) - CLI only, no library dependencies
-2. Shell execution (27) - needs hash maps (done)
-3. Web server (28) - needs hash maps (done), JSON (done), adds Javalin dependency
+1. ~~Init file (26)~~ - CLI only, no library dependencies - **DONE**
+2. ~~Shell execution (27)~~ - needs hash maps (done) - **DONE**
+3. ~~Web server (28)~~ - needs hash maps (done), JSON (done), adds Javalin dependency - **DONE**
 4. Web console (29) - depends on web server (28)
 
 ### Scheme Compatibility Notes
@@ -2118,7 +2118,7 @@ jlll -i script.jlll
 
 ---
 
-## 27. Shell Execution (Important)
+## 27. Shell Execution (Implemented)
 
 Execute shell commands from JLLL and capture output. Essential for system integration,
 build automation, and scripting tasks.
@@ -2217,7 +2217,7 @@ execution. Security is the user's responsibility. Document risks clearly.
 
 ---
 
-## 28. Web Server (Important)
+## 28. Web Server (Implemented)
 
 Embedded HTTP server for exposing web endpoints from JLLL. Uses Javalin for a
 lightweight, modern implementation with an imperative routing API.

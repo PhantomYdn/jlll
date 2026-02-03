@@ -71,7 +71,12 @@ Before committing or ending a session:
    - Java: Public classes and methods must have JavaDoc (extracted by `therapi-runtime-javadoc` for primitives)
    - JLLL: Functions and macros in `.jlll` files must have `:doc` metadata
    - Update relevant documentation in `docs/` when adding or modifying functionality
-5. **Commit all changes**: Ensure working tree is clean
+5. **ROADMAP.md sync** (REQUIRED when implementing roadmap features):
+   - Update section header from "(Important)" or "(Nice to Have)" to "(Implemented)"
+   - Mark all checklist items as `[x]` when complete
+   - Update "Recommended implementation order" sections to show completed items
+   - This applies to any feature from ROADMAP.md, not just new sections
+6. **Commit all changes**: Ensure working tree is clean
 
 ## Lessons Learned
 
