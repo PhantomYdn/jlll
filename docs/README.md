@@ -19,16 +19,30 @@ JLLL is **not** Scheme, Clojure, or Common Lisp. While it shares Lisp syntax fun
 
 ## Documentation Index
 
+### Core Language
 - **[Syntax](syntax.md)** - Atoms, lists, reader macros, comments
 - **[Special Forms](special-forms.md)** - `define`, `if`, `lambda`, `let`, `cond`, `case`, `begin`
 - **[Procedures](procedures.md)** - Function definition, keyword arguments, defaults, rest arguments
 - **[Metadata](metadata.md)** - Documentation and metadata on bindings
 - **[Primitives](primitives.md)** - Built-in functions organized by library
 - **[Macros](macros.md)** - Macro definition and expansion
+- **[Lazy Sequences](lazy-sequences.md)** - Working with lazy evaluation and infinite sequences
+
+### Java Integration
 - **[Java Interop](java-interop.md)** - Calling Java from JLLL
 - **[Dynamic Classpath](dynamic-classpath.md)** - Loading Maven dependencies at runtime
-- **[Lazy Sequences](lazy-sequences.md)** - Working with lazy evaluation and infinite sequences
+
+### System Integration
+- **[Shell Execution](shell.md)** - Running shell commands from JLLL
+- **[Web Server](web-server.md)** - Embedded HTTP server with Javalin
 - **[Init File](init-file.md)** - Customizing JLLL startup with ~/.jlllrc
+
+### AI Integration
+- **[AI Library](ai.md)** - LLM integration with session management, tools, and streaming
+
+### Reference
+- **[Cookbook](cookbook.md)** - Practical examples and common patterns
+- **[System Prompt](system-prompt.md)** - AI assistant integration guide
 
 ## Quick Start
 

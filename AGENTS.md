@@ -133,7 +133,7 @@ src/
 ├── main/
 │   ├── java/ru/ydn/jlll/
 │   │   ├── common/           # Core: Jlll, Cons, Symbol, Enviroment, Evaluator
-│   │   │   └── annotation/   # @JlllName, @JlllDoc
+│   │   │   └── annotation/   # @JlllName
 │   │   ├── cli/              # CLI: JlllCli, JlllRepl, JlllCompleter, JlllHighlighter
 │   │   ├── io/               # Tokenizer, Marshaller, Renderer
 │   │   ├── libs/             # Built-in libraries (Kernel, Math, List, etc.)
@@ -187,8 +187,9 @@ src/
 ### Annotations
 
 - `@JlllName("name")` - Bind Java method to Lisp function name
-- `@JlllDoc("description")` - Document a primitive
 - `@Override` - Always use when overriding methods
+
+**Note:** Primitives are documented via JavaDoc comments (extracted at runtime by `therapi-runtime-javadoc`), not via a dedicated annotation.
 
 ## Testing Patterns
 
