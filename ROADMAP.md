@@ -1889,7 +1889,7 @@ or implement sections in the order listed.
 1. ~~Init file (26)~~ - CLI only, no library dependencies - **DONE**
 2. ~~Shell execution (27)~~ - needs hash maps (done) - **DONE**
 3. ~~Web server (28)~~ - needs hash maps (done), JSON (done), adds Javalin dependency - **DONE**
-4. Web console (29) - depends on web server (28)
+4. ~~Web console (29)~~ - depends on web server (28) - **DONE**
 
 ### Scheme Compatibility Notes
 
@@ -2434,7 +2434,7 @@ These features may be added later:
 
 ---
 
-## 29. Web Console (Nice to Have)
+## 29. Web Console (Implemented)
 
 Browser-based REPL for JLLL. Provides a rich interactive environment accessible
 from any web browser, useful for remote development, demonstrations, and
@@ -2568,16 +2568,16 @@ null
 
 ### Checklist
 
-- [ ] Add `web` subcommand to CLI
-- [ ] `--port` option for custom port
-- [ ] `--bind` option for external access
-- [ ] Create `WebConsoleLib.java`
-- [ ] `web-console` function for starting from JLLL
-- [ ] SSE streaming for evaluation output
-- [ ] HTML/CSS/JS for web UI
-- [ ] CodeMirror integration for syntax highlighting
-- [ ] Auto-complete endpoint
-- [ ] Document in `docs/web-console.md`
+- [x] Add `web` subcommand to CLI
+- [x] `--port` option for custom port
+- [x] `--bind` option for external access
+- [x] Create `WebConsoleLib.java`
+- [x] `web-console` function for starting from JLLL
+- [x] SSE streaming for evaluation output
+- [x] HTML/CSS/JS for web UI
+- [x] CodeMirror integration for syntax highlighting
+- [x] Auto-complete endpoint
+- [x] Document in `docs/web-console.md`
 
 ---
 

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JLLL Web Console</title>
+    <link rel="stylesheet" href="/codemirror/codemirror.min.css">
+    <link rel="stylesheet" href="/web-console.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>JLLL Web Console</h1>
+            <div id="status" class="status connected">Connected</div>
+        </header>
+        
+        <main id="output">
+            <div class="welcome">
+                <span class="cyan">JLLL - Java Lisp Like Language</span><br>
+                <span class="hint">Type (help) for commands</span>
+            </div>
+        </main>
+        
+        <footer>
+            <div id="input-container">
+                <span class="prompt">jlll&gt;</span>
+                <div id="editor-wrapper">
+                    <textarea id="editor" autofocus></textarea>
+                </div>
+            </div>
+            <div id="autocomplete" class="hidden"></div>
+        </footer>
+    </div>
+    
+    <script src="/codemirror/codemirror.min.js"></script>
+    <script src="/codemirror/mode/commonlisp.min.js"></script>
+    <script src="/web-console.js"></script>
+</body>
+</html>
