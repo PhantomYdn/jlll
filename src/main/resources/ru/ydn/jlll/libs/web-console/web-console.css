@@ -86,7 +86,6 @@ main#output {
 }
 
 .output-line.input {
-    color: #9cdcfe;
     cursor: pointer;
     padding: 2px 4px;
     margin-left: -4px;
@@ -196,22 +195,37 @@ footer {
     background: #264f78 !important;
 }
 
-/* CodeMirror syntax highlighting (dark theme) */
-.cm-s-default .cm-keyword { color: #569cd6; }
-.cm-s-default .cm-atom { color: #b5cea8; }
-.cm-s-default .cm-number { color: #b5cea8; }
-.cm-s-default .cm-def { color: #dcdcaa; }
-.cm-s-default .cm-variable { color: #9cdcfe; }
-.cm-s-default .cm-variable-2 { color: #9cdcfe; }
-.cm-s-default .cm-property { color: #9cdcfe; }
-.cm-s-default .cm-operator { color: #d4d4d4; }
-.cm-s-default .cm-comment { color: #6a9955; font-style: italic; }
-.cm-s-default .cm-string { color: #ce9178; }
-.cm-s-default .cm-string-2 { color: #ce9178; }
-.cm-s-default .cm-meta { color: #9cdcfe; }
-.cm-s-default .cm-bracket { color: #ffd700; }
-.cm-s-default .cm-builtin { color: #4ec9b0; }
-.cm-s-default .cm-special { color: #c586c0; }
+/* ========================================
+ * JLLL Syntax Highlighting - Terminal ANSI Colors
+ * Matching JlllHighlighter.java exactly
+ * ======================================== */
+
+/* CodeMirror mode classes (cm- prefix) - for editor input */
+.cm-s-default .cm-comment { color: #aaaaaa; font-style: italic; }  /* Gray italic - comments */
+.cm-s-default .cm-string { color: #55ff55; }       /* Green - strings */
+.cm-s-default .cm-number { color: #c0c000; }       /* Yellow - numbers */
+.cm-s-default .cm-keyword { color: #ff55ff; }      /* Magenta - keywords (:foo) */
+.cm-s-default .cm-callable { color: #5555ff; }     /* Blue - callables (procedure/primitive/macro) */
+.cm-s-default .cm-variable { color: #55ffff; }     /* Cyan - variables (non-callable bindings) */
+.cm-s-default .cm-unbound { color: #d4d4d4; }      /* Default - unbound symbols */
+.cm-s-default .cm-paren { color: #aaaaaa; }        /* Gray - parentheses */
+.cm-s-default .cm-bracket { color: #aaaaaa; }      /* Gray - brackets */
+.cm-s-default .cm-quote { color: #ff5555; }        /* Red - quote characters (' ` , ,@) */
+
+/* JLLL highlighting classes (jlll- prefix) - for history/output */
+.jlll-comment { color: #aaaaaa; font-style: italic; }  /* Gray italic - comments */
+.jlll-string { color: #55ff55; }       /* Green - strings */
+.jlll-number { color: #c0c000; }       /* Yellow - numbers */
+.jlll-keyword { color: #ff55ff; }      /* Magenta - keywords (:foo) */
+.jlll-callable { color: #5555ff; }     /* Blue - callables (procedure/primitive/macro) */
+.jlll-variable { color: #55ffff; }     /* Cyan - variables (non-callable bindings) */
+.jlll-unbound { color: #d4d4d4; }      /* Default - unbound symbols */
+.jlll-paren { color: #aaaaaa; }        /* Gray - parentheses */
+.jlll-bracket { color: #aaaaaa; }      /* Gray - brackets */
+.jlll-quote { color: #ff5555; }        /* Red - quote characters (' ` , ,@) */
+
+/* Input line prompt in history */
+.output-line.input .prompt { color: #aaaaaa; }
 
 /* Autocomplete popup */
 #autocomplete {

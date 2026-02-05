@@ -235,6 +235,8 @@ public class WebConsoleLib extends ReflectionLibrary
                 createResourceHandler("web-console/codemirror/mode/commonlisp.min.js", "application/javascript", env));
         // Auto-complete endpoint
         server.addRoute(HandlerType.GET, "/complete", createCompleteHandler(env));
+        // Symbols endpoint (for syntax highlighting)
+        server.addRoute(HandlerType.GET, "/symbols", createSymbolsHandler(env));
         // Status endpoint
         server.addRoute(HandlerType.GET, "/status", createStatusHandler(env));
         // Interrupt endpoint
@@ -299,6 +301,40 @@ public class WebConsoleLib extends ReflectionLibrary
                     prefix = "";
                 }
                 Object result = getCompletions(prefix, getEvalEnvironment());
+                ctx.json(result);
+                return Null.NULL;
+            }
+        };
+    }
+
+    /**
+     * Creates a handler for the /symbols endpoint (for syntax highlighting).
+     */
+    private static Procedure createSymbolsHandler(Environment env)
+    {
+        return new Primitive("web-console-symbols", env)
+        {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            public Object applyEvaluated(Cons values, Environment env) throws JlllException
+            {
+                if (values == null || values.isNull())
+                {
+                    throw new JlllException("Missing context argument");
+                }
+                Object ctxObj = values.car();
+                if (!(ctxObj instanceof Context))
+                {
+                    throw new JlllException("Expected Context, got " + ctxObj.getClass().getSimpleName());
+                }
+                Context ctx = (Context) ctxObj;
+                String type = ctx.queryParam("type");
+                if (type == null)
+                {
+                    type = "all";
+                }
+                Object result = getSymbols(type, getEvalEnvironment());
                 ctx.json(result);
                 return Null.NULL;
             }
@@ -437,6 +473,52 @@ public class WebConsoleLib extends ReflectionLibrary
     }
 
     /**
+     * Gets symbols categorized by type for syntax highlighting.
+     *
+     * @param type
+     *            "all" for both callables and variables, "callables" for just callables, "variables"
+     *            for just variables
+     * @param env
+     *            the environment to get symbols from
+     * @return map with "callables" and/or "variables" arrays
+     */
+    private static Object getSymbols(String type, Environment env)
+    {
+        TreeSet<String> callables = new TreeSet<>();
+        TreeSet<String> variables = new TreeSet<>();
+        Map<Symbol, Object> bindings = env.getAllBindings();
+        for (Map.Entry<Symbol, Object> entry : bindings.entrySet())
+        {
+            String name = entry.getKey().getName();
+            Object value = entry.getValue();
+            if (value instanceof Primitive || value instanceof Procedure || value instanceof Macros)
+            {
+                callables.add(name);
+            }
+            else if (value != null)
+            {
+                variables.add(name);
+            }
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        if ("callables".equals(type))
+        {
+            result.put("callables", new java.util.ArrayList<>(callables));
+        }
+        else if ("variables".equals(type))
+        {
+            result.put("variables", new java.util.ArrayList<>(variables));
+        }
+        else
+        {
+            // "all" or default
+            result.put("callables", new java.util.ArrayList<>(callables));
+            result.put("variables", new java.util.ArrayList<>(variables));
+        }
+        return result;
+    }
+
+    /**
      * Gets a description for a symbol value.
      */
     private static String getDescription(String name, Object value, Environment env)
@@ -518,9 +600,13 @@ public class WebConsoleLib extends ReflectionLibrary
             // Get environment for evaluation
             Environment evalEnv = getEvalEnvironment();
             // Create capturing console for output
+            // IMPORTANT: We must bind the CapturingConsole to Environment.top because
+            // library functions like for-each have lexical environments that were captured
+            // when libraries were loaded. Their lookup chain eventually reaches Environment.top,
+            // not sharedEnv. So we must modify Environment.top to intercept all console output.
             CapturingConsole captureConsole = new CapturingConsole();
-            Console originalConsole = KernelLib.getConsole(evalEnv);
-            evalEnv.addBinding(Symbol.CONSOLE, captureConsole);
+            Console originalConsole = KernelLib.getConsole(Environment.top);
+            Environment.top.addBinding(Symbol.CONSOLE, captureConsole);
             // Execute in background thread so we can send output progressively
             Future<?> future = executor.submit(() ->
             {
@@ -539,22 +625,14 @@ public class WebConsoleLib extends ReflectionLibrary
                     {
                         sendSseEvent(client, "clear", Map.of());
                     }
-                    else
+                    else if (result != null && !(result instanceof Null))
                     {
-                        String resultStr;
-                        String resultType;
-                        if (result == null || result instanceof Null)
-                        {
-                            resultStr = "null";
-                            resultType = "Null";
-                        }
-                        else
-                        {
-                            resultStr = result.toString();
-                            resultType = result.getClass().getSimpleName();
-                        }
+                        // Only send result for non-null values (matching REPL behavior)
+                        String resultStr = result.toString();
+                        String resultType = result.getClass().getSimpleName();
                         sendSseEvent(client, "result", Map.of("value", resultStr, "type", resultType));
                     }
+                    // null/Null results are silently suppressed (like REPL)
                 }
                 catch (JlllException e)
                 {
@@ -583,8 +661,8 @@ public class WebConsoleLib extends ReflectionLibrary
                 }
                 finally
                 {
-                    // Restore original console
-                    evalEnv.addBinding(Symbol.CONSOLE, originalConsole);
+                    // Restore original console to Environment.top
+                    Environment.top.addBinding(Symbol.CONSOLE, originalConsole);
                     // Send done event
                     sendSseEvent(client, "done", Map.of());
                     // Clear current eval reference

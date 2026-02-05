@@ -24,11 +24,278 @@
     let autocompletePrefix = '';
     let autocompleteDebounce = null;
 
+    // Symbol cache for syntax highlighting (matching JlllHighlighter.java behavior)
+    let knownSymbols = { callables: new Set(), variables: new Set() };
+
+    // ========================================
+    // JLLL Syntax Highlighting
+    // ========================================
+
+    /**
+     * Fetch symbols from server for syntax highlighting.
+     * Called on init and after each evaluation.
+     */
+    async function fetchSymbols() {
+        try {
+            const response = await fetch('/symbols?type=all');
+            const data = await response.json();
+            knownSymbols.callables = new Set(data.callables || []);
+            knownSymbols.variables = new Set(data.variables || []);
+            // Refresh editor highlighting if CodeMirror is active
+            if (editor) {
+                editor.refresh();
+            }
+        } catch (e) {
+            console.error('Failed to fetch symbols:', e);
+        }
+    }
+
+    /**
+     * Check if a character is a delimiter (ends a token).
+     * Matches JlllHighlighter.isDelimiter()
+     */
+    function isDelimiter(c) {
+        return c === '(' || c === ')' || c === '[' || c === ']' ||
+               c === '\'' || c === '`' || c === ',' || c === '@' ||
+               c === '"' || c === ';' || /\s/.test(c);
+    }
+
+    /**
+     * Check if a string is a number.
+     * Matches JlllHighlighter.isNumber()
+     */
+    function isNumber(token) {
+        if (!token || token.length === 0) return false;
+        return /^[+-]?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(token);
+    }
+
+    /**
+     * Tokenize JLLL code into an array of {type, value} tokens.
+     * Matches JlllHighlighter.java logic.
+     */
+    function tokenizeJlll(code) {
+        const tokens = [];
+        let i = 0;
+
+        while (i < code.length) {
+            const c = code[i];
+
+            // Comment (starts with ;)
+            if (c === ';') {
+                let end = code.indexOf('\n', i);
+                if (end === -1) end = code.length;
+                tokens.push({ type: 'comment', value: code.substring(i, end) });
+                i = end;
+                continue;
+            }
+
+            // String literal
+            if (c === '"') {
+                let end = i + 1;
+                while (end < code.length) {
+                    const sc = code[end];
+                    if (sc === '\\' && end + 1 < code.length) {
+                        end += 2; // Skip escaped character
+                        continue;
+                    }
+                    if (sc === '"') {
+                        end++;
+                        break;
+                    }
+                    end++;
+                }
+                tokens.push({ type: 'string', value: code.substring(i, end) });
+                i = end;
+                continue;
+            }
+
+            // Quote characters
+            if (c === '\'' || c === '`') {
+                tokens.push({ type: 'quote', value: c });
+                i++;
+                continue;
+            }
+
+            // Comma (unquote) - handle ,@
+            if (c === ',') {
+                if (i + 1 < code.length && code[i + 1] === '@') {
+                    tokens.push({ type: 'quote', value: ',@' });
+                    i += 2;
+                } else {
+                    tokens.push({ type: 'quote', value: ',' });
+                    i++;
+                }
+                continue;
+            }
+
+            // Parentheses
+            if (c === '(' || c === ')') {
+                tokens.push({ type: 'paren', value: c });
+                i++;
+                continue;
+            }
+
+            // Brackets
+            if (c === '[' || c === ']') {
+                tokens.push({ type: 'bracket', value: c });
+                i++;
+                continue;
+            }
+
+            // Whitespace
+            if (/\s/.test(c)) {
+                let end = i + 1;
+                while (end < code.length && /\s/.test(code[end])) {
+                    end++;
+                }
+                tokens.push({ type: 'whitespace', value: code.substring(i, end) });
+                i = end;
+                continue;
+            }
+
+            // Symbol or number - read until delimiter
+            let start = i;
+            while (i < code.length && !isDelimiter(code[i])) {
+                i++;
+            }
+            const token = code.substring(start, i);
+
+            if (isNumber(token)) {
+                tokens.push({ type: 'number', value: token });
+            } else if (token.startsWith(':')) {
+                tokens.push({ type: 'keyword', value: token });
+            } else if (knownSymbols.callables.has(token)) {
+                tokens.push({ type: 'callable', value: token });
+            } else if (knownSymbols.variables.has(token)) {
+                tokens.push({ type: 'variable', value: token });
+            } else {
+                tokens.push({ type: 'unbound', value: token });
+            }
+        }
+
+        return tokens;
+    }
+
+    /**
+     * Highlight JLLL code - returns HTML with span elements.
+     * Used for history/output highlighting.
+     */
+    function highlightJlll(code) {
+        const tokens = tokenizeJlll(code);
+        return tokens.map(t => {
+            if (t.type === 'whitespace') {
+                return escapeHtml(t.value);
+            }
+            return `<span class="jlll-${t.type}">${escapeHtml(t.value)}</span>`;
+        }).join('');
+    }
+
+    /**
+     * Define custom CodeMirror mode for JLLL.
+     * Uses knownSymbols for context-aware highlighting.
+     */
+    function defineJlllMode() {
+        if (typeof CodeMirror === 'undefined') return;
+
+        CodeMirror.defineMode('jlll', function() {
+            return {
+                startState: function() {
+                    return {};
+                },
+                token: function(stream, state) {
+                    // Comment
+                    if (stream.match(/;.*/)) {
+                        return 'comment';
+                    }
+
+                    // String
+                    if (stream.peek() === '"') {
+                        stream.next(); // consume opening quote
+                        while (!stream.eol()) {
+                            const c = stream.next();
+                            if (c === '\\') {
+                                stream.next(); // skip escaped char
+                            } else if (c === '"') {
+                                break;
+                            }
+                        }
+                        return 'string';
+                    }
+
+                    // Quote characters
+                    if (stream.eat('\'') || stream.eat('`')) {
+                        return 'quote';
+                    }
+
+                    // Comma (unquote)
+                    if (stream.eat(',')) {
+                        stream.eat('@'); // optional @ for unquote-splicing
+                        return 'quote';
+                    }
+
+                    // Parentheses
+                    if (stream.eat('(') || stream.eat(')')) {
+                        return 'paren';
+                    }
+
+                    // Brackets
+                    if (stream.eat('[') || stream.eat(']')) {
+                        return 'bracket';
+                    }
+
+                    // Whitespace
+                    if (stream.eatSpace()) {
+                        return null;
+                    }
+
+                    // Symbol or number
+                    let word = '';
+                    while (!stream.eol()) {
+                        const c = stream.peek();
+                        if (c === '(' || c === ')' || c === '[' || c === ']' ||
+                            c === '\'' || c === '`' || c === ',' || c === '@' ||
+                            c === '"' || c === ';' || /\s/.test(c)) {
+                            break;
+                        }
+                        word += stream.next();
+                    }
+
+                    if (word.length === 0) {
+                        stream.next(); // consume unknown char
+                        return null;
+                    }
+
+                    // Classify the token
+                    if (isNumber(word)) {
+                        return 'number';
+                    }
+                    if (word.startsWith(':')) {
+                        return 'keyword';
+                    }
+                    if (knownSymbols.callables.has(word)) {
+                        return 'callable';
+                    }
+                    if (knownSymbols.variables.has(word)) {
+                        return 'variable';
+                    }
+                    return 'unbound';
+                }
+            };
+        });
+    }
+
+    // ========================================
+    // Editor Initialization
+    // ========================================
+
     // Initialize CodeMirror if available
     function initEditor() {
+        // Define custom JLLL mode first
+        defineJlllMode();
+
         if (typeof CodeMirror !== 'undefined') {
             editor = CodeMirror.fromTextArea(editorTextarea, {
-                mode: 'commonlisp',
+                mode: 'jlll',
                 theme: 'default',
                 lineNumbers: false,
                 lineWrapping: true,
@@ -274,7 +541,7 @@
     // Get word at cursor for textarea
     function getWordAtCursorTextarea(text, pos) {
         let start = pos;
-        while (start > 0 && /[a-zA-Z0-9_\-!?*+<>=]/.test(text[start - 1])) {
+        while (start > 0 && /[a-zA-Z0-9_\-!?*+<>=:]/.test(text[start - 1])) {
             start--;
         }
         return text.substring(start, pos);
@@ -331,9 +598,9 @@
 
     // Get word at cursor position
     function getWordAtCursor(line, ch) {
-        // Find start of word (Lisp symbol characters)
+        // Find start of word (Lisp symbol characters, including : for keywords)
         let start = ch;
-        while (start > 0 && /[a-zA-Z0-9_\-!?*+<>=]/.test(line[start - 1])) {
+        while (start > 0 && /[a-zA-Z0-9_\-!?*+<>=:]/.test(line[start - 1])) {
             start--;
         }
         return line.substring(start, ch);
@@ -460,8 +727,8 @@
         }
         historyIndex = -1;
 
-        // Show input in output
-        appendOutput('input', '> ' + code);
+        // Show input in output (with syntax highlighting frozen at current state)
+        appendOutput('input', code);
         clearInput();
 
         // Start SSE connection
@@ -495,6 +762,8 @@
             eventSource.close();
             eventSource = null;
             isEvaluating = false;
+            // Refresh symbols after evaluation (new defines, etc.)
+            fetchSymbols();
             focusInput();
         });
 
@@ -515,7 +784,7 @@
     function appendWelcome() {
         const div = document.createElement('div');
         div.className = 'welcome';
-        div.innerHTML = `<span class="cyan">JLLL - Java Lisp Like Language</span><br>
+        div.innerHTML = `<span class="jlll-callable">JLLL</span> - <span class="jlll-variable">Java Lisp Like Language</span><br>
             <span class="hint">Type (help) for commands</span>`;
         output.appendChild(div);
     }
@@ -524,13 +793,14 @@
     function appendOutput(type, text) {
         const div = document.createElement('div');
         div.className = 'output-line ' + type;
-        div.textContent = text;
 
-        // Make input lines clickable to reuse code
         if (type === 'input') {
-            const code = text.substring(2); // Strip "> " prefix
-            div.dataset.code = code;
+            // Apply syntax highlighting to input lines (frozen at current symbol state)
+            div.innerHTML = '<span class="prompt">&gt; </span>' + highlightJlll(text);
+            div.dataset.code = text;
             div.title = 'Click to edit';
+        } else {
+            div.textContent = text;
         }
 
         output.appendChild(div);
@@ -567,7 +837,10 @@
     }
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Fetch symbols first for syntax highlighting
+        await fetchSymbols();
+
         initEditor();
         focusInput();
         checkStatus();
