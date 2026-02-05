@@ -147,6 +147,8 @@ public class WebConsoleLib extends ReflectionLibrary
             console.println();
             console.flush();
         }
+        // Load web console specific REPL library (help, clear commands)
+        new WebConsoleReplLib().load(env);
         sharedEnv = env;
         isolated = iso;
         currentPort = port;
@@ -429,7 +431,8 @@ public class WebConsoleLib extends ReflectionLibrary
             }
         }
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("completions", Cons.list(completions.toArray()));
+        // Return as ArrayList for proper JSON array serialization (not Cons list)
+        result.put("completions", new java.util.ArrayList<>(completions));
         return result;
     }
 
@@ -531,20 +534,27 @@ public class WebConsoleLib extends ReflectionLibrary
                     {
                         sendSseEvent(client, "output", Map.of("text", output));
                     }
-                    // Send result
-                    String resultStr;
-                    String resultType;
-                    if (result == null || result instanceof Null)
+                    // Send result (check for special clear marker)
+                    if (result == WebConsoleReplLib.CLEAR_MARKER)
                     {
-                        resultStr = "null";
-                        resultType = "Null";
+                        sendSseEvent(client, "clear", Map.of());
                     }
                     else
                     {
-                        resultStr = result.toString();
-                        resultType = result.getClass().getSimpleName();
+                        String resultStr;
+                        String resultType;
+                        if (result == null || result instanceof Null)
+                        {
+                            resultStr = "null";
+                            resultType = "Null";
+                        }
+                        else
+                        {
+                            resultStr = result.toString();
+                            resultType = result.getClass().getSimpleName();
+                        }
+                        sendSseEvent(client, "result", Map.of("value", resultStr, "type", resultType));
                     }
-                    sendSseEvent(client, "result", Map.of("value", resultStr, "type", resultType));
                 }
                 catch (JlllException e)
                 {

@@ -87,6 +87,15 @@ main#output {
 
 .output-line.input {
     color: #9cdcfe;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: -4px;
+    border-radius: 3px;
+    transition: background-color 0.15s ease;
+}
+
+.output-line.input:hover {
+    background: rgba(86, 156, 214, 0.15);
 }
 
 .output-line.output {
@@ -235,12 +244,18 @@ footer {
     border-bottom: none;
 }
 
-.autocomplete-item:hover {
+.autocomplete-item:hover,
+.autocomplete-item.selected {
     background: #094771;
 }
 
 .autocomplete-item .value {
     color: #9cdcfe;
+}
+
+.autocomplete-item .value .match {
+    color: #dcdcaa;
+    font-weight: bold;
 }
 
 .autocomplete-item .desc {
