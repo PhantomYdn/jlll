@@ -1,7 +1,10 @@
 package ru.ydn.jlll.libs;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeSet;
@@ -12,7 +15,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import io.javalin.http.Context;
 import io.javalin.http.HandlerType;
 import io.javalin.http.sse.SseClient;
-import ru.ydn.jlll.common.CapturingConsole;
 import ru.ydn.jlll.common.Cons;
 import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
@@ -599,14 +601,14 @@ public class WebConsoleLib extends ReflectionLibrary
             }
             // Get environment for evaluation
             Environment evalEnv = getEvalEnvironment();
-            // Create capturing console for output
-            // IMPORTANT: We must bind the CapturingConsole to Environment.top because
+            // Create streaming console for real-time output
+            // IMPORTANT: We must bind the StreamingConsole to Environment.top because
             // library functions like for-each have lexical environments that were captured
             // when libraries were loaded. Their lookup chain eventually reaches Environment.top,
             // not sharedEnv. So we must modify Environment.top to intercept all console output.
-            CapturingConsole captureConsole = new CapturingConsole();
             Console originalConsole = KernelLib.getConsole(Environment.top);
-            Environment.top.addBinding(Symbol.CONSOLE, captureConsole);
+            StreamingConsole streamingConsole = new StreamingConsole(client, originalConsole);
+            Environment.top.addBinding(Symbol.CONSOLE, streamingConsole);
             // Execute in background thread so we can send output progressively
             Future<?> future = executor.submit(() ->
             {
@@ -614,11 +616,11 @@ public class WebConsoleLib extends ReflectionLibrary
                 {
                     // Evaluate
                     Object result = Jlll.eval(new StringReader(code), evalEnv);
-                    // Send any captured output
-                    String output = captureConsole.getCapturedOutput();
-                    if (!output.isEmpty())
+                    // Send any remaining buffered output (fallback for code that doesn't flush)
+                    String remaining = streamingConsole.getRemainingOutput();
+                    if (!remaining.isEmpty())
                     {
-                        sendSseEvent(client, "output", Map.of("text", output));
+                        sendSseEvent(client, "output", Map.of("text", remaining));
                     }
                     // Send result (check for special clear marker)
                     if (result == WebConsoleReplLib.CLEAR_MARKER)
@@ -636,11 +638,11 @@ public class WebConsoleLib extends ReflectionLibrary
                 }
                 catch (JlllException e)
                 {
-                    // Send any captured output first
-                    String output = captureConsole.getCapturedOutput();
-                    if (!output.isEmpty())
+                    // Send any remaining buffered output first
+                    String remaining = streamingConsole.getRemainingOutput();
+                    if (!remaining.isEmpty())
                     {
-                        sendSseEvent(client, "output", Map.of("text", output));
+                        sendSseEvent(client, "output", Map.of("text", remaining));
                     }
                     // Send error
                     String message = e.getMessage();
@@ -817,5 +819,194 @@ public class WebConsoleLib extends ReflectionLibrary
     public boolean isWebConsoleRunning()
     {
         return server != null && server.isRunning();
+    }
+
+    /**
+     * A console implementation that streams output to an SSE client in real-time.
+     *
+     * <p>
+     * Unlike CapturingConsole which batches all output, StreamingConsole sends output
+     * to the client immediately on flush() calls. This enables real-time streaming
+     * for operations like AI chat responses.
+     * </p>
+     */
+    private static class StreamingConsole implements Console
+    {
+        private final StringBuilder buffer = new StringBuilder();
+        private final SseClient client;
+        private final Console parent;
+
+        /**
+         * Creates a streaming console that sends output to an SSE client.
+         *
+         * @param client
+         *            the SSE client to send output to
+         * @param parent
+         *            optional parent console for input operations (may be null)
+         */
+        public StreamingConsole(SseClient client, Console parent)
+        {
+            this.client = client;
+            this.parent = parent;
+        }
+
+        /**
+         * Sends any buffered output to the client and clears the buffer.
+         */
+        private synchronized void sendBuffer()
+        {
+            if (buffer.length() > 0)
+            {
+                String text = buffer.toString();
+                buffer.setLength(0);
+                sendSseEvent(client, "output", Map.of("text", text));
+            }
+        }
+
+        /**
+         * Returns any remaining buffered output without sending it.
+         * Used for fallback when evaluation completes.
+         *
+         * @return remaining buffered content
+         */
+        public synchronized String getRemainingOutput()
+        {
+            String remaining = buffer.toString();
+            buffer.setLength(0);
+            return remaining;
+        }
+        // ========== Output (low-level) ==========
+
+        @Override
+        public synchronized void print(String text)
+        {
+            buffer.append(text);
+        }
+
+        @Override
+        public synchronized void println(String text)
+        {
+            buffer.append(text).append("\n");
+        }
+
+        @Override
+        public synchronized void println()
+        {
+            buffer.append("\n");
+        }
+
+        @Override
+        public void flush()
+        {
+            sendBuffer();
+        }
+        // ========== Styled Output (capture plain text) ==========
+
+        @Override
+        public synchronized void printBold(String text)
+        {
+            buffer.append(text);
+        }
+
+        @Override
+        public synchronized void printFaint(String text)
+        {
+            buffer.append(text);
+        }
+
+        @Override
+        public synchronized void printColored(String text, Color color)
+        {
+            buffer.append(text);
+        }
+        // ========== Input (delegate to parent or throw) ==========
+
+        @Override
+        public String readLine() throws JlllException
+        {
+            if (parent != null && parent.supportsInput())
+            {
+                return parent.readLine();
+            }
+            throw new JlllException("Input not available in web console");
+        }
+
+        @Override
+        public String readLine(String prompt) throws JlllException
+        {
+            if (parent != null && parent.supportsInput())
+            {
+                return parent.readLine(prompt);
+            }
+            throw new JlllException("Input not available in web console");
+        }
+
+        @Override
+        public String readPassword() throws JlllException
+        {
+            if (parent != null && parent.supportsInput())
+            {
+                return parent.readPassword();
+            }
+            throw new JlllException("Input not available in web console");
+        }
+
+        @Override
+        public String readPassword(String prompt) throws JlllException
+        {
+            if (parent != null && parent.supportsInput())
+            {
+                return parent.readPassword(prompt);
+            }
+            throw new JlllException("Input not available in web console");
+        }
+        // ========== Capabilities ==========
+
+        @Override
+        public boolean supportsColor()
+        {
+            return false; // Web console handles colors via CSS
+        }
+
+        @Override
+        public boolean supportsInput()
+        {
+            return parent != null && parent.supportsInput();
+        }
+
+        @Override
+        public int getWidth()
+        {
+            return -1; // Unknown width in web context
+        }
+        // ========== Access to underlying streams ==========
+
+        @Override
+        public PrintWriter getWriter()
+        {
+            return new PrintWriter(new StringWriter()
+            {
+                @Override
+                public void write(String str)
+                {
+                    synchronized (StreamingConsole.this)
+                    {
+                        buffer.append(str);
+                    }
+                }
+
+                @Override
+                public void flush()
+                {
+                    StreamingConsole.this.flush();
+                }
+            });
+        }
+
+        @Override
+        public BufferedReader getReader()
+        {
+            return parent != null ? parent.getReader() : null;
+        }
     }
 }

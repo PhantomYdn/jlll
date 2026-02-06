@@ -17,6 +17,7 @@
     let currentInput = '';
     let isEvaluating = false;
     let eventSource = null;
+    let currentOutputDiv = null; // For streaming output - reuse same div
 
     // Autocomplete state
     let autocompleteItems = [];
@@ -721,6 +722,9 @@
         isEvaluating = true;
         hideAutocomplete();
 
+        // Reset streaming output div for new evaluation
+        currentOutputDiv = null;
+
         // Add to history
         if (code !== history[history.length - 1]) {
             history.push(code);
@@ -737,7 +741,7 @@
 
         eventSource.addEventListener('output', (e) => {
             const data = JSON.parse(e.data);
-            appendOutput('output', data.text);
+            appendStreamingOutput(data.text);
         });
 
         eventSource.addEventListener('result', (e) => {
@@ -762,6 +766,7 @@
             eventSource.close();
             eventSource = null;
             isEvaluating = false;
+            currentOutputDiv = null; // Reset streaming div
             // Refresh symbols after evaluation (new defines, etc.)
             fetchSymbols();
             focusInput();
@@ -789,8 +794,26 @@
         output.appendChild(div);
     }
 
+    // Append streaming output (reuses same div for continuous output)
+    function appendStreamingOutput(text) {
+        if (!currentOutputDiv) {
+            // Create new output div for this evaluation's output
+            currentOutputDiv = document.createElement('div');
+            currentOutputDiv.className = 'output-line output';
+            output.appendChild(currentOutputDiv);
+        }
+        // Append text to existing div (preserves streaming effect)
+        currentOutputDiv.textContent += text;
+        output.scrollTop = output.scrollHeight;
+    }
+
     // Append to output
     function appendOutput(type, text) {
+        // Clear streaming div reference when adding non-output content
+        if (type !== 'output') {
+            currentOutputDiv = null;
+        }
+
         const div = document.createElement('div');
         div.className = 'output-line ' + type;
 

@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import ru.ydn.jlll.common.Cons;
+import ru.ydn.jlll.common.Console;
 import ru.ydn.jlll.common.Environment;
 import ru.ydn.jlll.common.Jlll;
 import ru.ydn.jlll.common.JlllException;
@@ -46,6 +47,7 @@ import ru.ydn.jlll.common.ReflectionLibrary;
  * <li><b>:cwd</b> - Working directory</li>
  * <li><b>:input</b> - Data to pipe to stdin (string or Reader)</li>
  * <li><b>:env</b> - Additional environment variables (hash-map)</li>
+ * <li><b>:stream</b> - If true, print output in real-time and return only exit code</li>
  * </ul>
  *
  * <p>
@@ -60,6 +62,11 @@ import ru.ydn.jlll.common.ReflectionLibrary;
  * ;; =&gt; {:stdout "pattern here\n" :stderr "" :exit-code 0}
  *
  * (bash "npm test" :cwd "/path/to/project" :timeout 60000)
+ *
+ * ;; Streaming mode - prints output in real-time, returns exit code
+ * (bash "for i in 1 2 3; do echo $i; sleep 1; done" :stream true)
+ * ;; Prints: 1, 2, 3 (with delays)
+ * ;; =&gt; 0
  * </pre>
  */
 public class ShellLib extends ReflectionLibrary
@@ -81,7 +88,8 @@ public class ShellLib extends ReflectionLibrary
         new Primitive("bash", env,
                 "Execute shell command. Returns hash-map with :stdout, :stderr, :exit-code. "
                         + "Options: :timeout (ms, default 120000), :cwd (working directory), "
-                        + ":input (string or Reader to pipe to stdin), :env (hash-map of additional env vars).")
+                        + ":input (string or Reader to pipe to stdin), :env (hash-map of additional env vars), "
+                        + ":stream (if true, print output in real-time and return only exit code).")
         {
             private static final long serialVersionUID = 1L;
 
@@ -102,7 +110,9 @@ public class ShellLib extends ReflectionLibrary
                 String cwd = ParameterParser.getString(extraction, "cwd", null);
                 Object input = ParameterParser.getObject(extraction, "input", null);
                 Object envVars = ParameterParser.getObject(extraction, "env", null);
-                return executeCommand(command, timeout, cwd, input, envVars);
+                boolean stream = ParameterParser.getBoolean(extraction, "stream", false);
+                Console console = stream ? KernelLib.getConsole(env) : null;
+                return executeCommand(command, timeout, cwd, input, envVars, stream, console);
             }
         };
         // Load JLLL wrappers (shell alias, etc.)
@@ -110,7 +120,7 @@ public class ShellLib extends ReflectionLibrary
     }
 
     /**
-     * Executes a shell command and returns the result as a hash-map.
+     * Executes a shell command and returns the result.
      *
      * @param command
      *            the shell command to execute
@@ -122,13 +132,17 @@ public class ShellLib extends ReflectionLibrary
      *            data to pipe to stdin (String or Reader, null for none)
      * @param envVars
      *            additional environment variables (Map, null for none)
-     * @return hash-map with :stdout, :stderr, :exit-code
+     * @param stream
+     *            if true, print output in real-time to console
+     * @param console
+     *            the console for streaming output (required if stream is true)
+     * @return hash-map with :stdout, :stderr, :exit-code (or just exit code if streaming)
      * @throws JlllException
      *             if command execution fails
      */
     @SuppressWarnings("unchecked")
-    private Map<Object, Object> executeCommand(String command, long timeout, String cwd, Object input, Object envVars)
-            throws JlllException
+    private Object executeCommand(String command, long timeout, String cwd, Object input, Object envVars,
+            boolean stream, Console console) throws JlllException
     {
         String[] shellCmd = getShellCommand();
         String[] fullCommand = new String[shellCmd.length + 1];
@@ -208,8 +222,8 @@ public class ShellLib extends ReflectionLibrary
             // Capture stdout and stderr in parallel threads
             StringBuilder stdout = new StringBuilder();
             StringBuilder stderr = new StringBuilder();
-            Thread stdoutThread = createStreamReader(process.getInputStream(), stdout);
-            Thread stderrThread = createStreamReader(process.getErrorStream(), stderr);
+            Thread stdoutThread = createStreamReader(process.getInputStream(), stdout, stream, console, false);
+            Thread stderrThread = createStreamReader(process.getErrorStream(), stderr, stream, console, true);
             stdoutThread.start();
             stderrThread.start();
             // Wait for process with timeout
@@ -241,6 +255,11 @@ public class ShellLib extends ReflectionLibrary
             {
                 inputThread.join(1000);
             }
+            // Return just exit code when streaming, full hash-map otherwise
+            if (stream)
+            {
+                return exitCode;
+            }
             // Build result map
             Map<Object, Object> result = new LinkedHashMap<>();
             result.put(Keyword.intern("stdout"), stdout.toString());
@@ -261,14 +280,22 @@ public class ShellLib extends ReflectionLibrary
 
     /**
      * Creates a thread that reads from an input stream into a StringBuilder.
+     * Optionally streams output to console in real-time.
      *
      * @param input
      *            the input stream to read from
      * @param output
      *            the StringBuilder to write to
+     * @param stream
+     *            if true, print output to console in real-time
+     * @param console
+     *            the console for streaming output (may be null if stream is false)
+     * @param isStderr
+     *            if true, this is stderr (print in red when streaming)
      * @return the reader thread (not started)
      */
-    private Thread createStreamReader(InputStream input, StringBuilder output)
+    private Thread createStreamReader(InputStream input, StringBuilder output, boolean stream, Console console,
+            boolean isStderr)
     {
         Thread thread = new Thread(() ->
         {
@@ -278,7 +305,21 @@ public class ShellLib extends ReflectionLibrary
                 int read;
                 while ((read = reader.read(buffer)) != -1)
                 {
-                    output.append(buffer, 0, read);
+                    String chunk = new String(buffer, 0, read);
+                    output.append(chunk);
+                    // Stream to console if requested
+                    if (stream && console != null)
+                    {
+                        if (isStderr)
+                        {
+                            console.printColored(chunk, Console.Color.RED);
+                        }
+                        else
+                        {
+                            console.print(chunk);
+                        }
+                        console.flush();
+                    }
                 }
             }
             catch (IOException e)
