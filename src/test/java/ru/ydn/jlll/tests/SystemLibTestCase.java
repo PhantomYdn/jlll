@@ -202,6 +202,26 @@ public class SystemLibTestCase
         assertTrue("available-processors should be at least 1", (Integer) result >= 1);
         assertEquals(Runtime.getRuntime().availableProcessors(), result);
     }
+    // ========== Browser ==========
+
+    @Test
+    public void testOpenBrowserExists() throws Exception
+    {
+        // Test that open-browser function exists and returns a Boolean
+        // We can't easily test actual browser opening in CI, but we can verify the function works
+        // Using a file path that doesn't exist - function should still return true/false, not throw
+        Object result = Jlll.eval("(open-browser \"/nonexistent/path/test.html\")", env);
+        assertTrue("open-browser should return a Boolean", result instanceof Boolean);
+    }
+
+    @Test
+    public void testOpenBrowserWithUrl() throws Exception
+    {
+        // Test with a URL - the function should return Boolean (true if it tried, false if failed)
+        // Note: This may actually open a browser on developer machines, but CI headless should handle it
+        Object result = Jlll.eval("(open-browser \"https://example.com\")", env);
+        assertTrue("open-browser should return a Boolean", result instanceof Boolean);
+    }
     // ========== Helper ==========
 
     private void eval(Object expected, String code) throws Exception

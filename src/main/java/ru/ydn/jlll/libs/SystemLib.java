@@ -1,6 +1,9 @@
 package ru.ydn.jlll.libs;
 
+import java.awt.Desktop;
+import java.io.File;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,6 +27,7 @@ import ru.ydn.jlll.common.annotation.JlllName;
  * <li><b>System Info:</b> hostname</li>
  * <li><b>Memory:</b> gc, memory-used, memory-free, memory-total, memory-max</li>
  * <li><b>CPU:</b> available-processors</li>
+ * <li><b>Browser:</b> open-browser</li>
  * </ul>
  *
  * <p>
@@ -205,5 +209,72 @@ public class SystemLib extends ReflectionLibrary
     public Integer availableProcessors()
     {
         return Runtime.getRuntime().availableProcessors();
+    }
+
+    /**
+     * Opens a URL or file in the system's default web browser.
+     *
+     * <p>
+     * Uses Java's Desktop API when available, falling back to OS-specific commands
+     * ({@code open} on macOS, {@code xdg-open} on Linux, {@code start} on Windows).
+     * </p>
+     *
+     * <p>
+     * Examples:
+     * </p>
+     * <ul>
+     * <li>{@code (open-browser "https://github.com")} - opens URL</li>
+     * <li>{@code (open-browser "/tmp/report.html")} - opens local file</li>
+     * <li>{@code (open-browser "file:///tmp/report.html")} - opens file URL</li>
+     * </ul>
+     *
+     * @param urlOrPath
+     *            a URL (http://, https://, file://) or local file path
+     * @return true if browser was launched successfully, false otherwise
+     */
+    @JlllName("open-browser")
+    public Boolean openBrowser(String urlOrPath)
+    {
+        try
+        {
+            URI uri;
+            if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://") || urlOrPath.startsWith("file://"))
+            {
+                uri = new URI(urlOrPath);
+            }
+            else
+            {
+                // Local file path - convert to URI
+                uri = new File(urlOrPath).toURI();
+            }
+            // Try Desktop API first
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE))
+            {
+                Desktop.getDesktop().browse(uri);
+                return Boolean.TRUE;
+            }
+            // Fallback to OS-specific commands
+            String os = System.getProperty("os.name").toLowerCase();
+            ProcessBuilder pb;
+            if (os.contains("mac"))
+            {
+                pb = new ProcessBuilder("open", uri.toString());
+            }
+            else if (os.contains("win"))
+            {
+                pb = new ProcessBuilder("cmd", "/c", "start", "", uri.toString());
+            }
+            else
+            {
+                // Linux/Unix
+                pb = new ProcessBuilder("xdg-open", uri.toString());
+            }
+            pb.start();
+            return Boolean.TRUE;
+        }
+        catch (Exception e)
+        {
+            return Boolean.FALSE;
+        }
     }
 }

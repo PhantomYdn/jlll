@@ -1439,6 +1439,12 @@ Access to environment variables, system properties, and system information.
 | `memory-max` | Maximum heap size | `(memory-max)` => `2147483648` |
 | `available-processors` | Number of CPUs | `(available-processors)` => `8` |
 
+### Browser
+
+| Primitive | Description | Example |
+|-----------|-------------|---------|
+| `open-browser` | Open URL or file in default browser | `(open-browser "https://github.com")` => `true` |
+
 ### Examples
 
 ```lisp
@@ -1458,6 +1464,17 @@ Access to environment variables, system properties, and system information.
 
 ;; Force garbage collection
 (gc)
+
+;; Open URL in browser
+(open-browser "https://github.com")         ; => true
+
+;; Open local file in browser
+(open-browser "/tmp/report.html")           ; => true
+(open-browser "file:///tmp/report.html")    ; => true
+
+;; Useful with web console
+(web-console :port 3000)
+(open-browser "http://localhost:3000")
 ```
 
 ## Format Library
